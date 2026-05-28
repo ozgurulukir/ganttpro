@@ -2300,11 +2300,13 @@ function renderArrows(canvas, rows, tw, th) {
         const sX = dateToX(dep.end) + PPD;
         let pathD;
         if (sY === tY) {
-          pathD = `M ${sX} ${sY} H ${tX}`;
-        } else if (tX >= sX + 10) {
-          pathD = `M ${sX} ${sY} H ${tX} V ${tY}`;
+          pathD = `M ${sX} ${sY} H ${tX}`;           // 同行：水平
+        } else if (tX > sX) {
+          pathD = `M ${sX} ${sY} H ${tX} V ${tY}`;   // bar 有間距：右→下
+        } else if (tX === sX) {
+          pathD = `M ${sX} ${sY} V ${tY}`;            // 緊接：直接向下
         } else {
-          pathD = `M ${sX} ${sY} H ${sX + 20} V ${tY} H ${tX}`;
+          pathD = `M ${sX} ${sY} H ${sX + 20} V ${tY} H ${tX}`; // 重疊：繞行
         }
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', pathD);
