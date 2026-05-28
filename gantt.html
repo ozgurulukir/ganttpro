@@ -391,7 +391,8 @@ body.dark .ms-badge{background:#3d2c00;color:#fbbf24;border-color:#593f00}
   overflow:hidden;white-space:nowrap;
 }
 .week-cell.today-wk{color:var(--red)!important;font-weight:600}
-.week-cell.day-cell{font-size:9.5px;padding:0 2px;justify-content:center}
+.week-cell.day-cell{font-size:9.5px;padding:0 2px;justify-content:center;flex-direction:column;gap:1px}
+.week-cell.day-cell .day-dow{font-size:8.5px;opacity:.8}
 .week-cell.wknd-cell{color:var(--t3)}
 .week-cell.day-weekday{color:#2563EB;font-weight:600}
 .week-cell.day-sat{color:#60A5FA}
@@ -1871,9 +1872,11 @@ function renderChartHeader() {
       const dayColor = isTdy ? '' : dow === 6 ? ' day-sat' : dow === 0 ? ' day-sun' : ' day-weekday';
       el.className = 'week-cell day-cell' + dayColor + (isTdy ? ' today-wk' : '') + (isWknd ? ' wknd-cell' : '');
       el.style.cssText = `left:${x}px;width:${PPD}px`;
-      el.textContent = PPD >= 30
-        ? d.getDate() + dayNames[d.getDay()]
-        : d.getDate();
+      if (PPD >= 30) {
+        el.innerHTML = `<span>${d.getDate()}</span><span class="day-dow">${dayNames[d.getDay()]}</span>`;
+      } else {
+        el.textContent = d.getDate();
+      }
       wRow.appendChild(el);
       d.setDate(d.getDate() + 1);
     }
