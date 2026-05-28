@@ -374,7 +374,7 @@ body.dark .ms-badge{background:#3d2c00;color:#fbbf24;border-color:#593f00}
   min-width:max-content;
 }
 .ch-months{height:36px;display:flex;border-bottom:1px solid var(--border);position:relative}
-.ch-weeks{height:36px;display:flex;position:relative}
+.ch-weeks{height:40px;display:flex;position:relative}
 
 .month-label{
   position:absolute;height:100%;padding:0 12px;
@@ -1872,11 +1872,7 @@ function renderChartHeader() {
       const dayColor = isTdy ? '' : dow === 6 ? ' day-sat' : dow === 0 ? ' day-sun' : ' day-weekday';
       el.className = 'week-cell day-cell' + dayColor + (isTdy ? ' today-wk' : '') + (isWknd ? ' wknd-cell' : '');
       el.style.cssText = `left:${x}px;width:${PPD}px`;
-      if (PPD >= 30) {
-        el.innerHTML = `<span>${d.getDate()}</span><span class="day-dow">${dayNames[d.getDay()]}</span>`;
-      } else {
-        el.textContent = d.getDate();
-      }
+      el.innerHTML = `<span>${d.getDate()}</span><span class="day-dow">${dayNames[d.getDay()]}</span>`;
       wRow.appendChild(el);
       d.setDate(d.getDate() + 1);
     }
