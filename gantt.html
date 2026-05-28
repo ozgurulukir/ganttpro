@@ -2287,7 +2287,7 @@ function renderArrows(canvas, rows, tw, th) {
       svg.appendChild(path);
     });
 
-    // Critical path arrows (red solid, FS only)
+    // Critical path arrows (red elbow, FS only)
     if (showCriticalPath && criticalTaskIds.has(task.id)) {
       (task.deps || []).forEach(depId => {
         if (!criticalTaskIds.has(depId)) return;
@@ -2297,12 +2297,22 @@ function renderArrows(canvas, rows, tw, th) {
         if (sRow === undefined) return;
         const sY = sRow * ROW_H + ROW_H / 2;
         const sX = dep.type === 'milestone' ? dateToX(dep.date) + 8 : dateToX(dep.end) + PPD;
-        const dx = (tX - sX) / 2;
+        // Elbow connector: H → V (right-angle, arrowhead points down into target bar)
+        let pathD;
+        if (sY === tY) {
+          pathD = `M ${sX} ${sY} H ${tX}`;           // same row: straight across
+        } else if (tX >= sX + 10) {
+          pathD = `M ${sX} ${sY} H ${tX} V ${tY}`;   // normal: go right to tX, then down
+        } else {
+          pathD = `M ${sX} ${sY} H ${sX + 20} V ${tY} H ${tX}`; // tight: detour right then back
+        }
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', `M ${sX} ${sY} C ${sX + Math.max(dx, 24)} ${sY}, ${tX - Math.max(dx, 24)} ${tY}, ${tX} ${tY}`);
+        path.setAttribute('d', pathD);
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke', '#EF4444');
         path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
         path.setAttribute('marker-end', 'url(#ah-cp)');
         svg.appendChild(path);
       });
