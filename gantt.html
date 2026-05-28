@@ -2062,8 +2062,7 @@ function prevWorkingDay(endStr) {
 function renderBar(row, task) {
   if (!task.start || !task.end) return;
   const x1 = dateToX(task.start);
-  // Visual end extends 1 working day past exclusive end, so task.end column is filled
-  const visualEnd = addWorkingDays(task.end, 1);
+  const visualEnd = nextWorkingDay(task.end);
   const x2 = dateToX(visualEnd);
   const w = x2 - x1;
   if (!isFinite(w) || w <= 0) return;
@@ -2119,7 +2118,7 @@ function renderBar(row, task) {
 
 function renderGroupBar(row, task, bounds) {
   const x1 = dateToX(bounds.s);
-  const x2 = dateToX(addWorkingDays(bounds.e, 1)); // extend to fill last working day column
+  const x2 = dateToX(nextWorkingDay(bounds.e));
   const w = Math.max(x2 - x1, 8);
 
   const bar = document.createElement('div');
@@ -2525,7 +2524,7 @@ function openModal() {
   document.getElementById('modal-submit').textContent = '新增任務';
   document.getElementById('fName').value = '';
   document.getElementById('fStart').value = TODAY_STR;
-  document.getElementById('fEnd').value = addWorkingDays(TODAY_STR, 1);
+  document.getElementById('fEnd').value = TODAY_STR;
   document.getElementById('fWday').value = 1;
   document.getElementById('fType').value = 'task';
   populateModal();
@@ -2694,7 +2693,7 @@ function isWeekend(d) { const w = new Date(d).getDay(); return w === 0 || w === 
 function addWorkingDays(startStr, days) {
   let d = new Date(startStr);
   while (isWeekend(d)) d.setDate(d.getDate() + 1);
-  let count = 0; // exclusive: start is day 0, end = start + days working days
+  let count = 1; // inclusive: start is day 1
   while (count < days) {
     d.setDate(d.getDate() + 1);
     if (!isWeekend(d)) count++;
@@ -2702,11 +2701,18 @@ function addWorkingDays(startStr, days) {
   return d.toISOString().slice(0, 10);
 }
 
+function nextWorkingDay(dateStr) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + 1);
+  while (isWeekend(d)) d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 function countWorkingDays(startStr, endStr) {
   let d = new Date(startStr);
   const end = new Date(endStr);
   let count = 0;
-  while (d < end) { // exclusive: end not counted
+  while (d <= end) { // inclusive: both start and end counted
     if (!isWeekend(d)) count++;
     d.setDate(d.getDate() + 1);
   }
@@ -2725,7 +2731,7 @@ function openDateEditor(task, field, cell) {
     if (!inp.value) { render(); return; }
     if (field === 'start') {
       task.start = inp.value;
-      if (task.end && task.end <= task.start) task.end = addWorkingDays(task.start, 1);
+      if (task.end && task.end < task.start) task.end = task.start;
     } else {
       task.end = inp.value;
       if (task.start && task.start >= task.end) task.start = task.end; // keep start behind end
@@ -2954,7 +2960,7 @@ function scheduleTasks() {
       });
 
       if (task.type === 'task') {
-        let rawStart = latestFsEnd ? addWorkingDays(latestFsEnd, 1) : projStart;
+        let rawStart = latestFsEnd ? nextWorkingDay(latestFsEnd) : projStart;
         if (latestSsStart && latestSsStart > rawStart) rawStart = latestSsStart;
         let s = new Date(rawStart);
         while (isWeekend(s)) s.setDate(s.getDate() + 1);
@@ -2993,7 +2999,7 @@ function autoScheduleFromDeps(task) {
                 : dep.type === 'group' ? groupBounds(dep.id).e
                 : null;
     if (depEnd) {
-      const s = addWorkingDays(depEnd, 1);
+      const s = nextWorkingDay(depEnd);
       if (!candidateStart || s > candidateStart) candidateStart = s;
     }
   });
