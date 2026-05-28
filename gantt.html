@@ -2289,24 +2289,22 @@ function renderArrows(canvas, rows, tw, th) {
       });
     }
 
-    // Critical path arrows (red elbow, FS only)
-    if (showCriticalPath && criticalTaskIds.has(task.id)) {
-      (task.deps || []).forEach(depId => {
-        if (!criticalTaskIds.has(depId)) return;
+    // Critical path arrows (red elbow, trace through milestones)
+    if (showCriticalPath && criticalTaskIds.has(task.id) && task.type === 'task') {
+      getCriticalPredTaskIds(task).forEach(depId => {
         const dep = taskById(depId);
         if (!dep) return;
         const sRow = ri.get(depId);
         if (sRow === undefined) return;
         const sY = sRow * ROW_H + ROW_H / 2;
-        const sX = dep.type === 'milestone' ? dateToX(dep.date) + 8 : dateToX(dep.end) + PPD;
-        // Elbow connector: H → V (right-angle, arrowhead points down into target bar)
+        const sX = dateToX(dep.end) + PPD;
         let pathD;
         if (sY === tY) {
-          pathD = `M ${sX} ${sY} H ${tX}`;           // same row: straight across
+          pathD = `M ${sX} ${sY} H ${tX}`;
         } else if (tX >= sX + 10) {
-          pathD = `M ${sX} ${sY} H ${tX} V ${tY}`;   // normal: go right to tX, then down
+          pathD = `M ${sX} ${sY} H ${tX} V ${tY}`;
         } else {
-          pathD = `M ${sX} ${sY} H ${sX + 20} V ${tY} H ${tX}`; // tight: detour right then back
+          pathD = `M ${sX} ${sY} H ${sX + 20} V ${tY} H ${tX}`;
         }
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', pathD);
@@ -2429,10 +2427,17 @@ let showCriticalPath = false;
 let criticalTaskIds = new Set();
 
 function computeCriticalPath() {
-  const nodes = tasks.filter(t => t.type === 'task' && t.start && t.end);
+  // Include tasks AND milestones
+  const nodes = tasks.filter(t =>
+    (t.type === 'task' && t.start && t.end) ||
+    (t.type === 'milestone' && t.date)
+  );
   if (!nodes.length) return new Set();
 
-  // Build FS successor map
+  const getS = t => t.type === 'milestone' ? t.date : t.start;
+  const getE = t => t.type === 'milestone' ? t.date : t.end;
+
+  // Build FS successor map (tasks + milestones)
   const successors = {};
   nodes.forEach(t => { successors[t.id] = []; });
   nodes.forEach(t => {
@@ -2441,33 +2446,52 @@ function computeCriticalPath() {
     });
   });
 
-  // Project end = latest task.end
-  const projEnd = nodes.reduce((max, t) => t.end > max ? t.end : max, '');
+  // Project end = latest task end
+  const projEnd = nodes.filter(t => t.type === 'task')
+    .reduce((max, t) => t.end > max ? t.end : max, '');
 
-  // Backward pass: compute Late Finish (LF) for each task
   const LF = {};
   nodes.forEach(t => { LF[t.id] = null; });
 
-  let changed = true;
-  let iter = 0;
-  while (changed && iter++ < 200) {
+  let changed = true, iter = 0;
+  while (changed && iter++ < 300) {
     changed = false;
     nodes.forEach(t => {
       const succs = successors[t.id];
-      const newLF = succs.length === 0
-        ? projEnd
-        : succs.reduce((min, s) => {
-            const ls = prevWorkingDay(s.start); // latest t can end = day before s starts
-            return (min === null || ls < min) ? ls : min;
-          }, null);
+      let newLF;
+      if (!succs.length) {
+        newLF = t.type === 'task' ? projEnd : getS(t);
+      } else {
+        newLF = null;
+        succs.forEach(s => {
+          // If successor is milestone: pred can end ON milestone date
+          // If successor is task: pred must end day before task starts
+          const lf = s.type === 'milestone' ? getS(s) : prevWorkingDay(getS(s));
+          if (newLF === null || lf < newLF) newLF = lf;
+        });
+        if (!newLF) newLF = t.type === 'task' ? projEnd : getS(t);
+      }
       if (newLF && newLF !== LF[t.id]) { LF[t.id] = newLF; changed = true; }
     });
   }
 
-  // Float = 0 → critical (task.end === LF)
   const critical = new Set();
-  nodes.forEach(t => { if (LF[t.id] && t.end >= LF[t.id]) critical.add(t.id); });
+  nodes.forEach(t => { if (LF[t.id] && getE(t) >= LF[t.id]) critical.add(t.id); });
   return critical;
+}
+
+// 透過 milestone 往回追蹤，找到關鍵路徑上的 task 來源 id
+function getCriticalPredTaskIds(task) {
+  const result = [];
+  function trace(depId) {
+    if (!criticalTaskIds.has(depId)) return;
+    const dep = taskById(depId);
+    if (!dep) return;
+    if (dep.type === 'task') { result.push(depId); return; }
+    if (dep.type === 'milestone') (dep.deps || []).forEach(trace);
+  }
+  (task.deps || []).forEach(trace);
+  return result;
 }
 
 function toggleCriticalPath() {
