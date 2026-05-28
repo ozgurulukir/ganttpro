@@ -437,6 +437,8 @@ body.dark .chart-row.group-bg{background:rgba(255,255,255,.02)}
   transition:filter .1s,transform .1s;
 }
 .gantt-bar:hover{filter:brightness(1.08);transform:scaleY(1.06)}
+.gantt-bar.cp-critical{box-shadow:0 0 0 2.5px #EF4444;z-index:3}
+.cp-mode .gantt-bar:not(.cp-critical){opacity:0.28;filter:grayscale(.3)}
 
 .bar-bg{position:absolute;inset:0;opacity:.88;}
 .bar-fill{position:absolute;top:0;left:0;bottom:0;}
@@ -984,6 +986,7 @@ body.dark .proj-item.active{background:rgba(94,106,210,.2)}
   <button class="btn zoom-btn" onclick="zoomOut()" title="縮小">－</button>
   <button class="btn zoom-btn" onclick="zoomIn()" title="放大">＋</button>
   <button class="btn fit-btn" onclick="fitToFrame()" title="縮放至適合視窗"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4.5V1h3.5M8.5 1H12v3.5M12 8.5V12H8.5M4.5 12H1V8.5"/></svg></button>
+  <button class="btn" id="cpBtn" onclick="toggleCriticalPath()" title="顯示關鍵路徑">◆ 關鍵路徑</button>
   <div class="readonly-badge">👁 唯讀模式</div>
   <button class="btn btn-owner-only" id="collabBtn" onclick="openCollabModal()" title="協作管理">👥 協作</button>
   <button class="btn" id="darkBtn" onclick="toggleDark()" title="深色模式">🌙</button>
@@ -1936,6 +1939,7 @@ function renderChartHeader() {
 function renderChartBody() {
   const canvas = document.getElementById('chartCanvas');
   canvas.innerHTML = '';
+  canvas.classList.toggle('cp-mode', showCriticalPath);
   const tw = totalW();
 
   // Milestone view: canvas is empty (timeline lives in the sticky header)
@@ -2067,7 +2071,7 @@ function renderBar(row, task) {
   if (!isFinite(w) || w <= 0) return;
 
   const bar = document.createElement('div');
-  bar.className = 'gantt-bar';
+  bar.className = 'gantt-bar' + (showCriticalPath && criticalTaskIds.has(task.id) ? ' cp-critical' : '');
   bar.dataset.id = task.id;
   bar.style.cssText = `left:${x1}px;width:${w}px`;
 
@@ -2248,6 +2252,7 @@ function renderArrows(canvas, rows, tw, th) {
   }
   makeMarker('ah', '#9CA3AF');
   makeMarker('ah-ss', '#F59E0B');
+  makeMarker('ah-cp', '#EF4444');
   svg.appendChild(defs);
 
   // Row index lookup
@@ -2281,6 +2286,27 @@ function renderArrows(canvas, rows, tw, th) {
       path.setAttribute('opacity', '0.7');
       svg.appendChild(path);
     });
+
+    // Critical path arrows (red solid, FS only)
+    if (showCriticalPath && criticalTaskIds.has(task.id)) {
+      (task.deps || []).forEach(depId => {
+        if (!criticalTaskIds.has(depId)) return;
+        const dep = taskById(depId);
+        if (!dep) return;
+        const sRow = ri.get(depId);
+        if (sRow === undefined) return;
+        const sY = sRow * ROW_H + ROW_H / 2;
+        const sX = dep.type === 'milestone' ? dateToX(dep.date) + 8 : dateToX(dep.end) + PPD;
+        const dx = (tX - sX) / 2;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${sX} ${sY} C ${sX + Math.max(dx, 24)} ${sY}, ${tX - Math.max(dx, 24)} ${tY}, ${tX} ${tY}`);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', '#EF4444');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('marker-end', 'url(#ah-cp)');
+        svg.appendChild(path);
+      });
+    }
 
     // SS arrows (amber, from dep.start → task.start)
     (task.sdeps || []).forEach(depId => {
@@ -2383,6 +2409,60 @@ function setChartView(v) {
 
 function toggleBarDates() {
   showBarDates = !showBarDates;
+  render();
+}
+
+/* ── CRITICAL PATH ── */
+let showCriticalPath = false;
+let criticalTaskIds = new Set();
+
+function computeCriticalPath() {
+  const nodes = tasks.filter(t => t.type === 'task' && t.start && t.end);
+  if (!nodes.length) return new Set();
+
+  // Build FS successor map
+  const successors = {};
+  nodes.forEach(t => { successors[t.id] = []; });
+  nodes.forEach(t => {
+    (t.deps || []).forEach(depId => {
+      if (successors[depId] !== undefined) successors[depId].push(t);
+    });
+  });
+
+  // Project end = latest task.end
+  const projEnd = nodes.reduce((max, t) => t.end > max ? t.end : max, '');
+
+  // Backward pass: compute Late Finish (LF) for each task
+  const LF = {};
+  nodes.forEach(t => { LF[t.id] = null; });
+
+  let changed = true;
+  let iter = 0;
+  while (changed && iter++ < 200) {
+    changed = false;
+    nodes.forEach(t => {
+      const succs = successors[t.id];
+      const newLF = succs.length === 0
+        ? projEnd
+        : succs.reduce((min, s) => {
+            const ls = prevWorkingDay(s.start); // latest t can end = day before s starts
+            return (min === null || ls < min) ? ls : min;
+          }, null);
+      if (newLF && newLF !== LF[t.id]) { LF[t.id] = newLF; changed = true; }
+    });
+  }
+
+  // Float = 0 → critical (task.end === LF)
+  const critical = new Set();
+  nodes.forEach(t => { if (LF[t.id] && t.end >= LF[t.id]) critical.add(t.id); });
+  return critical;
+}
+
+function toggleCriticalPath() {
+  showCriticalPath = !showCriticalPath;
+  document.getElementById('cpBtn').classList.toggle('active', showCriticalPath);
+  if (showCriticalPath) criticalTaskIds = computeCriticalPath();
+  else criticalTaskIds = new Set();
   render();
 }
 
