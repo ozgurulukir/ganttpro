@@ -703,7 +703,7 @@ body.readonly .readonly-badge{display:flex}
 }
 body.readonly .btn-owner-only{display:none!important}
 /* in readonly hide new-project option */
-body.readonly .proj-item-new{display:none!important}
+/* proj-item-new always visible — creating a new project is independent of read-only state */
 
 .statusbar{
   height:28px;background:var(--surface);
@@ -2889,6 +2889,11 @@ function exportPNG() {
       ctx.fillStyle = task.color || '#F59E0B';
       ctx.save(); ctx.translate(mx,my); ctx.rotate(Math.PI/4);
       ctx.fillRect(-7,-7,14,14); ctx.restore();
+      // 在菱形右側繪製里程碑名稱
+      ctx.fillStyle = task.color || '#F59E0B';
+      ctx.font = '10px sans-serif';
+      const lbl = task.name.length > 12 ? task.name.slice(0,12)+'…' : task.name;
+      ctx.fillText(lbl, mx + 11, my);
     } else if (task.type === 'group') {
       const b = groupBounds(task.id);
       if (b.s && b.e) {
@@ -4051,7 +4056,6 @@ function deleteProject(id, e) {
 }
 
 function openProjModal() {
-  if (isReadOnly) return;
   document.getElementById('pName').value = '';
   document.getElementById('pStart').value = TODAY_STR;
 
