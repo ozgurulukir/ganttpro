@@ -4894,7 +4894,10 @@ function setupRealtime() {
       if (skipFirst) { skipFirst = false; return; }
       if (_myUpdate) return;
       const ok = await loadFromCloud();
-      if (ok) { saveToLS(); updateProjUI(); render(); showSyncToast(); }
+      if (ok) {
+        if (projects.length) { scheduleTasks(); recalcProjEnd(); }
+        saveToLS(); updateProjUI(); render(); showSyncToast();
+      }
     });
 }
 
