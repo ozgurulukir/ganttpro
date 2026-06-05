@@ -3462,6 +3462,7 @@ function openStartEditor(task, cell) {
   cell.innerHTML = '';
   cell.appendChild(inp);
   inp.focus();
+  try { inp.showPicker(); } catch(e) {}
   function commit() {
     const val = inp.value;
     if (val && val !== task.start) {
@@ -3489,6 +3490,7 @@ function openEndEditor(task, cell) {
   cell.innerHTML = '';
   cell.appendChild(inp);
   inp.focus();
+  try { inp.showPicker(); } catch(e) {}
   function commit() {
     const val = inp.value;
     if (val && val !== task.end) {
