@@ -1955,12 +1955,14 @@ function renderChartHeader() {
       const ds = toStr(d);
       const x = dateToX(ds);
       const dow = d.getDay();
-      const isWknd = dow === 0 || dow === 6;
+      const hol = getHoliday(ds);
+      const off = isNonWorkday(ds);
       const isTdy = ds === TODAY_STR;
       const el = document.createElement('div');
-      const dayColor = isTdy ? '' : dow === 6 ? ' day-sat' : dow === 0 ? ' day-sun' : ' day-weekday';
-      el.className = 'week-cell day-cell' + dayColor + (isTdy ? ' today-wk' : '') + (isWknd ? ' wknd-cell' : '');
+      const dayColor = isTdy ? '' : hol ? ' day-sun' : dow === 6 ? ' day-sat' : dow === 0 ? ' day-sun' : ' day-weekday';
+      el.className = 'week-cell day-cell' + dayColor + (isTdy ? ' today-wk' : '') + (off ? ' wknd-cell' : '');
       el.style.cssText = `left:${x}px;width:${PPD}px`;
+      if (hol) el.title = hol;
       el.innerHTML = `<span>${d.getDate()}</span><span class="day-dow">${dayNames[d.getDay()]}</span>`;
       wRow.appendChild(el);
       d.setDate(d.getDate() + 1);
@@ -2079,7 +2081,7 @@ function renderChartBody() {
       const daysOffset = Math.floor(clickX / PPD);
       const d = new Date(CHART_START);
       d.setDate(d.getDate() + daysOffset);
-      while (isWeekend(d)) d.setDate(d.getDate() + 1);
+      while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
       const dateStr = d.toISOString().slice(0, 10);
       openModal(null, dateStr);
     });
@@ -2110,11 +2112,12 @@ function renderGrid(canvas, tw, th) {
     let d = new Date(CHART_START);
     while (d <= CHART_END) {
       const x = dateToX(toStr(d));
+      const off = isNonWorkday(d);
       const l = document.createElement('div');
-      l.className = 'grid-line' + (isWeekend(d) ? ' grid-wknd' : '');
+      l.className = 'grid-line' + (off ? ' grid-wknd' : '');
       l.style.cssText = `left:${x}px;height:${th}px`;
       canvas.appendChild(l);
-      if (isWeekend(d)) {
+      if (off) {
         const bg = document.createElement('div');
         bg.className = 'wknd-bg';
         bg.style.cssText = `left:${x}px;width:${PPD}px`;
@@ -2144,9 +2147,9 @@ function getWorkingSegs(startStr, endStr) {
   const segs = [];
   let d = new Date(startStr), end = new Date(endStr), segS = null;
   while (d < end) {
-    const isWknd = d.getDay() === 0 || d.getDay() === 6;
-    if (!isWknd && !segS) segS = d.toISOString().slice(0, 10);
-    else if (isWknd && segS) { segs.push({s: segS, e: d.toISOString().slice(0, 10)}); segS = null; }
+    const isOff = isNonWorkday(d);
+    if (!isOff && !segS) segS = d.toISOString().slice(0, 10);
+    else if (isOff && segS) { segs.push({s: segS, e: d.toISOString().slice(0, 10)}); segS = null; }
     d.setDate(d.getDate() + 1);
   }
   if (segS) segs.push({s: segS, e: endStr});
@@ -2157,7 +2160,7 @@ function getWorkingSegs(startStr, endStr) {
 function prevWorkingDay(endStr) {
   const d = new Date(endStr);
   d.setDate(d.getDate() - 1);
-  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+  while (isNonWorkday(d)) d.setDate(d.getDate() - 1);
   return d.toISOString().slice(0, 10);
 }
 
@@ -3392,24 +3395,76 @@ function submitTask() {
 
 function isWeekend(d) { const w = new Date(d).getDay(); return w === 0 || w === 6; }
 
+/* ─── 台灣國定假日（政府行政機關辦公日曆表，民國114–116年）─── */
+const TW_HOLIDAYS = {
+  // 2025（民國114年）
+  '2025-01-01':'元旦',
+  '2025-01-25':'春節假期','2025-01-26':'春節假期','2025-01-27':'小年夜（彈性放假）','2025-01-28':'除夕',
+  '2025-01-29':'春節初一','2025-01-30':'春節初二','2025-01-31':'春節初三','2025-02-01':'春節假期','2025-02-02':'春節假期',
+  '2025-02-28':'和平紀念日',
+  '2025-04-03':'兒童節補假','2025-04-04':'兒童節/清明節',
+  '2025-05-30':'端午節補假','2025-05-31':'端午節',
+  '2025-09-28':'教師節','2025-09-29':'教師節補假',
+  '2025-10-06':'中秋節',
+  '2025-10-10':'國慶日',
+  '2025-10-24':'光復節補假','2025-10-25':'臺灣光復紀念日',
+  '2025-12-25':'行憲紀念日',
+  // 2026（民國115年）
+  '2026-01-01':'元旦',
+  '2026-02-15':'小年夜','2026-02-16':'除夕','2026-02-17':'春節初一','2026-02-18':'春節初二',
+  '2026-02-19':'春節初三','2026-02-20':'小年夜補假',
+  '2026-02-27':'和平紀念日補假','2026-02-28':'和平紀念日',
+  '2026-04-03':'兒童節補假','2026-04-04':'兒童節','2026-04-05':'清明節','2026-04-06':'清明節補假',
+  '2026-05-01':'勞動節',
+  '2026-06-19':'端午節',
+  '2026-09-25':'中秋節','2026-09-28':'教師節',
+  '2026-10-09':'國慶日補假','2026-10-10':'國慶日',
+  '2026-10-25':'臺灣光復紀念日','2026-10-26':'光復節補假',
+  '2026-12-25':'行憲紀念日',
+  // 2027（民國116年）
+  '2027-01-01':'元旦',
+  '2027-02-04':'小年夜','2027-02-05':'除夕','2027-02-06':'春節初一','2027-02-07':'春節初二',
+  '2027-02-08':'春節初三','2027-02-09':'春節補假','2027-02-10':'春節補假',
+  '2027-02-28':'和平紀念日','2027-03-01':'和平紀念日補假',
+  '2027-04-04':'兒童節','2027-04-05':'清明節','2027-04-06':'兒童節補假',
+  '2027-04-30':'勞動節補假','2027-05-01':'勞動節',
+  '2027-06-09':'端午節',
+  '2027-09-15':'中秋節','2027-09-28':'教師節',
+  '2027-10-10':'國慶日','2027-10-11':'國慶日補假',
+  '2027-10-25':'臺灣光復紀念日',
+  '2027-12-24':'行憲紀念日補假','2027-12-25':'行憲紀念日',
+  '2027-12-31':'元旦補假'
+};
+// 補行上班的週六（2025 下半年起補班制度已廢除）
+const TW_MAKEUP_WORKDAYS = new Set(['2025-02-08']);
+
+function dateKey(d) { return d instanceof Date ? d.toISOString().slice(0, 10) : String(d); }
+function getHoliday(d) { return TW_HOLIDAYS[dateKey(d)] || null; }
+function isNonWorkday(d) {
+  const s = dateKey(d);
+  if (TW_HOLIDAYS[s]) return true;
+  if (TW_MAKEUP_WORKDAYS.has(s)) return false;
+  return isWeekend(d);
+}
+
 function subtractWorkingDays(endStr, days) {
   let d = new Date(endStr);
-  while (isWeekend(d)) d.setDate(d.getDate() - 1);
+  while (isNonWorkday(d)) d.setDate(d.getDate() - 1);
   let count = 0;
   while (count < days) {
     d.setDate(d.getDate() - 1);
-    if (!isWeekend(d)) count++;
+    if (!isNonWorkday(d)) count++;
   }
   return d.toISOString().slice(0, 10);
 }
 
 function addWorkingDays(startStr, days) {
   let d = new Date(startStr);
-  while (isWeekend(d)) d.setDate(d.getDate() + 1);
+  while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
   let count = 1; // inclusive: start is day 1
   while (count < days) {
     d.setDate(d.getDate() + 1);
-    if (!isWeekend(d)) count++;
+    if (!isNonWorkday(d)) count++;
   }
   return d.toISOString().slice(0, 10);
 }
@@ -3417,7 +3472,7 @@ function addWorkingDays(startStr, days) {
 function nextWorkingDay(dateStr) {
   const d = new Date(dateStr);
   d.setDate(d.getDate() + 1);
-  while (isWeekend(d)) d.setDate(d.getDate() + 1);
+  while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
   return d.toISOString().slice(0, 10);
 }
 
@@ -3426,7 +3481,7 @@ function countWorkingDays(startStr, endStr) {
   const end = new Date(endStr);
   let count = 0;
   while (d <= end) { // inclusive: both start and end counted
-    if (!isWeekend(d)) count++;
+    if (!isNonWorkday(d)) count++;
     d.setDate(d.getDate() + 1);
   }
   return Math.max(count, 1);
@@ -3802,18 +3857,18 @@ function scheduleTasks() {
           if (sfStart > rawStart) rawStart = sfStart;
         }
         let s = new Date(rawStart);
-        while (isWeekend(s)) s.setDate(s.getDate() + 1);
+        while (isNonWorkday(s)) s.setDate(s.getDate() + 1);
         task.start = s.toISOString().slice(0, 10);
         task.end   = addWorkingDays(task.start, task.wday || 1);
       } else { // milestone
         let best = latestFsEnd || latestSsStart || null;
         if (best) {
           let d = new Date(best);
-          while (isWeekend(d)) d.setDate(d.getDate() + 1);
+          while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
           task.date = d.toISOString().slice(0, 10);
         } else if (!(task.pinStart && task.date)) {
           let d = new Date(projStart);
-          while (isWeekend(d)) d.setDate(d.getDate() + 1);
+          while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
           task.date = d.toISOString().slice(0, 10);
         }
       }
