@@ -262,6 +262,12 @@ body.dark .btn-group .btn.active{background:rgba(94,106,210,.2)}
   border:1px solid #FDE68A;
 }
 body.dark .ms-badge{background:#3d2c00;color:#fbbf24;border-color:#593f00}
+.assignee-av{
+  width:18px;height:18px;border-radius:50%;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:8.5px;font-weight:700;color:#fff;letter-spacing:.3px;
+  margin-left:auto;margin-right:4px;
+}
 
 /* ── DATE / WDAY CELLS ── */
 .pin-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.65;margin-right:5px;vertical-align:1px}
@@ -491,6 +497,9 @@ body.dark .chart-row.group-bg{background:rgba(255,255,255,.02)}
 .cp-mode .gantt-bar:not(.cp-critical){opacity:0.28;filter:grayscale(.3)}
 
 .bar-bg{position:absolute;inset:0;opacity:.88;}
+.bar-prog{position:absolute;top:0;left:0;bottom:0;z-index:1;opacity:.85;border-radius:3px 0 0 3px;pointer-events:none}
+.baseline-bar{position:absolute;height:4px;border-radius:2px;background:var(--t4);opacity:.55;z-index:0;pointer-events:none}
+.milestone-ghost{position:absolute;width:10px;height:10px;transform:rotate(45deg);border:2px solid var(--t4);opacity:.5;pointer-events:none}
 .bar-fill{position:absolute;top:0;left:0;bottom:0;}
 .bar-lbl{
   position:relative;padding:0 8px;
@@ -1066,7 +1075,12 @@ body.dark .proj-item.active{background:rgba(94,106,210,.2)}
         <input type="checkbox" id="settingBarDates" checked onchange="onSettingBarDatesChange()">
         顯示 Bar 日期
       </label>
+      <label class="settings-item">
+        <input type="checkbox" id="settingBaseline" checked onchange="onSettingBaselineChange()">
+        顯示基準線
+      </label>
       <div class="settings-sep"></div>
+      <button class="settings-action" onclick="setBaseline();closeSettings()">📐 設定基準線</button>
       <button class="settings-action btn-owner-only" id="settingVersionBtn" onclick="openVersionPanel();closeSettings()">🕐 版本紀錄</button>
     </div>
   </div>
@@ -1258,14 +1272,22 @@ body.dark .proj-item.active{background:rgba(94,106,210,.2)}
     <div class="form-row" id="rowDeps">
       <label class="form-lbl">前置任務</label>
       <div id="fDepsWrap">
-        <input class="form-ctrl" id="fDeps" placeholder="輸入列號（如 2、2SS）或從下方選擇" autocomplete="off">
+        <input class="form-ctrl" id="fDeps" placeholder="輸入列號（如 2、2SS、2FS+3）或從下方選擇" autocomplete="off">
         <div id="fDepsList" onmousedown="event.preventDefault()"></div>
       </div>
       <div id="fDepsTip" style="font-size:11px;color:var(--t3);margin-top:4px;line-height:1.5"></div>
     </div>
+    <div class="form-row" id="rowAssignee">
+      <label class="form-lbl">負責人</label>
+      <input class="form-ctrl" id="fAssignee" list="assigneeList" placeholder="輸入姓名（選填）" autocomplete="off">
+      <datalist id="assigneeList"></datalist>
+    </div>
     <div class="form-row" id="rowDone" style="display:flex;align-items:center;gap:10px;margin-bottom:0">
       <label class="form-lbl" style="margin-bottom:0">已完成</label>
-      <div class="check-box" id="fDone" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'✓':''"></div>
+      <div class="check-box" id="fDone" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'✓':'';if(this.classList.contains('done'))document.getElementById('fProgress').value=100"></div>
+      <label class="form-lbl" style="margin-bottom:0;margin-left:14px">進度</label>
+      <input class="form-ctrl" type="number" id="fProgress" min="0" max="100" step="5" value="0" style="width:70px;text-align:center">
+      <span style="font-size:12px;color:var(--t3)">%</span>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">取消</button>
@@ -1553,8 +1575,12 @@ function initials(name) {
   return name.replace(/\s/g, '').slice(0, 2).toUpperCase();
 }
 
+const AV_PALETTE = ['#5E6AD2','#10B981','#F59E0B','#EF4444','#8B5CF6','#0EA5E9','#EC4899','#14B8A6'];
 function avColor(name) {
-  return AV_COLORS[name] || '#6B7280';
+  if (typeof AV_COLORS !== 'undefined' && AV_COLORS[name]) return AV_COLORS[name];
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return AV_PALETTE[h % AV_PALETTE.length];
 }
 
 function taskById(id) {
@@ -1658,6 +1684,14 @@ function groupBounds(id) {
     }
   });
   return { s, e };
+}
+
+// 群組整體進度：所有後代 task 的進度平均
+function groupProgress(id) {
+  const ts = getAllDescendants(id).map(taskById).filter(t => t && t.type === 'task');
+  if (!ts.length) return 0;
+  const sum = ts.reduce((a, t) => a + (t.done ? 100 : (t.progress || 0)), 0);
+  return Math.round(sum / ts.length);
 }
 
 /* ═══════════════════════════════════════════
@@ -1778,6 +1812,16 @@ function renderTaskPanel() {
       nc.appendChild(badge);
     }
 
+    // 負責人頭像（縮寫 + 個人色）
+    if (task.assignee) {
+      const av = document.createElement('span');
+      av.className = 'assignee-av';
+      av.textContent = initials(task.assignee);
+      av.style.background = avColor(task.assignee);
+      av.title = '負責人：' + task.assignee;
+      nc.appendChild(av);
+    }
+
     // Strikethrough if done
     if (task.done) row.classList.add('completed');
     row.appendChild(nc);
@@ -1870,6 +1914,7 @@ function renderTaskPanel() {
         e.stopPropagation();
         pushHistory();
         task.done = !task.done;
+        if (task.done) task.progress = 100;
         render();
       };
       cc.appendChild(cb);
@@ -2240,6 +2285,15 @@ function renderBar(row, task) {
   bg.style.background = task.color;
   inner.appendChild(bg);
 
+  // 進度填充（深色段）
+  const prog = task.done ? 100 : (task.progress || 0);
+  if (prog > 0) {
+    const pf = document.createElement('div');
+    pf.className = 'bar-prog';
+    pf.style.cssText = `width:${prog}%;background:${darkenColor(task.color, 0.3)}`;
+    inner.appendChild(pf);
+  }
+
   const fmt = s => { const [,m,d] = s.split('-'); return `${+m}/${+d}`; };
 
   // Task name: centered across full bar area
@@ -2270,6 +2324,17 @@ function renderBar(row, task) {
   bar.addEventListener('mouseleave', e => { hideTT(); highlightDeps(task.id, false); });
 
   row.appendChild(bar);
+
+  // 基準線：顯示計畫日期（灰色細條），與現況不同時才畫
+  const bl = showBaseline && (curProj()?.baseline?.dates || {})[task.id];
+  if (bl && bl.s && bl.e && (bl.s !== task.start || bl.e !== task.end)) {
+    const bx1 = dateToX(bl.s);
+    const bx2 = dateToX((() => { const d = new Date(bl.e); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })());
+    const blb = document.createElement('div');
+    blb.className = 'baseline-bar';
+    blb.style.cssText = `left:${bx1}px;width:${Math.max(bx2 - bx1, 3)}px;top:30px`;
+    row.appendChild(blb);
+  }
 }
 
 function renderGroupBar(row, task, bounds) {
@@ -2283,6 +2348,14 @@ function renderGroupBar(row, task, bounds) {
   bar.style.setProperty('--c', task.color);
   // Triangles via pseudo-elements need color from CSS var; workaround: use box-shadow
   bar.style.boxShadow = `inset 0 0 0 1px ${task.color}80`;
+
+  // 群組整體進度填充
+  const gprog = groupProgress(task.id);
+  if (gprog > 0) {
+    const pf = document.createElement('div');
+    pf.style.cssText = `position:absolute;top:0;left:0;bottom:0;width:${gprog}%;background:${darkenColor(task.color, 0.35)};border-radius:4px 0 0 4px;pointer-events:none`;
+    bar.appendChild(pf);
+  }
 
   bar.addEventListener('mouseenter', e => showTT(e, task));
   bar.addEventListener('mousemove', moveTT);
@@ -2376,6 +2449,15 @@ function renderMilestone(row, task) {
   d.addEventListener('mousemove', moveTT);
   d.addEventListener('mouseleave', hideTT);
   row.appendChild(d);
+
+  // 基準線：里程碑原定日期（空心灰菱形）
+  const bl = showBaseline && (curProj()?.baseline?.dates || {})[task.id];
+  if (bl && bl.d && bl.d !== task.date) {
+    const g = document.createElement('div');
+    g.className = 'milestone-ghost';
+    g.style.cssText = `left:${dateToX(bl.d) + PPD / 2 - 5}px;top:13px`;
+    row.appendChild(g);
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -2603,9 +2685,19 @@ function showTT(e, task) {
   let h = `<div class="tt-h">${task.name}</div>`;
   if (task.type === 'task') {
     const wdays = task.wday || countWorkingDays(task.start, task.end);
+    const tprog = task.done ? 100 : (task.progress || 0);
     h += `<div class="tt-r"><span>開始</span><span>${task.start}</span></div>`;
     h += `<div class="tt-r"><span>結束</span><span>${task.end}</span></div>`;
     h += `<div class="tt-r"><span>工作天</span><span>${wdays} 天</span></div>`;
+    h += `<div class="tt-r"><span>進度</span><span>${tprog}%</span></div>`;
+    if (task.assignee) h += `<div class="tt-r"><span>負責人</span><span>${task.assignee}</span></div>`;
+    const _bl = (curProj()?.baseline?.dates || {})[task.id];
+    if (_bl && _bl.e && task.end && _bl.e !== task.end) {
+      const late = task.end > _bl.e;
+      const dd = countWorkingDays(late ? _bl.e : task.end, late ? task.end : _bl.e) - 1;
+      h += `<div class="tt-r"><span>基準偏差</span><span style="color:${late ? '#EF4444' : '#10B981'}">${late ? '+' : '−'}${dd} 工作日</span></div>`;
+    }
+    h += `<div class="tt-pb"><div class="tt-pf" style="width:${tprog}%;background:${task.color}"></div></div>`;
     const _ovd = !task.done && task.end && task.end < TODAY_STR;
     h += `<div class="tt-r"><span>狀態</span><span style="color:${task.done?'#10B981':_ovd?'#EF4444':'#9CA3AF'}">${task.done ? '✓ 已完成' : _ovd ? '⚠ 已逾期' : '⏳ 待完成'}</span></div>`;
     if ((task.deps||[]).length)   h += `<div class="tt-r"><span>FS前置</span><span>${task.deps.length} 項</span></div>`;
@@ -2761,6 +2853,9 @@ function computeCriticalPath() {
               c = t.type === 'task' ? addWorkingDays(sfLF, wdur(t) - 1) : sfLF;
               break;
           }
+          // lag 偏移：後繼任務的依賴若帶 lag，前置任務的最晚時間可往前推
+          const _lag = (succ.lags || {})[type + t.id] || 0;
+          if (c && _lag) c = shiftWorkingDays(c, -_lag);
           if (c && (newLF === null || c < newLF)) newLF = c;
         });
         if (!newLF) newLF = t.type === 'task' ? projEnd : getS(t);
@@ -2939,6 +3034,19 @@ function exportPNG() {
       ctx.globalAlpha = task.done ? 0.32 : 1;
       ctx.fillStyle = task.color || '#5E6AD2';
       ctx.beginPath(); ctx.roundRect(bx, by, bw, 20, 3); ctx.fill();
+      const _prog = task.done ? 100 : (task.progress || 0);
+      if (_prog > 0 && _prog < 100) {
+        ctx.fillStyle = darkenColor(task.color || '#5E6AD2', 0.3);
+        ctx.beginPath(); ctx.roundRect(bx, by, bw * _prog / 100, 20, 3); ctx.fill();
+      }
+      const _bl = showBaseline && (proj.baseline?.dates || {})[task.id];
+      if (_bl && _bl.s && _bl.e && (_bl.s !== task.start || _bl.e !== task.end)) {
+        const blx = PANEL + dateToX(_bl.s);
+        const blw = Math.max(PANEL + dateToX((() => { const d = new Date(_bl.e); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })()) - blx, 3);
+        ctx.fillStyle = '#9CA3AF'; ctx.globalAlpha = 0.55;
+        ctx.beginPath(); ctx.roundRect(blx, y + 30, blw, 4, 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
       if (showCriticalPath && criticalTaskIds.has(task.id)) {
         ctx.strokeStyle = '#EF4444'; ctx.lineWidth = 2;
         ctx.globalAlpha = 1;
@@ -3029,6 +3137,28 @@ function exportPNG() {
 function onSettingBarDatesChange() {
   showBarDates = document.getElementById('settingBarDates').checked;
   render();
+}
+
+let showBaseline = true;
+function onSettingBaselineChange() {
+  showBaseline = document.getElementById('settingBaseline').checked;
+  render();
+}
+
+// 設定基準線：快照所有任務目前的日期，之後排程變動時可比對偏差
+function setBaseline() {
+  const p = curProj();
+  if (!p || isReadOnly) return;
+  const dates = {};
+  tasks.forEach(t => {
+    if (t.type === 'task' && t.start && t.end) dates[t.id] = { s: t.start, e: t.end };
+    else if (t.type === 'milestone' && t.date) dates[t.id] = { d: t.date };
+  });
+  p.baseline = { setAt: TODAY_STR, dates };
+  showStatus(`已設定基準線（${TODAY_STR}）`);
+  render();
+  saveToLS();
+  if (currentUser) saveToCloud();
 }
 
 function toggleSettings() {
@@ -3134,6 +3264,15 @@ function populateModal(excludeId = null, checkedDeps = [], presetParent = null, 
     sel.appendChild(o);
   });
 
+  // Assignee suggestions（現有專案中出現過的負責人）
+  const dl = document.getElementById('assigneeList');
+  dl.innerHTML = '';
+  [...new Set(projects.flatMap(p => p.tasks || []).map(t => t.assignee).filter(Boolean))].forEach(n => {
+    const o = document.createElement('option');
+    o.value = n;
+    dl.appendChild(o);
+  });
+
   // Deps picker
   depsExcludeId = excludeId;
   selectedDeps = new Set(checkedDeps);
@@ -3174,6 +3313,7 @@ function updateModalForType() {
   document.getElementById('lblStart').textContent   = isMs ? '日期' : '開始日期';
   document.getElementById('rowDone').style.display  = (isMs || isGrp) ? 'none' : 'flex';
   document.getElementById('rowDeps').style.display  = isGrp ? 'none' : '';
+  document.getElementById('rowAssignee').style.display = isGrp ? 'none' : '';
 }
 
 function setupDepsInputListener(excludeId) {
@@ -3266,6 +3406,8 @@ function openModal(unused, prefillDate) {
   document.getElementById('fType').value = 'task';
   document.getElementById('fDeps').value = '';
   document.getElementById('fDepsTip').textContent = '';
+  document.getElementById('fProgress').value = 0;
+  document.getElementById('fAssignee').value = '';
   populateModal();
   updateModalForType();
   document.getElementById('overlay').classList.add('open');
@@ -3374,6 +3516,8 @@ function openEditModal(taskId) {
   document.getElementById('fStart').value = task.start || task.date || TODAY_STR;
   document.getElementById('fEnd').value = task.end || task.date || TODAY_STR;
   document.getElementById('fWday').value = (task.start && task.end) ? countWorkingDays(task.start, task.end) : 1;
+  document.getElementById('fProgress').value = task.done ? 100 : (task.progress || 0);
+  document.getElementById('fAssignee').value = task.assignee || '';
   populateModal(taskId, task.deps || [], task.parent, task.done || false);
   selectedSdeps = new Set(task.sdeps || []);
   document.getElementById('fDeps').value = buildDepsText(task);
@@ -3481,10 +3625,17 @@ function submitTask() {
         t.deps = newDeps; t.sdeps = newSdeps;
         if (newFfdeps.length) t.ffdeps = newFfdeps; else delete t.ffdeps;
         if (newSfdeps.length) t.sfdeps = newSfdeps; else delete t.sfdeps;
+        const newLags = lagsFromParsed(parsedDeps);
+        if (Object.keys(newLags).length) t.lags = newLags; else delete t.lags;
       }
-      if (type === 'task') { t.start = start; t.end = end; t.done = done; t.pinStart = true; delete t.date; }
+      if (type === 'task') {
+        t.start = start; t.end = end; t.done = done; t.pinStart = true; delete t.date;
+        t.progress = done ? 100 : Math.max(0, Math.min(100, parseInt(document.getElementById('fProgress').value) || 0));
+      }
       else if (type === 'milestone') { t.date = start; t.pinStart = true; delete t.start; delete t.end; }
       else { delete t.date; delete t.start; delete t.end; delete t.pinStart; }
+      const asg = document.getElementById('fAssignee').value.trim();
+      if (type !== 'group' && asg) t.assignee = asg; else delete t.assignee;
     }
   } else {
     // Add new task
@@ -3493,8 +3644,17 @@ function submitTask() {
                 deps: newDeps||[], sdeps: newSdeps||[] };
     if (newFfdeps?.length) t.ffdeps = newFfdeps;
     if (newSfdeps?.length) t.sfdeps = newSfdeps;
-    if (type === 'task') { t.start = start; t.end = end; t.done = done; t.pinStart = true; }
+    if (!hasDepErr) {
+      const newLags = lagsFromParsed(parsedDeps);
+      if (Object.keys(newLags).length) t.lags = newLags;
+    }
+    if (type === 'task') {
+      t.start = start; t.end = end; t.done = done; t.pinStart = true;
+      t.progress = done ? 100 : Math.max(0, Math.min(100, parseInt(document.getElementById('fProgress').value) || 0));
+    }
     else if (type === 'milestone') { t.date = start; t.pinStart = true; }
+    const asg = document.getElementById('fAssignee').value.trim();
+    if (type !== 'group' && asg) t.assignee = asg;
     tasks.push(t);
     curProj().nextId = nextId;
   }
@@ -3587,6 +3747,12 @@ function nextWorkingDay(dateStr) {
   d.setDate(d.getDate() + 1);
   while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
   return d.toISOString().slice(0, 10);
+}
+
+// 將日期前後平移 N 個工作日（正數向後、負數向前；0 不變）
+function shiftWorkingDays(dateStr, days) {
+  if (!days) return dateStr;
+  return days > 0 ? addWorkingDays(dateStr, days + 1) : subtractWorkingDays(dateStr, -days);
 }
 
 function countWorkingDays(startStr, endStr) {
@@ -3771,10 +3937,14 @@ function openDepsEditor(task, cell) { openAllDepsEditor(task, cell); }
 
 function buildDepsText(task) {
   const parts = [];
-  (task.deps   || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'FS'); });
-  (task.sdeps  || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'SS'); });
-  (task.ffdeps || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'FF'); });
-  (task.sfdeps || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'SF'); });
+  const lagSfx = (type, id) => {
+    const l = (task.lags || {})[type + id] || 0;
+    return l ? (l > 0 ? '+' + l : String(l)) : '';
+  };
+  (task.deps   || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'FS' + lagSfx('FS', id)); });
+  (task.sdeps  || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'SS' + lagSfx('SS', id)); });
+  (task.ffdeps || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'FF' + lagSfx('FF', id)); });
+  (task.sfdeps || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'SF' + lagSfx('SF', id)); });
   return parts.join(', ');
 }
 
@@ -3798,17 +3968,25 @@ function parseDepInput(val, taskId) {
   return val.split(',').map(s => {
     s = s.trim();
     if (!s) return null;
-    const m = s.toUpperCase().match(/^(\d+)\s*(FS|SS|FF|SF)?$/);
-    if (!m) return { raw: s, err: '格式錯誤（應為：2FS 或 3SS）' };
+    const m = s.toUpperCase().match(/^(\d+)\s*(FS|SS|FF|SF)?\s*([+-]\d+)?$/);
+    if (!m) return { raw: s, err: '格式錯誤（應為：2FS、3SS 或 2FS+3）' };
     const rowNum = parseInt(m[1]);
     const type = m[2] || 'FS';
+    const lag = m[3] ? parseInt(m[3]) : 0;
     const depTask = getTaskByRowNum(rowNum);
     if (!depTask) return { raw: s, err: `找不到第 ${rowNum} 列任務` };
     if (depTask.id === taskId) return { raw: s, err: '不能設定自己為前置任務' };
     if (taskId != null && wouldCreateCycle(taskId, depTask.id))
       return { raw: s, err: '循環依賴：對方已依賴此任務' };
-    return { rowNum, type, taskId: depTask.id, raw: s };
+    return { rowNum, type, lag, taskId: depTask.id, raw: s };
   }).filter(Boolean);
+}
+
+// 從解析結果建立 lags 物件（key = 類型+前置任務id，如 FS12）
+function lagsFromParsed(parsed) {
+  const lags = {};
+  parsed.forEach(p => { if (p.lag) lags[p.type + p.taskId] = p.lag; });
+  return lags;
 }
 
 function openAllDepsEditor(task, cell) {
@@ -3817,7 +3995,7 @@ function openAllDepsEditor(task, cell) {
 
   const inp = document.createElement('input');
   inp.className = 'deps-input';
-  inp.placeholder = '如：2FS, 3SS, 4FF';
+  inp.placeholder = '如：2FS, 3SS, 2FS+3';
   inp.value = buildDepsText(task);
   wrap.appendChild(inp);
 
@@ -3867,6 +4045,8 @@ function openAllDepsEditor(task, cell) {
       task.sdeps  = [...new Set(parsed.filter(p => p.type === 'SS').map(p => p.taskId))];
       task.ffdeps = [...new Set(parsed.filter(p => p.type === 'FF').map(p => p.taskId))];
       task.sfdeps = [...new Set(parsed.filter(p => p.type === 'SF').map(p => p.taskId))];
+      const newLags = lagsFromParsed(parsed);
+      if (Object.keys(newLags).length) task.lags = newLags; else delete task.lags;
       scheduleTasks();
       recalcProjEnd();
     }
@@ -3928,31 +4108,40 @@ function scheduleTasks() {
       const unresolvedSf = sfdeps.filter(d => !scheduled.has(d.id));
       if (unresolvedSf.length) return;
 
-      // Latest end among FS deps → task must start after this
+      const depLag = (type, id) => (task.lags || {})[type + id] || 0;
+      // Latest end among FS deps → task must start after this（含 lag 偏移）
       let latestFsEnd = null;
       deps.forEach(dep => {
-        const e = dep.type === 'task' ? dep.end
-                : dep.type === 'milestone' ? dep.date
-                : dep.type === 'group' ? groupBounds(dep.id).e : null;
-        if (e && (!latestFsEnd || e > latestFsEnd)) latestFsEnd = e;
+        let e = dep.type === 'task' ? dep.end
+              : dep.type === 'milestone' ? dep.date
+              : dep.type === 'group' ? groupBounds(dep.id).e : null;
+        if (!e) return;
+        e = shiftWorkingDays(e, depLag('FS', dep.id));
+        if (!latestFsEnd || e > latestFsEnd) latestFsEnd = e;
       });
       // Latest start among SS deps → task must start no earlier than this
       let latestSsStart = null;
       sdeps.forEach(dep => {
-        const s = dep.type === 'task' ? dep.start : dep.type === 'milestone' ? dep.date : null;
-        if (s && (!latestSsStart || s > latestSsStart)) latestSsStart = s;
+        let s = dep.type === 'task' ? dep.start : dep.type === 'milestone' ? dep.date : null;
+        if (!s) return;
+        s = shiftWorkingDays(s, depLag('SS', dep.id));
+        if (!latestSsStart || s > latestSsStart) latestSsStart = s;
       });
       // Latest end among FF deps → backward-schedule task start so end >= dep end
       let latestFfEnd = null;
       ffdeps.forEach(dep => {
-        const e = dep.type === 'task' ? dep.end : dep.type === 'milestone' ? dep.date : null;
-        if (e && (!latestFfEnd || e > latestFfEnd)) latestFfEnd = e;
+        let e = dep.type === 'task' ? dep.end : dep.type === 'milestone' ? dep.date : null;
+        if (!e) return;
+        e = shiftWorkingDays(e, depLag('FF', dep.id));
+        if (!latestFfEnd || e > latestFfEnd) latestFfEnd = e;
       });
       // Latest start among SF deps → backward-schedule task start so end >= dep start
       let latestSfStart = null;
       sfdeps.forEach(dep => {
-        const s = dep.type === 'task' ? dep.start : dep.type === 'milestone' ? dep.date : null;
-        if (s && (!latestSfStart || s > latestSfStart)) latestSfStart = s;
+        let s = dep.type === 'task' ? dep.start : dep.type === 'milestone' ? dep.date : null;
+        if (!s) return;
+        s = shiftWorkingDays(s, depLag('SF', dep.id));
+        if (!latestSfStart || s > latestSfStart) latestSfStart = s;
       });
 
       if (task.type === 'task') {
