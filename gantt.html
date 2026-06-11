@@ -499,6 +499,7 @@ body.dark .chart-row.group-bg{background:rgba(255,255,255,.02)}
 .bar-bg{position:absolute;inset:0;opacity:.88;}
 .bar-prog{position:absolute;top:0;left:0;bottom:0;z-index:1;opacity:.85;border-radius:3px 0 0 3px;pointer-events:none}
 .baseline-bar{position:absolute;height:4px;border-radius:2px;background:var(--t4);opacity:.55;z-index:0;pointer-events:none}
+.wl-cell{position:absolute;top:6px;bottom:6px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--t1);font-weight:600}
 .milestone-ghost{position:absolute;width:10px;height:10px;transform:rotate(45deg);border:2px solid var(--t4);opacity:.5;pointer-events:none}
 .bar-fill{position:absolute;top:0;left:0;bottom:0;}
 .bar-lbl{
@@ -1047,6 +1048,7 @@ body.dark .proj-item.active{background:rgba(94,106,210,.2)}
   <div class="btn-group" id="chartViewBtns">
     <button class="btn active" data-cv="gantt" onclick="setChartView('gantt')">甘特圖</button>
     <button class="btn" data-cv="milestone" onclick="setChartView('milestone')">◆ 里程碑</button>
+    <button class="btn" data-cv="workload" onclick="setChartView('workload')">工作量</button>
   </div>
   <div class="sep"></div>
   <div class="btn-group" id="viewBtns">
@@ -1063,6 +1065,7 @@ body.dark .proj-item.active{background:rgba(94,106,210,.2)}
     <div class="settings-panel" id="exportPanel">
       <button class="settings-action" onclick="exportPNG();closeExportMenu()">🖼 匯出 PNG</button>
       <button class="settings-action" onclick="exportPDF();closeExportMenu()">📄 匯出 PDF</button>
+      <button class="settings-action" onclick="exportCSV();closeExportMenu()">📊 匯出 CSV (Excel)</button>
     </div>
   </div>
   <div class="readonly-badge">👁 唯讀模式</div>
@@ -1349,6 +1352,7 @@ const PPDS = { day: 36, week: 20, month: 8 };
 let PPD = PPDS.week;
 let viewMode = 'week';
 let milestoneView = false;
+let workloadView = false;
 let showBarDates = true;
 const MS_ROW_H = 160;
 
@@ -1702,6 +1706,9 @@ function renderTaskPanel() {
   const body = document.getElementById('taskBody');
   body.innerHTML = '';
   document.getElementById('taskCount').textContent = tasks.filter(t => t.type === 'task').length;
+
+  // 工作量視圖：左側面板改列出負責人
+  if (workloadView) { renderWorkloadPanel(body); return; }
 
   // 空狀態：給予明確的下一步引導
   if (!rows.length) {
@@ -2129,6 +2136,12 @@ function renderChartBody() {
   if (milestoneView) {
     canvas.style.cssText = `width:${tw}px;height:0px`;
     updateStats();
+    return;
+  }
+
+  // Workload view: per-assignee daily load heatmap
+  if (workloadView) {
+    renderWorkloadChart(canvas, tw);
     return;
   }
 
@@ -2747,8 +2760,107 @@ function setView(v) {
   render();
 }
 
+/* ── WORKLOAD VIEW ── */
+// 統計每位負責人每個工作日的未完成任務數
+function computeWorkload() {
+  const byName = new Map();
+  tasks.filter(t => t.type === 'task' && t.start && t.end && !t.done).forEach(t => {
+    const name = t.assignee || '未指派';
+    if (!byName.has(name)) byName.set(name, { days: new Map(), count: 0 });
+    const rec = byName.get(name);
+    rec.count++;
+    let d = new Date(t.start);
+    const end = new Date(t.end);
+    while (d <= end) {
+      if (!isNonWorkday(d)) {
+        const k = d.toISOString().slice(0, 10);
+        rec.days.set(k, (rec.days.get(k) || 0) + 1);
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  });
+  const names = [...byName.keys()].sort((a, b) =>
+    a === '未指派' ? 1 : b === '未指派' ? -1 : a.localeCompare(b, 'zh-Hant'));
+  return { names, byName };
+}
+
+function renderWorkloadPanel(body) {
+  const { names, byName } = computeWorkload();
+  if (!names.length) {
+    const empty = document.createElement('div');
+    empty.className = 'panel-empty';
+    const txt = document.createElement('div');
+    txt.className = 'panel-empty-txt';
+    txt.textContent = '沒有進行中的任務';
+    empty.appendChild(txt);
+    body.appendChild(empty);
+    return;
+  }
+  names.forEach(name => {
+    const row = document.createElement('div');
+    row.className = 'task-row';
+    row.appendChild(document.createElement('div'));
+    const nc = document.createElement('div');
+    nc.className = 'name-cell';
+    const av = document.createElement('span');
+    av.className = 'assignee-av';
+    av.style.cssText = `margin-left:0;background:${avColor(name)}`;
+    av.textContent = initials(name);
+    nc.appendChild(av);
+    const nm = document.createElement('span');
+    nm.className = 'tname';
+    nm.textContent = name;
+    nc.appendChild(nm);
+    const cnt = document.createElement('span');
+    cnt.style.cssText = 'font-size:11px;color:var(--t3);margin-left:auto;margin-right:8px;flex-shrink:0';
+    cnt.textContent = byName.get(name).count + ' 項進行中';
+    nc.appendChild(cnt);
+    row.appendChild(nc);
+    body.appendChild(row);
+  });
+}
+
+function renderWorkloadChart(canvas, tw) {
+  const { names, byName } = computeWorkload();
+  const th = Math.max(names.length, 1) * ROW_H;
+  canvas.style.cssText = `width:${tw}px;height:${th}px`;
+  renderGrid(canvas, tw, th);
+
+  const tx = dateToX(TODAY_STR);
+  if (tx >= 0 && tx <= tw) {
+    const line = document.createElement('div');
+    line.className = 'today-line';
+    line.style.cssText = `left:${tx}px;height:${th}px`;
+    const lbl = document.createElement('div');
+    lbl.className = 'today-lbl';
+    lbl.textContent = '今日';
+    line.appendChild(lbl);
+    canvas.appendChild(line);
+  }
+
+  names.forEach(name => {
+    const row = document.createElement('div');
+    row.className = 'chart-row';
+    row.style.width = tw + 'px';
+    byName.get(name).days.forEach((count, day) => {
+      const x = dateToX(day);
+      if (x < -PPD || x > tw) return;
+      const c = document.createElement('div');
+      c.className = 'wl-cell';
+      c.style.cssText = `left:${x}px;width:${PPD}px;background:${
+        count >= 3 ? 'rgba(239,68,68,.55)' : count === 2 ? 'rgba(94,106,210,.5)' : 'rgba(94,106,210,.22)'}`;
+      c.title = `${name}　${day}：${count} 項任務`;
+      if (PPD >= 18) c.textContent = count;
+      row.appendChild(c);
+    });
+    canvas.appendChild(row);
+  });
+  updateStats();
+}
+
 function setChartView(v) {
   milestoneView = v === 'milestone';
+  workloadView = v === 'workload';
   document.querySelectorAll('#chartViewBtns .btn').forEach(b => {
     b.classList.toggle('active', b.dataset.cv === v);
   });
@@ -3132,6 +3244,44 @@ function exportPNG() {
     a.download = filename; a.href = url; a.click();
     setTimeout(()=>URL.revokeObjectURL(url), 2000);
   }, 'image/png');
+}
+
+// 匯出 CSV（UTF-8 BOM，Excel 可直接開啟）
+function exportCSV() {
+  const proj = curProj();
+  if (!proj) return;
+  const lines = [['編號','任務名稱','類型','負責人','開始日期','結束日期','工作日','進度%','前置任務','已完成']];
+  let num = 0;
+  const walk = (parentId, depth) => {
+    tasks.filter(t => t.parent === parentId).forEach(t => {
+      num++;
+      const isGrp = t.type === 'group';
+      const gb = isGrp ? groupBounds(t.id) : null;
+      lines.push([
+        num,
+        '　'.repeat(depth) + t.name,
+        isGrp ? '群組' : t.type === 'milestone' ? '里程碑' : '任務',
+        t.assignee || '',
+        isGrp ? (gb.s || '') : (t.start || t.date || ''),
+        isGrp ? (gb.e || '') : (t.end || t.date || ''),
+        t.type === 'task' && t.start && t.end ? countWorkingDays(t.start, t.end) : '',
+        t.type === 'task' ? (t.done ? 100 : (t.progress || 0)) : '',
+        buildDepsText(t),
+        t.done ? 'V' : ''
+      ]);
+      walk(t.id, depth + 1);
+    });
+  };
+  walk(null, 0);
+  const esc = v => { v = String(v ?? ''); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const csv = '\ufeff' + lines.map(r => r.map(esc).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.download = `gantt-${(proj.name || 'export').replace(/\s+/g, '-')}-${TODAY_STR}.csv`;
+  a.href = url;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 function onSettingBarDatesChange() {
