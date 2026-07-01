@@ -49,8 +49,9 @@ so they're testable in Node. `main.js` passes current state at call sites.
       hasMilestoneDescendant, getRowNum, getTaskByRowNum, getTreeLines
       → **16 node:test tests, all pass**; thin bound wrappers in main.js (zero
       call-site changes); color helpers kept for format.js (1.6)
-- [ ] 1.3 `src/core/deps.js` — wouldCreateCycle, parseDepInput, buildDepsText,
-      lagsFromParsed (4228–4280, 4241–4254) → tests (cycle detection!)
+- [x] 1.3 `src/core/deps.js` — wouldCreateCycle, parseDepInput, buildDepsText,
+      lagsFromParsed → **20 node:test tests, all pass** (cycle detection covered);
+      imports tree.js resolvers; thin bound wrappers in main.js
 - [ ] 1.4 `src/core/critical-path.js` — computeCriticalPath, getCriticalPredTaskIds,
       prevWorkingDay (3017–3147) → tests with known-good CPM cases
 - [ ] 1.5 `src/core/schedule.js` — scheduleTasks, autoScheduleFromDeps,

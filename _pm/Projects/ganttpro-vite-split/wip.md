@@ -2,13 +2,15 @@
 
 ## Status
 
-**Phase 1.1 ✅ (`f82e103`) · Phase 1.2 ✅ (uncommitted).** Next: **Phase 1.3 — `deps.js`.**
+**Phase 1.1–1.3 ✅.** Next: **Phase 1.4 — `critical-path.js` (CPM).**
 
 ## Active
 
-- Phase 1.3 next: `src/core/deps.js` — wouldCreateCycle, parseDepInput,
-  buildDepsText, lagsFromParsed (cycle detection is the high-value test target).
-- **Tooling note**: bypass Prettier-on-write for `.js` surgical edits (use Python).
+- Phase 1.4 next: `src/core/critical-path.js` — computeCriticalPath,
+  getCriticalPredTaskIds, prevWorkingDay. CPM forward/backward pass with
+  known-good test cases (FS/SS/FF/SF + lag).
+- **Tooling**: Prettier-on-write still active. Write=ok for new files;
+  Python surgery for main.js edits.
 
 ## Decisions resolved
 

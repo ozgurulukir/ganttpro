@@ -1,5 +1,6 @@
 import { getHoliday, isNonWorkday, subtractWorkingDays, addWorkingDays, nextWorkingDay, shiftWorkingDays, countWorkingDays } from "./core/calendar.js";
 import * as Tree from "./core/tree.js";
+import * as Deps from "./core/deps.js";
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
@@ -2687,59 +2688,12 @@ function renderDepsMenu() {
 
 function openDepsEditor(task, cell) { openAllDepsEditor(task, cell); }
 
-function buildDepsText(task) {
-  const parts = [];
-  const lagSfx = (type, id) => {
-    const l = (task.lags || {})[type + id] || 0;
-    return l ? (l > 0 ? '+' + l : String(l)) : '';
-  };
-  (task.deps   || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'FS' + lagSfx('FS', id)); });
-  (task.sdeps  || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'SS' + lagSfx('SS', id)); });
-  (task.ffdeps || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'FF' + lagSfx('FF', id)); });
-  (task.sfdeps || []).forEach(id => { const n = getRowNum(id); if (n) parts.push(n + 'SF' + lagSfx('SF', id)); });
-  return parts.join(', ');
-}
+/* deps adapters: pure logic in core/deps.js; bind global state. */
+function buildDepsText(task) { return Deps.buildDepsText(tasks, collapsed, milestoneView, task); }
+function wouldCreateCycle(taskId, newDepId) { return Deps.wouldCreateCycle(tasks, taskId, newDepId); }
 
-function wouldCreateCycle(taskId, newDepId) {
-  // 從 newDepId 出發，沿依賴鏈找，若能到達 taskId 就是循環
-  const visited = new Set();
-  function dfs(id) {
-    if (id === taskId) return true;
-    if (visited.has(id)) return false;
-    visited.add(id);
-    const t = taskById(id);
-    if (!t) return false;
-    const all = [...(t.deps||[]), ...(t.sdeps||[]), ...(t.ffdeps||[]), ...(t.sfdeps||[])];
-    return all.some(dfs);
-  }
-  return dfs(newDepId);
-}
-
-function parseDepInput(val, taskId) {
-  if (!val.trim()) return [];
-  return val.split(',').map(s => {
-    s = s.trim();
-    if (!s) return null;
-    const m = s.toUpperCase().match(/^(\d+)\s*(FS|SS|FF|SF)?\s*([+-]\d+)?$/);
-    if (!m) return { raw: s, err: '格式錯誤（應為：2FS、3SS 或 2FS+3）' };
-    const rowNum = parseInt(m[1]);
-    const type = m[2] || 'FS';
-    const lag = m[3] ? parseInt(m[3]) : 0;
-    const depTask = getTaskByRowNum(rowNum);
-    if (!depTask) return { raw: s, err: `找不到第 ${rowNum} 列任務` };
-    if (depTask.id === taskId) return { raw: s, err: '不能設定自己為前置任務' };
-    if (taskId != null && wouldCreateCycle(taskId, depTask.id))
-      return { raw: s, err: '循環依賴：對方已依賴此任務' };
-    return { rowNum, type, lag, taskId: depTask.id, raw: s };
-  }).filter(Boolean);
-}
-
-// 從解析結果建立 lags 物件（key = 類型+前置任務id，如 FS12）
-function lagsFromParsed(parsed) {
-  const lags = {};
-  parsed.forEach(p => { if (p.lag) lags[p.type + p.taskId] = p.lag; });
-  return lags;
-}
+const { lagsFromParsed } = Deps;
+function parseDepInput(val, taskId) { return Deps.parseDepInput(val, taskId, tasks, collapsed, milestoneView); }
 
 function openAllDepsEditor(task, cell) {
   const wrap = document.createElement('div');

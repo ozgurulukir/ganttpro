@@ -4,6 +4,22 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 1.3: Extract `src/core/deps.js` ✅
+
+- Moved 4 dependency functions to a pure module; imports tree.js resolvers
+  (taskById, getRowNum, getTaskByRowNum). State passed as params.
+- `main.js` keeps thin bound wrappers (zero call-site changes).
+- `tests/deps.test.js`: 20 node:test tests, **all pass** — cycle detection
+  (direct, transitive, sfdeps, pre-existing-cycle visited guard), parse
+  validation (format / not-found / self / cycle errors, multi-entry), lags,
+  and deps-text rendering with +/- lag suffixes.
+- Verified: `node --check` clean, `npm test` 45/45 green, `npm run build` green.
+- **Tooling**: Prettier-on-write is still active (user disable didn't take).
+  Established workflow: Write tool for NEW core/test files (Prettier style ok),
+  Python string surgery for main.js (avoid legacy-file churn).
+
+---
+
 ## 2026-07-02 — Phase 1.2: Extract `src/core/tree.js` ✅
 
 - Moved 12 tree functions to a pure module, parameterized with `tasks`
