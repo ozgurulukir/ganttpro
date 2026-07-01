@@ -23,8 +23,10 @@ Goal: Vite boots, app runs identically to `gantt.html`. No logic change.
       to post-Phase-6** (legacy code would emit hundreds of warnings)
 - [x] 0.9 Verified: `node --check` OK, `npm run build` → dist/ (103 kB JS/34 kB CSS),
       dev server HTTP 200, Firebase scripts preserved in dist
-- [ ] 0.10 **(user)** Browser smoke-test: `npm run dev`, confirm all features identical
-- [ ] 0.11 **(awaiting go-ahead)** Commit: `chore: scaffold vite + mechanical split`
+- [x] 0.10 **(user)** Browser smoke-test: local mode ✅ verified (render/edit/deps/CPM/
+      export all Firebase-independent paths confirmed working). Google login
+      pending Firebase console `localhost` authorized-domain config (not a code issue).
+- [x] 0.11 Commit: `9bec5fa chore: scaffold vite + mechanical split`
 
 **Exit criteria:** single-file app reproduced as Vite project, zero behavior change. ✅
 
@@ -38,10 +40,10 @@ Rule 3 compliance: tests written as each module is extracted.
 Principle: extracted functions take `tasks`/state as **parameters** (not globals),
 so they're testable in Node. `main.js` passes current state at call sites.
 
-- [ ] 1.1 `src/core/calendar.js` — isWeekend, getHoliday, isNonWorkday, dateKey,
+- [x] 1.1 `src/core/calendar.js` — isWeekend, getHoliday, isNonWorkday, dateKey,
       addWorkingDays, subtractWorkingDays, nextWorkingDay, shiftWorkingDays,
-      countWorkingDays, TW_HOLIDAYS, TW_MAKEUP_WORKDAYS (gantt.html 3959–4058)
-      → **tests first** (buggiest; timezone/edge cases)
+      countWorkingDays, TW_HOLIDAYS, TW_MAKEUP_WORKDAYS
+      → **9 node:test characterization tests, all pass**
 - [ ] 1.2 `src/core/tree.js` — taskById, getVisibleRows, groupBounds, groupProgress,
       groupAllDone, isDescendant, getAllDescendants, getTaskDepth,
       hasMilestoneDescendant (1603–1712, 3853–3864, 4507–4513, 4600–4610)

@@ -2,13 +2,12 @@
 
 ## Status
 
-**Phase 0 complete (pending browser smoke-test by user).** Next: **Phase 1 —
-extract pure core + tests.**
+**Phase 0 ✅ committed (`9bec5fa`).** Next: **Phase 1 — extract pure core + tests.**
 
 ## Active
 
-- Awaiting user to run `npm run dev` and smoke-test (0.10), then commit (0.11).
-- After commit, begin Phase 1.1: `src/core/calendar.js` (buggiest) + tests first.
+- Begin Phase 1.1: `src/core/calendar.js` (buggiest) + tests first.
+- Pick test runner at 1.1: `node:test` (Node 24 native) vs vitest.
 
 ## Decisions resolved
 

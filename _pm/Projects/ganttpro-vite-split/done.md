@@ -4,6 +4,19 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 1.1: Extract `src/core/calendar.js` ✅
+
+- Moved 11 symbols (isWeekend, getHoliday, isNonWorkday, dateKey,
+  addWorkingDays, subtractWorkingDays, nextWorkingDay, shiftWorkingDays,
+  countWorkingDays, TW_HOLIDAYS, TW_MAKEUP_WORKDAYS) verbatim to a pure module.
+- Self-contained — no parameterization needed (no globals referenced).
+- `main.js` imports the 7 functions used in logic; window shim regenerated
+  (calendar fns dropped — not onclick-referenced).
+- `tests/calendar.test.js`: 9 node:test characterization tests, **all pass**.
+- Verified: `node --check` both files, `npm test` green, `npm run build` green.
+
+---
+
 ## 2026-07-01 — Phase 0: Scaffold & mechanical split ✅
 
 - Vite 8.1.2 scaffolded (manual file creation — controlled for non-empty dir).
@@ -42,6 +55,6 @@ Newest first. Move items here from todo.md as completed.
 
 ### Pending (user)
 
-- **0.10 Browser smoke-test**: `npm run dev`, confirm all features work
-  identically to `gantt.html` (login, edit, deps, CPM, export, share).
-- **0.11 Commit** (awaiting user go-ahead).
+- **0.10 Browser smoke-test**: local mode ✅; Google login pending Firebase
+  console `localhost` authorized-domain config (not a code issue).
+- **0.11 Commit** ✅ `9bec5fa chore: scaffold vite + mechanical split`.
