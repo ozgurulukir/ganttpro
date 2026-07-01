@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>GanttPro — 專案甘特圖</title>
+<link rel="stylesheet" href="/styles.css">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">G</div>
+      GanttPro
+    </div>
+    <p class="login-subtitle">專案甘特圖管理工具</p>
+
+    <!-- 登入狀態檢查中（Firebase session 恢復前的過渡畫面） -->
+    <div id="authChecking" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:18px 0;color:var(--t3);font-size:13px">
+      <span style="display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></span>
+      檢查登入狀態…
+    </div>
+
+    <!-- 登入面板 -->
+    <div id="loginPanel" style="display:none;flex-direction:column;align-items:center;gap:16px;width:100%">
+      <button class="google-btn" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.083 17.64 11.775 17.64 9.2z" fill="#4285F4"/>
+          <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+          <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+        </svg>
+        使用 Google 帳號登入
+      </button>
+      <p id="loginError" style="color:#e53;font-size:13px;text-align:center;margin:0;display:none"></p>
+      <div style="display:flex;align-items:center;gap:8px;width:100%">
+        <hr style="flex:1;border:none;border-top:1px solid var(--border)">
+        <span style="font-size:11px;color:var(--t4)">或</span>
+        <hr style="flex:1;border:none;border-top:1px solid var(--border)">
+      </div>
+      <button onclick="signInAsGuest()" style="width:100%;padding:10px 0;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--t2);font-size:13px;font-family:inherit;cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--s-hover)'" onmouseout="this.style.background='transparent'">
+        本地模式（不同步雲端）
+      </button>
+    </div>
+
+    <!-- 註冊面板（新用戶 Google 登入後顯示） -->
+    <div id="registerPanel" style="display:none;flex-direction:column;align-items:center;gap:16px;width:100%">
+      <p style="color:var(--t2);font-size:13px;text-align:center;margin:0">歡迎使用 GanttPro！請填寫暱稱完成註冊</p>
+      <input id="registerNickname" type="text" placeholder="請輸入暱稱（最多 20 字）" maxlength="20"
+        onkeydown="if(event.key==='Enter')submitRegister()"
+        style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;
+               background:var(--bg);color:var(--t1);font-size:13px;font-family:inherit;
+               box-sizing:border-box;outline:none">
+      <button class="google-btn" style="width:100%;justify-content:center" onclick="submitRegister()">完成註冊</button>
+      <p id="registerError" style="color:#e53;font-size:13px;text-align:center;margin:0;display:none"></p>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar" id="appToolbar" style="display:none">
+  <div class="logo">
+    <div class="logo-icon">G</div>
+    GanttPro
+  </div>
+  <div class="proj-selector" id="projSelector" onclick="toggleProjMenu(event)">
+    <div class="proj-sel-dot" id="projDot" style="background:#5E6AD2"></div>
+    <span class="proj-sel-name" id="projSelectorName">載入中…</span>
+    <span class="proj-sel-arrow">▾</span>
+    <div class="proj-menu" id="projMenu" onclick="event.stopPropagation()"></div>
+  </div>
+  <button class="btn btn-owner-only proj-share-btn" onclick="openCollabModal()" title="共享此專案">🔗</button>
+  <div class="sep"></div>
+  <button class="btn btn-primary" onclick="openModal()" style="display:none">＋ 新增任務</button>
+  <button class="btn" id="undoBtn" onclick="undo()" title="復原 (⌘Z)" disabled>↩ 復原</button>
+  <button class="btn" onclick="scrollToToday()" title="跳至今日">📍 今日</button>
+  <button class="btn" onclick="expandAll()">⊞ 全展開</button>
+  <button class="btn" onclick="collapseAll()">⊟ 全收合</button>
+  <div class="spacer"></div>
+  <div class="btn-group" id="chartViewBtns">
+    <button class="btn active" data-cv="gantt" onclick="setChartView('gantt')">甘特圖</button>
+    <button class="btn" data-cv="milestone" onclick="setChartView('milestone')">◆ 里程碑</button>
+    <button class="btn" data-cv="workload" onclick="setChartView('workload')">工作量</button>
+  </div>
+  <div class="sep"></div>
+  <div class="btn-group" id="viewBtns">
+    <button class="btn" data-v="day" onclick="setView('day')">日</button>
+    <button class="btn active" data-v="week" onclick="setView('week')">週</button>
+    <button class="btn" data-v="month" onclick="setView('month')">月</button>
+  </div>
+  <button class="btn zoom-btn" onclick="zoomOut()" title="縮小">－</button>
+  <button class="btn zoom-btn" onclick="zoomIn()" title="放大">＋</button>
+  <button class="btn fit-btn" onclick="fitToFrame()" title="縮放至適合視窗"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4.5V1h3.5M8.5 1H12v3.5M12 8.5V12H8.5M4.5 12H1V8.5"/></svg></button>
+  <button class="btn" id="cpBtn" onclick="toggleCriticalPath()" title="顯示關鍵路徑">◆ 關鍵路徑</button>
+  <div class="settings-wrap" id="exportWrap">
+    <button class="btn" onclick="toggleExportMenu()" title="匯出圖檔">⬇ 匯出</button>
+    <div class="settings-panel" id="exportPanel">
+      <button class="settings-action" onclick="exportPNG();closeExportMenu()">🖼 匯出 PNG</button>
+      <button class="settings-action" onclick="exportPDF();closeExportMenu()">📄 匯出 PDF</button>
+      <button class="settings-action" onclick="exportCSV();closeExportMenu()">📊 匯出 CSV (Excel)</button>
+    </div>
+  </div>
+  <div class="readonly-badge">👁 唯讀模式</div>
+  <button class="btn btn-owner-only" id="collabBtn" onclick="openCollabModal()" title="協作管理">👥 協作</button>
+  <button class="btn" id="darkBtn" onclick="toggleDark()" title="深色模式">🌙</button>
+  <div class="settings-wrap" id="settingsWrap">
+    <button class="btn" id="settingsBtn" onclick="toggleSettings()" title="設定">⚙ 設定</button>
+    <div class="settings-panel" id="settingsPanel">
+      <label class="settings-item">
+        <input type="checkbox" id="settingBarDates" checked onchange="onSettingBarDatesChange()">
+        顯示 Bar 日期
+      </label>
+      <label class="settings-item">
+        <input type="checkbox" id="settingBaseline" checked onchange="onSettingBaselineChange()">
+        顯示基準線
+      </label>
+      <div class="settings-sep"></div>
+      <button class="settings-action" onclick="setBaseline();closeSettings()">📐 設定基準線</button>
+      <button class="settings-action btn-owner-only" id="settingVersionBtn" onclick="openVersionPanel();closeSettings()">🕐 版本紀錄</button>
+    </div>
+  </div>
+  <button class="btn" id="adminBtn" onclick="openAdminPanel()" title="管理員面板" style="display:none">👑 Admin</button>
+  <div id="userDisplay"></div>
+  <button class="btn" id="signOutBtn" onclick="signOut()" title="登出" style="display:none">登出</button>
+  <div class="sync-dot" id="syncDot" title="雲端同步狀態"></div>
+</div>
+
+<!-- VERSION PANEL -->
+<div class="ver-backdrop" id="verBackdrop" onclick="closeVersionPanel()"></div>
+<div class="ver-panel" id="verPanel">
+  <div class="ver-head">
+    <span class="ver-head-title">🕐 版本紀錄</span>
+    <button class="ver-close" onclick="closeVersionPanel()">✕</button>
+  </div>
+  <div class="ver-create">
+    <input id="verNameInput" placeholder="版本名稱，如 v1.0 需求確認" maxlength="60"
+      onkeydown="if(event.key==='Enter')createVersion()">
+    <button onclick="createVersion()">建立版本</button>
+  </div>
+  <div class="ver-list" id="verList"></div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="overlay" id="shareOverlay" onclick="closeShareModal()">
+  <div class="modal share-modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeShareModal()">✕</button>
+    <div class="modal-title">🔗 分享專案：<span id="shareModalProjName" style="color:var(--accent);font-size:14px"></span></div>
+    <p class="share-note">將此連結分享給其他人，對方可以唯讀瀏覽此專案，無法進行任何編輯。</p>
+    <div class="share-link-row">
+      <input class="share-link-input" id="shareLinkInput" readonly>
+      <button class="share-copy-btn" onclick="copyShareLink()">複製連結</button>
+    </div>
+    <div class="share-owner-note">💡 此連結為唯讀連結。只有您（專案建立者）在一般模式下可以編輯。</div>
+  </div>
+</div>
+
+<!-- COLLAB MODAL -->
+<div class="collab-overlay" id="collabOverlay" onclick="closeCollabModal()">
+  <div class="collab-box" onclick="event.stopPropagation()">
+    <div class="collab-title">🔗 共享管理</div>
+    <div class="collab-proj-row">
+      <label class="collab-proj-label">專案</label>
+      <select id="collabProjSelect" class="collab-proj-select" onchange="onCollabProjChange()"></select>
+    </div>
+    <div class="collab-share-list" id="collabShareList"></div>
+    <div class="collab-add-row">
+      <input id="collabEmailInput" type="email" placeholder="輸入對方的 Gmail 帳號" onkeydown="if(event.key==='Enter')addShare()">
+      <select id="collabPermSelect">
+        <option value="read">唯讀</option>
+        <option value="edit">共同編輯</option>
+      </select>
+      <button class="btn btn-primary" onclick="addShare()">加入</button>
+    </div>
+    <p id="collabMsg" style="font-size:12px;color:#E53;margin:8px 0 0;display:none"></p>
+    <div class="collab-footer">
+      <button class="btn" onclick="closeCollabModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-overlay" id="adminOverlay" onclick="closeAdminPanel()">
+  <div class="admin-box" onclick="event.stopPropagation()">
+    <div class="admin-title">👑 用戶管理
+      <span style="font-size:12px;font-weight:400;color:var(--t3)" id="adminUserCount"></span>
+    </div>
+    <div style="overflow-y:auto;flex:1">
+      <table class="admin-table">
+        <thead><tr>
+          <th>暱稱</th><th>Email</th><th>身份</th><th>加入時間</th><th></th>
+        </tr></thead>
+        <tbody id="adminUserList"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px">
+      <button class="btn" onclick="closeAdminPanel()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT HEADER (visible only when printing) -->
+<div id="printHeader">
+  <h2 id="printProjName"></h2>
+  <p id="printMeta"></p>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="main" style="display:none">
+  <!-- Left: Task Panel -->
+  <div class="task-panel" id="taskPanel">
+    <div class="task-thead">
+      <div class="task-thead-r">
+        <span class="th" style="text-align:center">#</span>
+        <div class="th th-col">任務名稱<div class="col-rsz" data-ci="1"></div></div>
+        <div class="th th-col">開始日期<div class="col-rsz" data-ci="2"></div></div>
+        <div class="th th-col">結束日期<div class="col-rsz" data-ci="3"></div></div>
+        <div class="th th-col" style="justify-content:center">工作日<div class="col-rsz" data-ci="4"></div></div>
+        <div class="th th-col">前置任務<div class="col-rsz" data-ci="5"></div></div>
+        <span class="th" style="text-align:center">完成</span>
+        <span></span>
+      </div>
+      <div class="task-thead-r">
+        <span></span>
+        <span class="th-sub">共 <b id="taskCount">0</b> 項任務</span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+    <div class="task-body" id="taskBody"></div>
+  </div>
+
+  <!-- Resize handle -->
+  <div class="resizer" id="resizer"></div>
+
+  <!-- Right: Chart Panel -->
+  <div class="chart-panel" id="chartPanel">
+    <div class="chart-scroll" id="chartScroll">
+      <div class="chart-head" id="chartHead"></div>
+      <div class="chart-canvas" id="chartCanvas"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div class="stat"><div class="stat-dot" style="background:#10B981"></div>已完成 <b id="sDone">0</b></div>
+  <div class="stat"><div class="stat-dot" style="background:#9CA3AF"></div>待完成 <b id="sPending">0</b></div>
+  <div class="stat"><div class="stat-dot" style="background:#5E6AD2"></div>里程碑 <b id="sMilestone">0</b></div>
+  <div class="spacer"></div>
+  <div class="stat">今日：<b id="sTodayDisplay"></b></div>
+  <div class="stat">專案期間：<b id="sPeriod">2026-04-01 — 2026-07-31</b></div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="overlay" id="deleteOverlay" onclick="closeDeleteModal(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="width:320px;padding:20px 20px 16px">
+    <div class="modal-title" style="font-size:14px;margin-bottom:6px">刪除任務</div>
+    <p id="deleteModalMsg" style="font-size:12px;color:var(--t3);margin:0 0 18px;line-height:1.5">此操作無法復原。</p>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="closeDeleteModal()" style="height:28px;padding:0 12px;border-radius:5px;font-size:12px;border:1px solid var(--border);background:var(--surface);color:var(--t2);cursor:pointer">取消</button>
+      <button id="deleteConfirmBtn" style="height:28px;padding:0 12px;border-radius:5px;font-size:12px;border:none;background:var(--red);color:#fff;cursor:pointer">刪除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TASK MODAL -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()" title="關閉">✕</button>
+    <div class="modal-title" id="modal-title">＋ 新增任務</div>
+    <div class="form-row">
+      <label class="form-lbl">任務名稱</label>
+      <input class="form-ctrl" id="fName" placeholder="輸入任務名稱...">
+    </div>
+    <div class="form-row-2" style="grid-template-columns:1fr 1fr">
+      <div>
+        <label class="form-lbl">類型</label>
+        <select class="form-ctrl" id="fType" onchange="updateModalForType()">
+          <option value="task">一般任務</option>
+          <option value="milestone">里程碑</option>
+          <option value="group">群組</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-lbl">父群組</label>
+        <select class="form-ctrl" id="fParent"></select>
+      </div>
+    </div>
+    <div class="form-row-2" id="rowDates" style="grid-template-columns:1fr 1fr 80px">
+      <div>
+        <label class="form-lbl" id="lblStart">開始日期</label>
+        <input class="form-ctrl" type="date" id="fStart" value="2026-05-07">
+      </div>
+      <div id="colEnd">
+        <label class="form-lbl">結束日期</label>
+        <input class="form-ctrl" type="date" id="fEnd" value="2026-05-14">
+      </div>
+      <div id="colWday">
+        <label class="form-lbl">工作日</label>
+        <input class="form-ctrl" type="number" id="fWday" min="1" value="6" style="text-align:center">
+      </div>
+    </div>
+    <div class="form-row" id="rowDeps">
+      <label class="form-lbl">前置任務</label>
+      <div id="fDepsWrap">
+        <input class="form-ctrl" id="fDeps" placeholder="輸入列號（如 2、2SS、2FS+3）或從下方選擇" autocomplete="off">
+        <div id="fDepsList" onmousedown="event.preventDefault()"></div>
+      </div>
+      <div id="fDepsTip" style="font-size:11px;color:var(--t3);margin-top:4px;line-height:1.5"></div>
+    </div>
+    <div class="form-row" id="rowAssignee">
+      <label class="form-lbl">負責人</label>
+      <input class="form-ctrl" id="fAssignee" list="assigneeList" placeholder="輸入姓名（選填）" autocomplete="off">
+      <datalist id="assigneeList"></datalist>
+    </div>
+    <div class="form-row" id="rowDone" style="display:flex;align-items:center;gap:10px;margin-bottom:0">
+      <label class="form-lbl" style="margin-bottom:0">已完成</label>
+      <div class="check-box" id="fDone" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'✓':'';if(this.classList.contains('done'))document.getElementById('fProgress').value=100"></div>
+      <label class="form-lbl" style="margin-bottom:0;margin-left:14px">進度</label>
+      <input class="form-ctrl" type="number" id="fProgress" min="0" max="100" step="5" value="0" style="width:70px;text-align:center">
+      <span style="font-size:12px;color:var(--t3)">%</span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" id="modal-submit" onclick="submitTask()">新增任務</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW PROJECT MODAL -->
+<div class="overlay" id="projOverlay" onclick="closeProjModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeProjModal()" title="關閉">✕</button>
+    <div class="modal-title" id="projModalTitle">◆ 建立新專案</div>
+    <div class="form-row">
+      <label class="form-lbl">專案名稱</label>
+      <input class="form-ctrl" id="pName" placeholder="例：網站改版計畫、Q3 行銷活動...">
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">開始日期</label>
+      <input class="form-ctrl" type="date" id="pStart" value="2026-05-06">
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">套用範本</label>
+      <select class="form-ctrl" id="pTemplate" onchange="onTemplateChange()">
+        <option value="">— 空白專案 —</option>
+      </select>
+    </div>
+    <div id="templatePreview" style="display:none;margin:4px 0 0;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--t3);line-height:1.6"></div>
+    <div class="form-row">
+      <label class="form-lbl">專案顏色</label>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px" id="projColorPreview">
+        <div id="projColorDot" style="width:20px;height:20px;border-radius:50%;background:#5E6AD2;flex-shrink:0"></div>
+        <span style="font-size:12px;color:var(--t3)">自動分配（依色盤順序）</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeProjModal()">取消</button>
+      <button class="btn btn-primary" id="projSubmitBtn" onclick="submitProject()">建立專案</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip"></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

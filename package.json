@@ -1,0 +1,18 @@
+{
+  "name": "ganttpro",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "GanttPro — 專案甘特圖管理工具",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.9.4",
+    "vite": "^8.1.2"
+  }
+}
