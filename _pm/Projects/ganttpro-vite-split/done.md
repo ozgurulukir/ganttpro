@@ -4,6 +4,21 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 1.2: Extract `src/core/tree.js` ✅
+
+- Moved 12 tree functions to a pure module, parameterized with `tasks`
+  (+ `collapsed`, `milestoneView` for getVisibleRows / getRowNum / getTaskByRowNum).
+- `main.js` keeps thin bound wrappers (close over global `tasks` / `collapsed` /
+  `milestoneView`) so ~95 call sites are unchanged; removed when state.js lands (2.x).
+- Color helpers (darkenColor, hexToRgba) left in main.js → format.js in Phase 1.6.
+- `tests/tree.test.js`: 16 node:test characterization tests, **all pass**.
+- Verified: `node --check` both files, `npm test` 25/25 green, `npm run build` green.
+- **Discovery**: Edit/Write tools run Prettier on `.js` save → whole-file reformat
+  (+1576 lines churn). Bypassed via Python string surgery to keep the diff minimal
+  (15 ins / 125 del). All future `.js` surgical edits must bypass the formatter.
+
+---
+
 ## 2026-07-02 — Phase 1.1: Extract `src/core/calendar.js` ✅
 
 - Moved 11 symbols (isWeekend, getHoliday, isNonWorkday, dateKey,

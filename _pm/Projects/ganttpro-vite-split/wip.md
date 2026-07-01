@@ -2,12 +2,13 @@
 
 ## Status
 
-**Phase 0 ✅ committed (`9bec5fa`).** Next: **Phase 1 — extract pure core + tests.**
+**Phase 1.1 ✅ (`f82e103`) · Phase 1.2 ✅ (uncommitted).** Next: **Phase 1.3 — `deps.js`.**
 
 ## Active
 
-- Begin Phase 1.1: `src/core/calendar.js` (buggiest) + tests first.
-- Pick test runner at 1.1: `node:test` (Node 24 native) vs vitest.
+- Phase 1.3 next: `src/core/deps.js` — wouldCreateCycle, parseDepInput,
+  buildDepsText, lagsFromParsed (cycle detection is the high-value test target).
+- **Tooling note**: bypass Prettier-on-write for `.js` surgical edits (use Python).
 
 ## Decisions resolved
 

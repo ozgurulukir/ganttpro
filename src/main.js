@@ -1,4 +1,5 @@
 import { getHoliday, isNonWorkday, subtractWorkingDays, addWorkingDays, nextWorkingDay, shiftWorkingDays, countWorkingDays } from "./core/calendar.js";
+import * as Tree from "./core/tree.js";
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
@@ -249,30 +250,20 @@ function avColor(name) {
   return AV_PALETTE[h % AV_PALETTE.length];
 }
 
-function taskById(id) {
-  return tasks.find(t => t.id === id);
-}
-
-function getTreeLines(rows, idx) {
-  const d = rows[idx].depth;
-  if (d === 0) return [];
-  const types = [];
-  for (let col = 0; col < d - 1; col++) {
-    let hasPipe = false;
-    for (let j = idx + 1; j < rows.length; j++) {
-      if (rows[j].depth <= col) break;
-      if (rows[j].depth === col + 1) { hasPipe = true; break; }
-    }
-    types.push(hasPipe ? 'pipe' : 'space');
-  }
-  let isLast = true;
-  for (let j = idx + 1; j < rows.length; j++) {
-    if (rows[j].depth < d) break;
-    if (rows[j].depth === d) { isLast = false; break; }
-  }
-  types.push(isLast ? 'last' : 'fork');
-  return types;
-}
+/* tree-query adapters: pure logic in core/tree.js; bind global state.
+   Removed when state.js lands (Phase 2.x). */
+const { getTreeLines } = Tree;
+function taskById(id) { return Tree.taskById(tasks, id); }
+function hasMilestoneDescendant(id) { return Tree.hasMilestoneDescendant(tasks, id); }
+function getRowNum(taskId) { return Tree.getRowNum(tasks, collapsed, milestoneView, taskId); }
+function getTaskByRowNum(num) { return Tree.getTaskByRowNum(tasks, collapsed, milestoneView, num); }
+function getVisibleRows() { return Tree.getVisibleRows(tasks, collapsed, milestoneView); }
+function groupAllDone(id) { return Tree.groupAllDone(tasks, id); }
+function groupBounds(id) { return Tree.groupBounds(tasks, id); }
+function groupProgress(id) { return Tree.groupProgress(tasks, id); }
+function getAllDescendants(id) { return Tree.getAllDescendants(tasks, id); }
+function isDescendant(ancestorId, checkId) { return Tree.isDescendant(tasks, ancestorId, checkId); }
+function getTaskDepth(id) { return Tree.getTaskDepth(tasks, id); }
 
 function darkenColor(hex, amount = 0.35) {
   const h = hex.replace('#', '');
@@ -282,82 +273,12 @@ function darkenColor(hex, amount = 0.35) {
   return `rgb(${Math.round(r*(1-amount))},${Math.round(g*(1-amount))},${Math.round(b*(1-amount))})`;
 }
 
-function hasMilestoneDescendant(id) {
-  for (const t of tasks.filter(t => t.parent === id)) {
-    if (t.type === 'milestone') return true;
-    if (t.type === 'group' && hasMilestoneDescendant(t.id)) return true;
-  }
-  return false;
-}
-
 function hexToRgba(hex, alpha) {
   if (!hex || hex.length < 7) return `rgba(94,106,210,${alpha})`;
   const r = parseInt(hex.slice(1,3), 16);
   const g = parseInt(hex.slice(3,5), 16);
   const b = parseInt(hex.slice(5,7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
-}
-
-function getRowNum(taskId) {
-  const rows = getVisibleRows();
-  const idx = rows.findIndex(r => r.task.id === taskId);
-  return idx >= 0 ? idx + 1 : null;
-}
-
-function getTaskByRowNum(num) {
-  const rows = getVisibleRows();
-  return rows[num - 1]?.task ?? null;
-}
-
-function getVisibleRows() {
-  if (milestoneView) {
-    return tasks
-      .filter(t => t.type === 'milestone' && !t.done)
-      .sort((a, b) => (a.date || '') < (b.date || '') ? -1 : 1)
-      .map(t => ({ task: t, depth: 0 }));
-  }
-  const rows = [];
-  function addChildren(parentId, depth) {
-    tasks.filter(t => t.parent === parentId).forEach(t => {
-      rows.push({ task: t, depth });
-      if (!collapsed.has(t.id) && tasks.some(c => c.parent === t.id)) {
-        addChildren(t.id, depth + 1);
-      }
-    });
-  }
-  addChildren(null, 0);
-  return rows;
-}
-
-function groupAllDone(id) {
-  const children = tasks.filter(t => t.parent === id && t.type === 'task');
-  return children.length > 0 && children.every(t => t.done);
-}
-
-function groupBounds(id) {
-  let s = null, e = null;
-  tasks.filter(t => t.parent === id).forEach(t => {
-    if (t.type === 'task') {
-      if (!s || t.start < s) s = t.start;
-      if (!e || t.end > e) e = t.end;
-    } else if (t.type === 'milestone') {
-      if (!s || t.date < s) s = t.date;
-      if (!e || t.date > e) e = t.date;
-    } else if (t.type === 'group') {
-      const b = groupBounds(t.id);
-      if (b.s && (!s || b.s < s)) s = b.s;
-      if (b.e && (!e || b.e > e)) e = b.e;
-    }
-  });
-  return { s, e };
-}
-
-// 群組整體進度：所有後代 task 的進度平均
-function groupProgress(id) {
-  const ts = getAllDescendants(id).map(taskById).filter(t => t && t.type === 'task');
-  if (!ts.length) return 0;
-  const sum = ts.reduce((a, t) => a + (t.done ? 100 : (t.progress || 0)), 0);
-  return Math.round(sum / ts.length);
 }
 
 /* ═══════════════════════════════════════════
@@ -2503,18 +2424,6 @@ function closeDeleteModal(e) {
   }
 }
 
-function getAllDescendants(id) {
-  const result = [];
-  function collect(parentId) {
-    tasks.filter(t => t.parent === parentId).forEach(t => {
-      result.push(t.id);
-      collect(t.id);
-    });
-  }
-  collect(id);
-  return result;
-}
-
 function executeDeleteTask(id) {
   document.getElementById('deleteOverlay').classList.remove('open');
   _deleteTargetId = null;
@@ -3057,13 +2966,6 @@ function autoScheduleFromDeps(task) {
   }
 }
 
-function isDescendant(ancestorId, checkId) {
-  const t = taskById(checkId);
-  if (!t || t.parent === null) return false;
-  if (t.parent === ancestorId) return true;
-  return isDescendant(ancestorId, t.parent);
-}
-
 function reorderTask(srcId, targetId, insertBefore) {
   const src = taskById(srcId);
   const target = taskById(targetId);
@@ -3148,17 +3050,6 @@ function showStatus(msg) {
   el.style.opacity = '1';
   clearTimeout(el._t);
   el._t = setTimeout(() => el.style.opacity = '0', 2000);
-}
-
-function getTaskDepth(id) {
-  let depth = 0, cur = taskById(id), seen = new Set();
-  while (cur && cur.parent !== null) {
-    if (seen.has(cur.id)) break; // circular reference guard
-    seen.add(cur.id);
-    depth++;
-    cur = taskById(cur.parent);
-  }
-  return depth;
 }
 
 function indentTask(id) {
@@ -4478,7 +4369,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
-
 
 /* ── PHASE 0 COMPAT SHIM ──────────────────────────────────────
    Module scope hides these from window; inline onclick handlers

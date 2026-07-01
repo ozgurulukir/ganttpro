@@ -44,10 +44,11 @@ so they're testable in Node. `main.js` passes current state at call sites.
       addWorkingDays, subtractWorkingDays, nextWorkingDay, shiftWorkingDays,
       countWorkingDays, TW_HOLIDAYS, TW_MAKEUP_WORKDAYS
       → **9 node:test characterization tests, all pass**
-- [ ] 1.2 `src/core/tree.js` — taskById, getVisibleRows, groupBounds, groupProgress,
+- [x] 1.2 `src/core/tree.js` — taskById, getVisibleRows, groupBounds, groupProgress,
       groupAllDone, isDescendant, getAllDescendants, getTaskDepth,
-      hasMilestoneDescendant (1603–1712, 3853–3864, 4507–4513, 4600–4610)
-      → tests
+      hasMilestoneDescendant, getRowNum, getTaskByRowNum, getTreeLines
+      → **16 node:test tests, all pass**; thin bound wrappers in main.js (zero
+      call-site changes); color helpers kept for format.js (1.6)
 - [ ] 1.3 `src/core/deps.js` — wouldCreateCycle, parseDepInput, buildDepsText,
       lagsFromParsed (4228–4280, 4241–4254) → tests (cycle detection!)
 - [ ] 1.4 `src/core/critical-path.js` — computeCriticalPath, getCriticalPredTaskIds,
