@@ -1,0 +1,287 @@
+/* Project CRUD: switch, create, edit, delete, menu rendering. */
+import { D } from '../render/deps.js';
+
+let _editingProjId = null;
+
+export function switchProject(id) {
+  const { currentProjId, projects, closeProjMenuOnly, loadProject, updateReadOnly, updateProjUI, scheduleTasks, recalcProjEnd, render, scrollToToday } = D;
+  if (id === currentProjId) { closeProjMenuOnly(); return; }
+  const proj = projects.find(p => p.id === id);
+  if (!proj) return;
+  loadProject(proj);
+  closeProjMenuOnly();
+  updateReadOnly();
+  updateProjUI();
+  scheduleTasks();
+  recalcProjEnd();
+  render();
+  setTimeout(scrollToToday, 80);
+}
+
+export function updateProjUI() {
+  const { projects, currentProjId, setCurrentProjId, updateReadOnly } = D;
+  let p = projects.find(x => x.id === currentProjId);
+  if (!p) {
+    const fallback = projects.find(x => !x._isShared) || projects[0];
+    if (!fallback) {
+      // No projects at all — clear header and show create modal
+      document.getElementById('projSelectorName').textContent = '— 無專案 —';
+      document.getElementById('projDot').style.background = '#999';
+      renderProjMenu();
+      return;
+    }
+    p = fallback;
+    setCurrentProjId(p.id);
+  }
+  document.getElementById('projSelectorName').textContent = p.name;
+  document.getElementById('projDot').style.background = p.color;
+  document.getElementById('sPeriod').textContent = `${p.startDate} — ${p.endDate}`;
+  updateReadOnly();
+}
+
+export function toggleProjMenu(e) {
+  const menu = document.getElementById('projMenu');
+  const sel  = document.getElementById('projSelector');
+  const isOpen = menu.classList.contains('open');
+  if (isOpen) { closeProjMenuOnly(); return; }
+  renderProjMenu();
+  menu.classList.add('open');
+  sel.classList.add('open');
+  // Close when clicking outside
+  setTimeout(() => document.addEventListener('click', closeProjOnOutside, { once: true }), 0);
+}
+
+export function closeProjOnOutside(e) {
+  if (!document.getElementById('projSelector').contains(e.target)) closeProjMenuOnly();
+  else document.addEventListener('click', closeProjOnOutside, { once: true });
+}
+
+export function closeProjMenuOnly() {
+  document.getElementById('projMenu').classList.remove('open');
+  document.getElementById('projSelector').classList.remove('open');
+}
+
+export function renderProjMenu() {
+  const { projects, currentProjId } = D;
+  const menu = document.getElementById('projMenu');
+  menu.innerHTML = '';
+  projects.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'proj-item' + (p.id === currentProjId ? ' active' : '');
+    item.innerHTML = `
+      <div class="proj-item-dot" style="background:${p.color}"></div>
+      <span class="proj-item-name">${p.name}${p._isShared ? ' <span class="collab-shared-badge">共享</span>' : ''}</span>
+      ${!p._isShared ? `<span class="proj-item-edit" onclick="openEditProjModal(${p.id},event)" title="編輯此專案">✎</span>` : ''}
+      ${!p._isShared ? `<span class="proj-item-del" onclick="deleteProject(${p.id},event)" title="刪除此專案">✕</span>` : ''}
+    `;
+    item.addEventListener('click', () => switchProject(p.id));
+    menu.appendChild(item);
+  });
+  const div = document.createElement('div'); div.className = 'proj-menu-div';
+  menu.appendChild(div);
+  const add = document.createElement('div');
+  add.className = 'proj-item proj-item-new';
+  add.innerHTML = '＋ 建立新專案';
+  add.onclick = () => { closeProjMenuOnly(); openProjModal(); };
+  menu.appendChild(add);
+}
+
+export function deleteProject(id, e) {
+  const { projects, currentProjId, setProjects, resetState, closeProjMenuOnly, switchProject, saveToCloud, updateProjUI, renderProjMenu, render } = D;
+  e.stopPropagation();
+  const p = projects.find(x => x.id === id);
+  if (!p || p._isShared) return;
+  if (!confirm(`確定要刪除「${p.name}」嗎？此操作無法復原。`)) return;
+  setProjects(projects.filter(x => x.id !== id));
+  closeProjMenuOnly();
+  const ownedLeft = D.projects.filter(x => !x._isShared);
+  if (ownedLeft.length === 0) {
+    // 全部刪完：重置狀態，更新 header
+    resetState();
+    saveToCloud();
+    updateProjUI();
+    renderProjMenu();
+    render();
+  } else if (id === currentProjId) {
+    switchProject((ownedLeft[0] || D.projects[0]).id);
+    saveToCloud();
+  } else {
+    renderProjMenu();
+    saveToCloud();
+  }
+}
+
+export function openEditProjModal(id, e) {
+  const { projects } = D;
+  if (e) e.stopPropagation();
+  closeProjMenuOnly();
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+  _editingProjId = id;
+  document.getElementById('projModalTitle').textContent = '✎ 編輯專案';
+  document.getElementById('projSubmitBtn').textContent = '儲存';
+  document.getElementById('pName').value = p.name;
+  document.getElementById('pStart').value = p.startDate;
+  document.getElementById('projColorDot').style.background = p.color;
+  // 隱藏範本選擇（僅建立時使用）
+  const tplRow = document.getElementById('tplRow');
+  if (tplRow) tplRow.style.display = 'none';
+  const preview = document.getElementById('templatePreview');
+  if (preview) preview.style.display = 'none';
+  document.getElementById('projOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('pName').focus(), 50);
+}
+
+export function openProjModal() {
+  const { TODAY_STR, TEMPLATES, getNextGroupColor } = D;
+  _editingProjId = null;
+  document.getElementById('projModalTitle').textContent = '◆ 建立新專案';
+  document.getElementById('projSubmitBtn').textContent = '建立專案';
+  document.getElementById('pName').value = '';
+  document.getElementById('pStart').value = TODAY_STR;
+
+  // Inject template row dynamically (handles browser HTML cache)
+  if (!document.getElementById('pTemplate')) {
+    const startRow = document.getElementById('pStart').closest('.form-row');
+    const tplRow = document.createElement('div');
+    tplRow.className = 'form-row';
+    tplRow.id = 'tplRow';
+    tplRow.innerHTML =
+      '<label class="form-lbl">套用範本</label>' +
+      '<select class="form-ctrl" id="pTemplate" onchange="onTemplateChange()">' +
+      '<option value="">— 空白專案 —</option></select>';
+    startRow.insertAdjacentElement('afterend', tplRow);
+    const prevDiv = document.createElement('div');
+    prevDiv.id = 'templatePreview';
+    prevDiv.style.cssText = 'display:none;margin:4px 0 0;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--t3);line-height:1.6';
+    tplRow.insertAdjacentElement('afterend', prevDiv);
+  }
+
+  // Fill template options
+  const sel = document.getElementById('pTemplate');
+  sel.innerHTML = '<option value="">— 空白專案 —</option>' +
+    TEMPLATES.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  sel.value = '';
+  document.getElementById('templatePreview').style.display = 'none';
+  // Preview the color that will be auto-assigned
+  const nextColor = getNextGroupColor();
+  document.getElementById('projColorDot').style.background = nextColor;
+  const tplRow = document.getElementById('tplRow');
+  if (tplRow) tplRow.style.display = '';
+  document.getElementById('projOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('pName').focus(), 50);
+}
+
+export function onTemplateChange() {
+  const { TEMPLATES, getNextGroupColor } = D;
+  const val = document.getElementById('pTemplate').value;
+  const preview = document.getElementById('templatePreview');
+  const tpl = TEMPLATES.find(t => t.id === val);
+  if (!tpl) { preview.style.display = 'none'; return; }
+  // Count tasks by type
+  const groups = tpl.tasks.filter(t => t.type === 'group' && t.parent !== null).length;
+  const tasks  = tpl.tasks.filter(t => t.type === 'task').length;
+  const miles  = tpl.tasks.filter(t => t.type === 'milestone').length;
+  // List phase names (top-level groups)
+  const phases = tpl.tasks.filter(t => t.type === 'group' && t.parent === 1)
+    .map(t => t.name).join('　→　');
+  preview.innerHTML = `<b>範本內容：</b>${groups} 個階段、${tasks} 個任務、${miles} 個里程碑<br>
+    <span style="color:var(--t4)">${phases}</span>`;
+  preview.style.display = '';
+  // Auto-fill name if empty (use short default, not full template name)
+  const nameEl = document.getElementById('pName');
+  if (!nameEl.value.trim()) {
+    const today = new Date();
+    const ym = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
+    nameEl.value = (tpl.defaultName || tpl.name.split('（')[0]) + ' ' + ym;
+    setTimeout(() => { nameEl.select(); }, 60);
+  }
+  // Update color dot to template color
+  document.getElementById('projColorDot').style.background = tpl.color || getNextGroupColor();
+}
+
+export function closeProjModal(e) {
+  if (!e || e.target === document.getElementById('projOverlay'))
+    document.getElementById('projOverlay').classList.remove('open');
+}
+
+export function selectColor(el) {
+  document.querySelectorAll('.color-opt').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+}
+
+export function submitProject() {
+  const { projects, nextProjId, getOwnerId, getNextGroupColor, TEMPLATES, loadProject, setChartStart, setChartEnd, curProj, scheduleTasks, recalcProjEnd, updateProjUI, render, saveToLS, saveToCloud, currentUser } = D;
+  const name = document.getElementById('pName').value.trim();
+  if (!name) { document.getElementById('pName').focus(); return; }
+  const start = document.getElementById('pStart').value;
+
+  // 重複名稱提醒
+  const dupName = projects.some(p => p.id !== _editingProjId && p.name === name);
+  if (dupName && !confirm(`已有名稱為「${name}」的專案，重複名稱容易混淆，建議改用不同名稱。\n\n仍要使用這個名稱嗎？`)) {
+    document.getElementById('pName').focus();
+    return;
+  }
+
+  // 編輯模式：更新現有專案
+  if (_editingProjId !== null) {
+    const p = projects.find(x => x.id === _editingProjId);
+    if (p) {
+      p.name = name;
+      p.startDate = start;
+      setChartStart(new Date(start));
+      scheduleTasks();
+      recalcProjEnd();
+      updateProjUI();
+      render();
+      saveToLS();
+      if (currentUser) saveToCloud();
+    }
+    document.getElementById('projOverlay').classList.remove('open');
+    _editingProjId = null;
+    return;
+  }
+
+  const tplId   = document.getElementById('pTemplate').value;
+  const tpl     = TEMPLATES.find(t => t.id === tplId);
+  const color   = tpl ? tpl.color : getNextGroupColor();
+
+  let projTasks, projNextId;
+  if (tpl) {
+    // Deep-clone template tasks, replace root group name with project name
+    projTasks = JSON.parse(JSON.stringify(tpl.tasks));
+    projTasks[0].name = name;
+    projTasks[0].color = color;
+    projNextId = Math.max(...projTasks.map(t => t.id)) + 1;
+  } else {
+    projTasks  = [{ id:1, name, type:'group', parent:null, color, assignee:'' }];
+    projNextId = 2;
+  }
+
+  // Default end = start + 12 months for template, 3 months for blank
+  const d = new Date(start);
+  d.setMonth(d.getMonth() + (tpl ? 12 : 3));
+  const end = d.toISOString().slice(0, 10);
+
+  const newProj = {
+    id: nextProjId,
+    name, color,
+    startDate: start,
+    endDate: end,
+    nextId: projNextId,
+    ownerId: getOwnerId(),
+    tasks: projTasks
+  };
+  projects.push(newProj);
+  document.getElementById('projOverlay').classList.remove('open');
+  if (curProj()) curProj().nextId = D.nextId; // 儲存舊專案的 nextId
+  loadProject(newProj);
+  setChartStart(new Date(start));
+  setChartEnd(new Date(end));
+  scheduleTasks();
+  recalcProjEnd();
+  updateProjUI();
+  render();
+  saveToLS();
+  if (currentUser) saveToCloud();
+}

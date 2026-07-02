@@ -2,15 +2,12 @@
 
 ## Status
 
-**Phase 5 PLANNED — ready to execute.** See todo.md § Phase 5 for function-level
-breakdown with current main.js line numbers.
+**Phase 5 COMPLETE ✅ (UI & interactions extraction).** Next: **Phase 6 — Replace inline onclick.**
 
 ## Active
 
-- Phase 5: extract UI & interactions (4 modules, ~1290 lines).
-  Order: 5.1 modal.js → 5.2 project.js → 5.3 settings.js → 5.4 interactions.js.
-  Same D-object pattern as Phase 4. Key D additions: editingTaskId, selectedDeps,
-  depsExcludeId, viewMode, PPDS, zoom, projects, currentProjId, nextId, isDark.
+- Phase 6: replace inline `onclick="fn()"` in index.html with `addEventListener`.
+  Enables removing the ~187-entry window shim. Required before tree-shaking pays off.
 
 ## Decisions resolved
 

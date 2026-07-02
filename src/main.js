@@ -14,6 +14,29 @@ import { renderArrows } from "./render/arrows.js";
 import { renderChartHeader } from "./render/chart-header.js";
 import { renderChartBody } from "./render/chart-body.js";
 import { renderTaskPanel } from "./render/task-panel.js";
+import {
+  populateModal, syncWday, syncEndFromWday, updateModalForType,
+  setupDepsInputListener, renderDepsDropdown, addDepToInput,
+  openModal, openModalUnder, openEditModal, closeModal,
+  openNameEditor, openDateEditor, openStartEditor, openEndEditor, openWdayEditor,
+  addTaskInline, confirmDeleteTask, closeDeleteModal, executeDeleteTask,
+  submitTask, toggleDepsMenu, closeDepsOutside, toggleDepOpt, removeDepTag,
+  updateDepsTags, renderDepsMenu, openDepsEditor, openAllDepsEditor,
+} from "./ui/modal.js";
+import {
+  switchProject, updateProjUI, toggleProjMenu, closeProjOnOutside,
+  closeProjMenuOnly, renderProjMenu, deleteProject, openEditProjModal,
+  openProjModal, onTemplateChange, closeProjModal, selectColor, submitProject,
+} from "./ui/project.js";
+import {
+  onSettingBarDatesChange, onSettingBaselineChange, setBaseline,
+  toggleSettings, toggleExportMenu, closeExportMenu, closeSettings,
+  applyZoom, zoomIn, zoomOut, fitToFrame, scrollToToday,
+  updateStats, toggleDark,
+  curVersions, openVersionPanel, closeVersionPanel,
+  createVersion, restoreVersion, deleteVersion, renderVersionList,
+} from "./ui/settings.js";
+import { setupSync, applyColGrid, setupColResizers, setupResizer } from "./interactions.js";
 import { auth, googleProvider } from "./data/firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import * as Local from "./data/local.js";
@@ -210,10 +233,6 @@ function curProj() { return projects.find(p => p.id === currentProjId); }
 ═══════════════════════════════════════════ */
 let collapsed = new Set();
 let isDark = false;
-let editingTaskId = null;
-let selectedDeps = new Set();
-let depsExcludeId = null;
-let selectedSdeps = new Set();
 
 /* ─── UNDO HISTORY ─── */
 const MAX_HISTORY = 50;
@@ -599,779 +618,12 @@ function exportCSV() {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
-
-function onSettingBarDatesChange() {
-  showBarDates = document.getElementById('settingBarDates').checked;
-  render();
-}
-
-let showBaseline = true;
-function onSettingBaselineChange() {
-  showBaseline = document.getElementById('settingBaseline').checked;
-  render();
-}
-
-// 設定基準線：快照所有任務目前的日期，之後排程變動時可比對偏差
-function setBaseline() {
-  const p = curProj();
-  if (!p || isReadOnly) return;
-  const dates = {};
-  tasks.forEach(t => {
-    if (t.type === 'task' && t.start && t.end) dates[t.id] = { s: t.start, e: t.end };
-    else if (t.type === 'milestone' && t.date) dates[t.id] = { d: t.date };
-  });
-  p.baseline = { setAt: TODAY_STR, dates };
-  showStatus(`已設定基準線（${TODAY_STR}）`);
-  render();
-  saveToLS();
-  if (currentUser) saveToCloud();
-}
-
-function toggleSettings() {
-  const panel = document.getElementById('settingsPanel');
-  panel.classList.toggle('open');
-}
-
-function toggleExportMenu() {
-  document.getElementById('exportPanel').classList.toggle('open');
-}
-function closeExportMenu() {
-  document.getElementById('exportPanel').classList.remove('open');
-}
-document.addEventListener('click', e => {
-  const w = document.getElementById('exportWrap');
-  if (w && !w.contains(e.target)) closeExportMenu();
-});
-
-function closeSettings() {
-  document.getElementById('settingsPanel').classList.remove('open');
-}
-
-document.addEventListener('click', e => {
-  const wrap = document.getElementById('settingsWrap');
-  if (wrap && !wrap.contains(e.target)) closeSettings();
-});
-
-function applyZoom(factor) {
-  const cs = document.getElementById('chartScroll');
-  // Anchor: keep the left-edge date fixed so content doesn't jump off-screen
-  const leftMs = CHART_START.getTime() + cs.scrollLeft / PPD * 86400000;
-  PPD = Math.max(2, Math.min(80, Math.round(PPD * factor)));
-  document.querySelectorAll('#viewBtns .btn').forEach(b => {
-    b.classList.toggle('active', PPDS[b.dataset.v] === PPD);
-  });
-  updateChartStart(); // recompute CHART_START padding for new PPD
-  render();
-  requestAnimationFrame(() => {
-    cs.scrollLeft = Math.max(0, (leftMs - CHART_START.getTime()) / 86400000 * PPD);
-  });
-}
-function zoomIn()  { applyZoom(1.4); }
-function zoomOut() { applyZoom(1 / 1.4); }
-function fitToFrame() {
-  const cs = document.getElementById('chartScroll');
-  const viewW = cs.clientWidth - 4;
-  const totalDays = (CHART_END - CHART_START) / 86400000 + 1;
-  PPD = Math.max(2, Math.min(80, viewW / totalDays));
-  document.querySelectorAll('#viewBtns .btn').forEach(b => {
-    b.classList.toggle('active', PPDS[b.dataset.v] === PPD);
-  });
-  updateChartStart();
-  render();
-  requestAnimationFrame(() => { cs.scrollLeft = 0; });
-}
-
-/* ═══════════════════════════════════════════
-   SCROLL TO TODAY
-═══════════════════════════════════════════ */
-function scrollToToday() {
-  const cs = document.getElementById('chartScroll');
-  const x = Math.max(0, dateToX(TODAY_STR) - cs.clientWidth / 3);
-  cs.scrollTo({ left: x, behavior: 'smooth' });
-}
-
-/* ═══════════════════════════════════════════
-   STATS
-═══════════════════════════════════════════ */
-function updateStats() {
-  const t = tasks.filter(x => x.type === 'task');
-  const m = tasks.filter(x => x.type === 'milestone');
-  document.getElementById('sDone').textContent    = t.filter(x => x.done).length;
-  document.getElementById('sPending').textContent = t.filter(x => !x.done).length;
-  document.getElementById('sMilestone').textContent = m.length;
-}
-
-/* ═══════════════════════════════════════════
-   DARK MODE
-═══════════════════════════════════════════ */
-function toggleDark() {
-  isDark = !isDark;
-  document.body.classList.toggle('dark', isDark);
-  document.getElementById('darkBtn').textContent = isDark ? '☀️' : '🌙';
-}
-
-/* ═══════════════════════════════════════════
-   MODAL
-═══════════════════════════════════════════ */
-function populateModal(excludeId = null, checkedDeps = [], presetParent = null, isDone = false) {
-  // Parent groups（含「無」選項；編輯時排除自己與後代避免循環）
-  const sel = document.getElementById('fParent');
-  sel.innerHTML = '';
-  const noneOpt = document.createElement('option');
-  noneOpt.value = '';
-  noneOpt.textContent = '— 無（最上層）—';
-  sel.appendChild(noneOpt);
-  const excludeSet = excludeId !== null ? new Set([excludeId, ...getAllDescendants(excludeId)]) : new Set();
-  tasks.filter(t => t.type === 'group' && !excludeSet.has(t.id)).forEach(t => {
-    const o = document.createElement('option');
-    o.value = t.id;
-    o.textContent = t.name;
-    if (presetParent && t.id === presetParent) o.selected = true;
-    sel.appendChild(o);
-  });
-
-  // Assignee suggestions（現有專案中出現過的負責人）
-  const dl = document.getElementById('assigneeList');
-  dl.innerHTML = '';
-  [...new Set(projects.flatMap(p => p.tasks || []).map(t => t.assignee).filter(Boolean))].forEach(n => {
-    const o = document.createElement('option');
-    o.value = n;
-    dl.appendChild(o);
-  });
-
-  // Deps picker
-  depsExcludeId = excludeId;
-  selectedDeps = new Set(checkedDeps);
-  selectedSdeps = new Set();
-  updateDepsTags();
-
-  // Done checkbox
-  const fd = document.getElementById('fDone');
-  fd.classList.toggle('done', isDone);
-  fd.textContent = isDone ? '✓' : '';
-}
-
-function syncWday() {
-  const s = document.getElementById('fStart').value;
-  const e = document.getElementById('fEnd').value;
-  if (s && e) document.getElementById('fWday').value = countWorkingDays(s, e);
-}
-function syncEndFromWday() {
-  const s = document.getElementById('fStart').value;
-  const d = parseInt(document.getElementById('fWday').value);
-  if (s && d >= 1) document.getElementById('fEnd').value = addWorkingDays(s, d);
-}
-
-// Wire up modal date ↔ workday sync once on page load
-(function() {
-  document.getElementById('fStart').addEventListener('change', syncWday);
-  document.getElementById('fEnd').addEventListener('change', syncWday);
-  document.getElementById('fWday').addEventListener('change', syncEndFromWday);
-  document.getElementById('fWday').addEventListener('keyup', syncEndFromWday);
-})();
-
-function updateModalForType() {
-  const t = document.getElementById('fType').value;
-  const isMs = t === 'milestone', isGrp = t === 'group';
-  document.getElementById('rowDates').style.display = isGrp ? 'none' : '';
-  document.getElementById('colEnd').style.display   = isMs ? 'none' : '';
-  document.getElementById('colWday').style.display  = isMs ? 'none' : '';
-  document.getElementById('lblStart').textContent   = isMs ? '日期' : '開始日期';
-  document.getElementById('rowDone').style.display  = (isMs || isGrp) ? 'none' : 'flex';
-  document.getElementById('rowDeps').style.display  = isGrp ? 'none' : '';
-  document.getElementById('rowAssignee').style.display = isGrp ? 'none' : '';
-}
-
-function setupDepsInputListener(excludeId) {
-  const inp = document.getElementById('fDeps');
-  const tip = document.getElementById('fDepsTip');
-  const list = document.getElementById('fDepsList');
-  if (!inp) return;
-
-  function updateTip() {
-    const val = inp.value;
-    if (!val.trim()) { tip.innerHTML = ''; return; }
-    const parsed = parseDepInput(val, excludeId);
-    tip.innerHTML = parsed.map(p => {
-      if (p.err) return `<span style="color:var(--red)">✕ ${p.raw}：${p.err}</span>`;
-      const dt = taskById(p.taskId);
-      return `<span style="color:#10B981">✓ ${p.rowNum}${p.type}・${dt ? dt.name : ''}</span>`;
-    }).join('&nbsp;&nbsp;');
-  }
-
-  inp.oninput = () => { updateTip(); renderDepsDropdown(excludeId); };
-  inp.onfocus = () => { renderDepsDropdown(excludeId); if (list) list.style.display = 'block'; };
-  inp.onblur  = () => { setTimeout(() => { if (list) list.style.display = 'none'; }, 150); };
-  updateTip();
-}
-
-function renderDepsDropdown(excludeId) {
-  const list = document.getElementById('fDepsList');
-  const inp  = document.getElementById('fDeps');
-  if (!list || !inp) return;
-
-  const parsed = parseDepInput(inp.value, excludeId);
-  const selMap = {};
-  parsed.filter(p => !p.err).forEach(p => { selMap[p.rowNum] = p.type; });
-
-  const rows = getVisibleRows().filter(({task}) =>
-    task.type !== 'group' && task.id !== excludeId
-  );
-
-  if (!rows.length) { list.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--t4);text-align:center">無可選任務</div>'; return; }
-
-  list.innerHTML = rows.map(({task}, i) => {
-    const rowNum = i + 1;
-    const selType = selMap[rowNum] || '';
-    const isSel = !!selType;
-    const typeBtns = ['FS','SS','FF','SF'].map(t =>
-      `<button class="dep-type-btn${selType===t?' active':''}" onclick="addDepToInput(${rowNum},'${t}',${JSON.stringify(excludeId)})">${t}</button>`
-    ).join('');
-    return `<div class="dep-li${isSel?' dep-sel':''}">
-      <span class="dep-li-num">#${rowNum}</span>
-      <span class="dep-li-name" title="${task.name}">${task.name}</span>
-      <div class="dep-type-btns">${typeBtns}</div>
-    </div>`;
-  }).join('');
-}
-
-function addDepToInput(rowNum, type, excludeId) {
-  const inp = document.getElementById('fDeps');
-  if (!inp) return;
-  const parsed = parseDepInput(inp.value, excludeId);
-  const existing = parsed.filter(p => !p.err);
-  const same = existing.find(p => p.rowNum === rowNum);
-
-  let parts;
-  if (same && same.type === type) {
-    // 已選且同類型 → 取消
-    parts = existing.filter(p => p.rowNum !== rowNum).map(p => `${p.rowNum}${p.type}`);
-  } else {
-    // 新增或換類型
-    const others = existing.filter(p => p.rowNum !== rowNum).map(p => `${p.rowNum}${p.type}`);
-    others.push(`${rowNum}${type}`);
-    parts = others;
-  }
-
-  inp.value = parts.join(', ');
-  inp.dispatchEvent(new Event('input'));
-  inp.focus();
-}
-
-function openModal(unused, prefillDate) {
-  if (isReadOnly) return;
-  if (!curProj()) { openProjModal(); return; }
-  editingTaskId = null;
-  document.getElementById('modal-title').textContent = '＋ 新增任務';
-  document.getElementById('modal-submit').textContent = '新增任務';
-  document.getElementById('fName').value = '';
-  const startDate = prefillDate || TODAY_STR;
-  document.getElementById('fStart').value = startDate;
-  document.getElementById('fEnd').value = startDate;
-  document.getElementById('fWday').value = 1;
-  document.getElementById('fType').value = 'task';
-  document.getElementById('fDeps').value = '';
-  document.getElementById('fDepsTip').textContent = '';
-  document.getElementById('fProgress').value = 0;
-  document.getElementById('fAssignee').value = '';
-  populateModal();
-  updateModalForType();
-  document.getElementById('overlay').classList.add('open');
-  setupDepsInputListener(null);
-  setTimeout(() => document.getElementById('fName').focus(), 50);
-}
-
-function openNameEditor(task, cell, isNew = false) {
-  const inp = document.createElement('input');
-  inp.type = 'text';
-  inp.className = 'inline-input';
-  inp.value = task.name;
-  inp.placeholder = '輸入任務名稱…';
-  inp.style.cssText = 'width:100%;min-width:80px';
-  cell.innerHTML = '';
-  cell.style.overflow = 'visible';
-  cell.appendChild(inp);
-  inp.focus(); inp.select();
-  let committed = false;
-  function commit() {
-    if (committed) return; committed = true;
-    const name = inp.value.trim();
-    if (!isNew) pushHistory();
-    task.name = name || '新任務';
-    recalcProjEnd(); render();
-  }
-  inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
-    if (e.key === 'Escape') {
-      committed = true;
-      if (isNew) { const _f = tasks.filter(t => t.id !== task.id); tasks.length = 0; tasks.push(..._f); }
-      render();
-    }
-  });
-}
-
-function addTaskInline(refTaskId) {
-  if (isReadOnly) return;
-  const ref = taskById(refTaskId);
-  if (!ref) return;
-  // Group: new task goes inside (as child); leaf task: new task goes after (as sibling)
-  const parentId = ref.type === 'group' ? ref.id : ref.parent;
-  const parent = taskById(parentId);
-  const newTask = {
-    id: nextId++,
-    name: '新任務',
-    type: 'task',
-    parent: parentId,
-    color: parent ? parent.color : ref.color || '#5E6AD2',
-    wday: 1,
-    start: TODAY_STR,
-    end: TODAY_STR,
-    done: false,
-    deps: []
-  };
-  // Insert: after last child of group, or after ref for leaf
-  let insertIdx = tasks.indexOf(ref);
-  if (ref.type === 'group') {
-    // Find last descendant of this group
-    for (let i = insertIdx + 1; i < tasks.length; i++) {
-      const anc = tasks[i];
-      let p = anc.parent;
-      while (p !== null && p !== undefined) {
-        if (p === ref.id) { insertIdx = i; break; }
-        p = taskById(p)?.parent;
-      }
-    }
-  }
-  pushHistory();
-  tasks.splice(insertIdx + 1, 0, newTask);
-  render();
-  requestAnimationFrame(() => {
-    const row = document.querySelector(`.task-row[data-id="${newTask.id}"]`);
-    if (row) openNameEditor(newTask, row.querySelector('.tname'), true);
-  });
-}
-
-function openModalUnder(taskId) {
-  if (isReadOnly) return;
-  const task = taskById(taskId);
-  if (!task) return;
-  const parentId = task.parent;
-  editingTaskId = null;
-  document.getElementById('modal-title').textContent = '＋ 新增任務';
-  document.getElementById('modal-submit').textContent = '新增任務';
-  document.getElementById('fName').value = '';
-  document.getElementById('fStart').value = TODAY_STR;
-  document.getElementById('fEnd').value = TODAY_STR;
-  document.getElementById('fType').value = 'task';
-  populateModal(null, [], parentId);
-  updateModalForType();
-  document.getElementById('overlay').classList.add('open');
-  setTimeout(() => document.getElementById('fName').focus(), 50);
-}
-
-function openEditModal(taskId) {
-  if (isReadOnly) return;
-  const task = taskById(taskId);
-  if (!task) return;
-  editingTaskId = taskId;
-  document.getElementById('modal-title').textContent = '✏️ 編輯任務';
-  document.getElementById('modal-submit').textContent = '儲存變更';
-  document.getElementById('fName').value = task.name;
-  document.getElementById('fType').value = task.type;
-  document.getElementById('fStart').value = task.start || task.date || TODAY_STR;
-  document.getElementById('fEnd').value = task.end || task.date || TODAY_STR;
-  document.getElementById('fWday').value = (task.start && task.end) ? countWorkingDays(task.start, task.end) : 1;
-  document.getElementById('fProgress').value = task.done ? 100 : (task.progress || 0);
-  document.getElementById('fAssignee').value = task.assignee || '';
-  populateModal(taskId, task.deps || [], task.parent, task.done || false);
-  selectedSdeps = new Set(task.sdeps || []);
-  document.getElementById('fDeps').value = buildDepsText(task);
-  document.getElementById('fDepsTip').textContent = '';
-  updateModalForType();
-  document.getElementById('overlay').classList.add('open');
-  setupDepsInputListener(taskId);
-  setTimeout(() => document.getElementById('fName').focus(), 50);
-}
-
-function closeModal(e) {
-  if (!e || e.target === document.getElementById('overlay')) {
-    document.getElementById('overlay').classList.remove('open');
-  }
-}
-
-let _deleteTargetId = null;
-
-function confirmDeleteTask(id) {
-  const task = taskById(id);
-  if (!task) return;
-  _deleteTargetId = id;
-
-  const descendants = getAllDescendants(id);
-  const msg = document.getElementById('deleteModalMsg');
-  if (task.type === 'group' && descendants.length > 0) {
-    msg.textContent = `此群組及其 ${descendants.length} 個子任務將一併刪除，此操作無法復原。`;
-  } else {
-    msg.textContent = '此操作無法復原。';
-  }
-
-  document.getElementById('deleteConfirmBtn').onclick = () => { executeDeleteTask(_deleteTargetId); };
-  document.getElementById('deleteOverlay').classList.add('open');
-}
-
-function closeDeleteModal(e) {
-  if (!e || e.target === document.getElementById('deleteOverlay')) {
-    document.getElementById('deleteOverlay').classList.remove('open');
-    _deleteTargetId = null;
-  }
-}
-
-function executeDeleteTask(id) {
-  document.getElementById('deleteOverlay').classList.remove('open');
-  _deleteTargetId = null;
-  pushHistory();
-  const toDelete = new Set([id, ...getAllDescendants(id)]);
-  // 清除其他任務對被刪除任務的依賴
-  tasks.forEach(t => {
-    if (t.deps)   t.deps   = t.deps.filter(d => !toDelete.has(d));
-    if (t.sdeps)  t.sdeps  = t.sdeps.filter(d => !toDelete.has(d));
-    if (t.ffdeps) t.ffdeps = t.ffdeps.filter(d => !toDelete.has(d));
-    if (t.sfdeps) t.sfdeps = t.sfdeps.filter(d => !toDelete.has(d));
-  });
-  const _filtered = tasks.filter(t => !toDelete.has(t.id));
-  tasks.length = 0;
-  tasks.push(..._filtered);
-  render();
-  saveToLS();
-  if (currentUser) saveToCloud();
-}
-
-function submitTask() {
-  const name = document.getElementById('fName').value.trim();
-  if (!name) { document.getElementById('fName').focus(); return; }
-
-  const parentRaw = parseInt(document.getElementById('fParent').value);
-  const parentId = Number.isNaN(parentRaw) ? null : parentRaw;
-  const parent = taskById(parentId);
-  const type = document.getElementById('fType').value;
-  const start = document.getElementById('fStart').value;
-  const end = document.getElementById('fEnd').value;
-  const done = document.getElementById('fDone').classList.contains('done');
-
-  // 解析前置任務文字輸入
-  const depsRaw = document.getElementById('fDeps').value;
-  const parsedDeps = parseDepInput(depsRaw, editingTaskId);
-  const hasDepErr = parsedDeps.some(p => p.err);
-  const newDeps   = hasDepErr ? null : [...new Set(parsedDeps.filter(p=>p.type==='FS').map(p=>p.taskId))];
-  const newSdeps  = hasDepErr ? null : [...new Set(parsedDeps.filter(p=>p.type==='SS').map(p=>p.taskId))];
-  const newFfdeps = hasDepErr ? null : [...new Set(parsedDeps.filter(p=>p.type==='FF').map(p=>p.taskId))];
-  const newSfdeps = hasDepErr ? null : [...new Set(parsedDeps.filter(p=>p.type==='SF').map(p=>p.taskId))];
-
-  pushHistory();
-  if (editingTaskId !== null) {
-    // Update existing task
-    const t = taskById(editingTaskId);
-    if (t) {
-      t.name = name;
-      t.type = type;
-      t.parent = parentId;
-      t.color = parent ? parent.color : t.color;
-      if (!hasDepErr) {
-        t.deps = newDeps; t.sdeps = newSdeps;
-        if (newFfdeps.length) t.ffdeps = newFfdeps; else delete t.ffdeps;
-        if (newSfdeps.length) t.sfdeps = newSfdeps; else delete t.sfdeps;
-        const newLags = lagsFromParsed(parsedDeps);
-        if (Object.keys(newLags).length) t.lags = newLags; else delete t.lags;
-      }
-      if (type === 'task') {
-        t.start = start; t.end = end; t.done = done; t.pinStart = true; delete t.date;
-        t.progress = done ? 100 : Math.max(0, Math.min(100, parseInt(document.getElementById('fProgress').value) || 0));
-      }
-      else if (type === 'milestone') { t.date = start; t.pinStart = true; delete t.start; delete t.end; }
-      else { delete t.date; delete t.start; delete t.end; delete t.pinStart; }
-      const asg = document.getElementById('fAssignee').value.trim();
-      if (type !== 'group' && asg) t.assignee = asg; else delete t.assignee;
-    }
-  } else {
-    // Add new task
-    const autoColor = type === 'group' ? getNextGroupColor() : (parent ? parent.color : '#5E6AD2');
-    const t = { id: nextId++, name, type, parent: parentId, color: autoColor,
-                deps: newDeps||[], sdeps: newSdeps||[] };
-    if (newFfdeps?.length) t.ffdeps = newFfdeps;
-    if (newSfdeps?.length) t.sfdeps = newSfdeps;
-    if (!hasDepErr) {
-      const newLags = lagsFromParsed(parsedDeps);
-      if (Object.keys(newLags).length) t.lags = newLags;
-    }
-    if (type === 'task') {
-      t.start = start; t.end = end; t.done = done; t.pinStart = true;
-      t.progress = done ? 100 : Math.max(0, Math.min(100, parseInt(document.getElementById('fProgress').value) || 0));
-    }
-    else if (type === 'milestone') { t.date = start; t.pinStart = true; }
-    const asg = document.getElementById('fAssignee').value.trim();
-    if (type !== 'group' && asg) t.assignee = asg;
-    tasks.push(t);
-    curProj().nextId = nextId;
-  }
-
-  editingTaskId = null;
-  document.getElementById('overlay').classList.remove('open');
-  scheduleTasks();
-  recalcProjEnd();
-  render();
-}
-
-function openDateEditor(task, field, cell) {
-  const inp = document.createElement('input');
-  inp.type = 'date';
-  inp.className = 'inline-input';
-  inp.value = field === 'start' ? (task.start || '') : (task.end || '');
-  cell.innerHTML = '';
-  cell.appendChild(inp);
-  inp.focus();
-  function commit() {
-    if (!inp.value) { render(); return; }
-    if (field === 'start') {
-      task.start = inp.value;
-      if (task.end && task.end < task.start) task.end = task.start;
-    } else {
-      task.end = inp.value;
-      if (task.start && task.start >= task.end) task.start = task.end; // keep start behind end
-    }
-    recalcProjEnd(); render();
-  }
-  inp.addEventListener('change', commit);
-  inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => { if (e.key === 'Escape') render(); });
-}
-
-function openStartEditor(task, cell) {
-  const inp = document.createElement('input');
-  inp.type = 'date';
-  inp.className = 'inline-input';
-  inp.value = task.start || '';
-  cell.innerHTML = '';
-  cell.appendChild(inp);
-  inp.focus();
-  try { inp.showPicker(); } catch(e) {}
-  function commit() {
-    const val = inp.value;
-    if (val && val !== task.start) {
-      pushHistory();
-      if (val > (task.end || '')) task.end = val;
-      task.wday = countWorkingDays(val, task.end);
-      task.start = val;
-      task.pinStart = true;
-    }
-    scheduleTasks();
-    recalcProjEnd();
-    render();
-    saveToLS();
-    if (currentUser) saveToCloud();
-  }
-  inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { render(); } });
-}
-
-function openEndEditor(task, cell) {
-  const inp = document.createElement('input');
-  inp.type = 'date';
-  inp.className = 'inline-input';
-  inp.value = task.end || '';
-  cell.innerHTML = '';
-  cell.appendChild(inp);
-  inp.focus();
-  try { inp.showPicker(); } catch(e) {}
-  function commit() {
-    const val = inp.value;
-    if (val && val !== task.end) {
-      pushHistory();
-      if (val < (task.start || '')) { task.start = val; task.wday = 1; }
-      else { task.wday = countWorkingDays(task.start, val); }
-      task.end = val;
-      task.pinStart = true;
-    }
-    scheduleTasks();
-    recalcProjEnd();
-    render();
-    saveToLS();
-    if (currentUser) saveToCloud();
-  }
-  inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') render(); });
-}
-
-function openWdayEditor(task, cell) {
-  const inp = document.createElement('input');
-  inp.type = 'number';
-  inp.min = '1';
-  inp.className = 'inline-input';
-  inp.style.textAlign = 'center';
-  inp.value = task.start && task.end ? countWorkingDays(task.start, task.end) : 1;
-  cell.innerHTML = '';
-  cell.appendChild(inp);
-  inp.focus(); inp.select();
-  function commit() {
-    const days = parseInt(inp.value);
-    if (!isNaN(days) && days >= 1) {
-      pushHistory();
-      task.wday = days;
-      scheduleTasks();
-      recalcProjEnd(); render();
-    } else { render(); }
-  }
-  inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') render(); });
-}
-
-/* ── DEPS PICKER LOGIC ── */
-function toggleDepsMenu(e) {
-  if (isReadOnly) return;
-  if (e && e.target.closest('.deps-tag-x')) return;
-  const menu = document.getElementById('depsMenu');
-  if (menu.classList.contains('open')) {
-    menu.classList.remove('open');
-  } else {
-    renderDepsMenu();
-    menu.classList.add('open');
-    setTimeout(() => document.addEventListener('click', closeDepsOutside, { once: true }), 0);
-  }
-}
-
-function closeDepsOutside(e) {
-  if (!document.getElementById('depsPicker').contains(e.target)) {
-    document.getElementById('depsMenu').classList.remove('open');
-  } else {
-    document.addEventListener('click', closeDepsOutside, { once: true });
-  }
-}
-
-function toggleDepOpt(id) {
-  if (selectedDeps.has(id)) selectedDeps.delete(id);
-  else selectedDeps.add(id);
-  updateDepsTags();
-  renderDepsMenu();
-}
-
-function removeDepTag(id) {
-  selectedDeps.delete(id);
-  updateDepsTags();
-}
-
-function updateDepsTags() { /* 已由 fDeps 文字輸入取代 */ }
-
-function renderDepsMenu() {
-  const menu = document.getElementById('depsMenu');
-  menu.innerHTML = '';
-  const editingTask = taskById(depsExcludeId);
-  const editingParent = editingTask ? editingTask.parent : null;
-  const list = tasks.filter(t =>
-    t.type !== 'milestone' &&
-    t.parent !== null &&
-    t.id !== depsExcludeId
-  );
-  if (list.length === 0) {
-    menu.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:var(--t4)">目前無可選前置任務</div>';
-    return;
-  }
-  list.forEach(t => {
-    const opt = document.createElement('div');
-    opt.className = 'deps-opt' + (selectedDeps.has(t.id) ? ' sel' : '');
-    opt.innerHTML = `
-      <span class="deps-opt-num">#${t.id}</span>
-      <span class="cdot" style="background:${t.color}"></span>
-      <span>${t.name}</span>
-      <span class="deps-opt-check">${selectedDeps.has(t.id) ? '✓' : ''}</span>
-    `;
-    opt.addEventListener('click', () => toggleDepOpt(t.id));
-    menu.appendChild(opt);
-  });
-}
-
-function openDepsEditor(task, cell) { openAllDepsEditor(task, cell); }
-
 /* deps adapters: pure logic in core/deps.js; bind global state. */
 function buildDepsText(task) { return Deps.buildDepsText(tasks, collapsed, milestoneView, task); }
 function wouldCreateCycle(taskId, newDepId) { return Deps.wouldCreateCycle(tasks, taskId, newDepId); }
 
 const { lagsFromParsed } = Deps;
 function parseDepInput(val, taskId) { return Deps.parseDepInput(val, taskId, tasks, collapsed, milestoneView); }
-
-function openAllDepsEditor(task, cell) {
-  const wrap = document.createElement('div');
-  wrap.className = 'deps-edit-wrap';
-
-  const inp = document.createElement('input');
-  inp.className = 'deps-input';
-  inp.placeholder = '如：2FS, 3SS, 2FS+3';
-  inp.value = buildDepsText(task);
-  wrap.appendChild(inp);
-
-  cell.innerHTML = '';
-  cell.appendChild(wrap);
-
-  // Tooltip 掛在 body，避免被 overflow:hidden 裁切
-  const tip = document.createElement('div');
-  tip.className = 'deps-tip';
-  tip.style.display = 'none';
-  tip.style.position = 'fixed';
-  document.body.appendChild(tip);
-
-  function positionTip() {
-    const r = wrap.getBoundingClientRect();
-    tip.style.left = r.left + 'px';
-    tip.style.top  = (r.bottom + 6) + 'px';
-    tip.style.minWidth = Math.max(r.width, 200) + 'px';
-  }
-
-  function updateTip(v) {
-    if (!v.trim()) { tip.style.display = 'none'; return; }
-    const parsed = parseDepInput(v, task.id);
-    if (!parsed.length) { tip.style.display = 'none'; return; }
-    const rows = parsed.map(p => {
-      if (p.err) return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.raw}</span> <span style="color:#FCA5A5">✕ ${p.err}</span></div>`;
-      const dt = taskById(p.taskId);
-      return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.rowNum}${p.type}</span> <span style="color:#6EE7B7">✓ ${dt ? dt.name : ''} · ${p.type}</span></div>`;
-    });
-    rows.push('<div style="margin-top:4px;color:#9CA3AF;font-size:10px">Enter 確認 &nbsp; Esc 取消</div>');
-    tip.innerHTML = rows.join('');
-    positionTip();
-    tip.style.display = 'block';
-  }
-
-  inp.addEventListener('input', () => updateTip(inp.value));
-  updateTip(inp.value);
-
-  let committed = false;
-  function commit() {
-    if (committed) return; committed = true;
-    const parsed = parseDepInput(inp.value, task.id);
-    const hasErr = parsed.some(p => p.err);
-    if (!hasErr) {
-      pushHistory();
-      task.deps   = [...new Set(parsed.filter(p => p.type === 'FS').map(p => p.taskId))];
-      task.sdeps  = [...new Set(parsed.filter(p => p.type === 'SS').map(p => p.taskId))];
-      task.ffdeps = [...new Set(parsed.filter(p => p.type === 'FF').map(p => p.taskId))];
-      task.sfdeps = [...new Set(parsed.filter(p => p.type === 'SF').map(p => p.taskId))];
-      const newLags = lagsFromParsed(parsed);
-      if (Object.keys(newLags).length) task.lags = newLags; else delete task.lags;
-      scheduleTasks();
-      recalcProjEnd();
-    }
-    tip.remove();
-    render();
-    saveToLS();
-    if (currentUser) saveToCloud();
-  }
-
-  inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
-    if (e.key === 'Escape') { committed = true; tip.remove(); render(); }
-  });
-
-  setTimeout(() => { inp.focus(); inp.select(); }, 30);
-}
 
 /* schedule adapters: pure logic in core/schedule.js; bind global state. */
 function allGroupMembersScheduled(groupId, scheduled) { return Schedule.allGroupMembersScheduled(tasks, groupId, scheduled); }
@@ -1514,395 +766,6 @@ function recalcProjEnd() {
   CHART_END = padded;
   document.getElementById('sPeriod').textContent = `${curProj().startDate} — ${endStr}`;
 }
-
-/* ═══════════════════════════════════════════
-   PROJECT MANAGEMENT
-═══════════════════════════════════════════ */
-function switchProject(id) {
-  if (id === currentProjId) { closeProjMenuOnly(); return; }
-  // Save current nextId back (guard against orphaned currentProjId)
-  if (curProj()) curProj().nextId = nextId;
-  // Switch
-  currentProjId = id;
-  tasks  = curProj().tasks;
-  nextId = curProj().nextId;
-  CHART_START = new Date(curProj().startDate);
-  CHART_END   = new Date(curProj().endDate);
-  collapsed.clear();
-  _history = [];
-  closeProjMenuOnly();
-  updateReadOnly();
-  updateProjUI();
-  scheduleTasks();
-  recalcProjEnd();
-  render();
-  setTimeout(scrollToToday, 80);
-}
-
-function updateProjUI() {
-  let p = curProj();
-  if (!p) {
-    const fallback = projects.find(x => !x._isShared) || projects[0];
-    if (!fallback) {
-      // No projects at all — clear header and show create modal
-      document.getElementById('projSelectorName').textContent = '— 無專案 —';
-      document.getElementById('projDot').style.background = '#999';
-      renderProjMenu();
-      return;
-    }
-    p = fallback;
-    currentProjId = p.id;
-  }
-  document.getElementById('projSelectorName').textContent = p.name;
-  document.getElementById('projDot').style.background = p.color;
-  document.getElementById('sPeriod').textContent = `${p.startDate} — ${p.endDate}`;
-  updateReadOnly();
-}
-
-function toggleProjMenu(e) {
-  const menu = document.getElementById('projMenu');
-  const sel  = document.getElementById('projSelector');
-  const isOpen = menu.classList.contains('open');
-  if (isOpen) { closeProjMenuOnly(); return; }
-  renderProjMenu();
-  menu.classList.add('open');
-  sel.classList.add('open');
-  // Close when clicking outside
-  setTimeout(() => document.addEventListener('click', closeProjOnOutside, { once: true }), 0);
-}
-
-function closeProjOnOutside(e) {
-  if (!document.getElementById('projSelector').contains(e.target)) closeProjMenuOnly();
-  else document.addEventListener('click', closeProjOnOutside, { once: true });
-}
-
-function closeProjMenuOnly() {
-  document.getElementById('projMenu').classList.remove('open');
-  document.getElementById('projSelector').classList.remove('open');
-}
-
-function renderProjMenu() {
-  const menu = document.getElementById('projMenu');
-  menu.innerHTML = '';
-  projects.forEach(p => {
-    const item = document.createElement('div');
-    item.className = 'proj-item' + (p.id === currentProjId ? ' active' : '');
-    item.innerHTML = `
-      <div class="proj-item-dot" style="background:${p.color}"></div>
-      <span class="proj-item-name">${p.name}${p._isShared ? ' <span class="collab-shared-badge">共享</span>' : ''}</span>
-      ${!p._isShared ? `<span class="proj-item-edit" onclick="openEditProjModal(${p.id},event)" title="編輯此專案">✎</span>` : ''}
-      ${!p._isShared ? `<span class="proj-item-del" onclick="deleteProject(${p.id},event)" title="刪除此專案">✕</span>` : ''}
-    `;
-    item.addEventListener('click', () => switchProject(p.id));
-    menu.appendChild(item);
-  });
-  const div = document.createElement('div'); div.className = 'proj-menu-div';
-  menu.appendChild(div);
-  const add = document.createElement('div');
-  add.className = 'proj-item proj-item-new';
-  add.innerHTML = '＋ 建立新專案';
-  add.onclick = () => { closeProjMenuOnly(); openProjModal(); };
-  menu.appendChild(add);
-}
-
-function deleteProject(id, e) {
-  e.stopPropagation();
-  const p = projects.find(x => x.id === id);
-  if (!p || p._isShared) return;
-  if (!confirm(`確定要刪除「${p.name}」嗎？此操作無法復原。`)) return;
-  projects = projects.filter(x => x.id !== id);
-  closeProjMenuOnly();
-  const ownedLeft = projects.filter(x => !x._isShared);
-  if (ownedLeft.length === 0) {
-    // 全部刪完：重置狀態，更新 header
-    currentProjId = null;
-    tasks = [];
-    nextId = 1;
-    saveToCloud();
-    updateProjUI();
-    renderProjMenu();
-    render();
-  } else if (id === currentProjId) {
-    switchProject((ownedLeft[0] || projects[0]).id);
-    saveToCloud();
-  } else {
-    renderProjMenu();
-    saveToCloud();
-  }
-}
-
-let _editingProjId = null;
-
-function openEditProjModal(id, e) {
-  if (e) e.stopPropagation();
-  closeProjMenuOnly();
-  const p = projects.find(x => x.id === id);
-  if (!p) return;
-  _editingProjId = id;
-  document.getElementById('projModalTitle').textContent = '✎ 編輯專案';
-  document.getElementById('projSubmitBtn').textContent = '儲存';
-  document.getElementById('pName').value = p.name;
-  document.getElementById('pStart').value = p.startDate;
-  document.getElementById('projColorDot').style.background = p.color;
-  // 隱藏範本選擇（僅建立時使用）
-  const tplRow = document.getElementById('tplRow');
-  if (tplRow) tplRow.style.display = 'none';
-  const preview = document.getElementById('templatePreview');
-  if (preview) preview.style.display = 'none';
-  document.getElementById('projOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('pName').focus(), 50);
-}
-
-function openProjModal() {
-  _editingProjId = null;
-  document.getElementById('projModalTitle').textContent = '◆ 建立新專案';
-  document.getElementById('projSubmitBtn').textContent = '建立專案';
-  document.getElementById('pName').value = '';
-  document.getElementById('pStart').value = TODAY_STR;
-
-  // Inject template row dynamically (handles browser HTML cache)
-  if (!document.getElementById('pTemplate')) {
-    const startRow = document.getElementById('pStart').closest('.form-row');
-    const tplRow = document.createElement('div');
-    tplRow.className = 'form-row';
-    tplRow.id = 'tplRow';
-    tplRow.innerHTML =
-      '<label class="form-lbl">套用範本</label>' +
-      '<select class="form-ctrl" id="pTemplate" onchange="onTemplateChange()">' +
-      '<option value="">— 空白專案 —</option></select>';
-    startRow.insertAdjacentElement('afterend', tplRow);
-    const prevDiv = document.createElement('div');
-    prevDiv.id = 'templatePreview';
-    prevDiv.style.cssText = 'display:none;margin:4px 0 0;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--t3);line-height:1.6';
-    tplRow.insertAdjacentElement('afterend', prevDiv);
-  }
-
-  // Fill template options
-  const sel = document.getElementById('pTemplate');
-  sel.innerHTML = '<option value="">— 空白專案 —</option>' +
-    TEMPLATES.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-  sel.value = '';
-  document.getElementById('templatePreview').style.display = 'none';
-  // Preview the color that will be auto-assigned
-  const nextColor = getNextGroupColor();
-  document.getElementById('projColorDot').style.background = nextColor;
-  const tplRow = document.getElementById('tplRow');
-  if (tplRow) tplRow.style.display = '';
-  document.getElementById('projOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('pName').focus(), 50);
-}
-
-function onTemplateChange() {
-  const val = document.getElementById('pTemplate').value;
-  const preview = document.getElementById('templatePreview');
-  const tpl = TEMPLATES.find(t => t.id === val);
-  if (!tpl) { preview.style.display = 'none'; return; }
-  // Count tasks by type
-  const groups = tpl.tasks.filter(t => t.type === 'group' && t.parent !== null).length;
-  const tasks  = tpl.tasks.filter(t => t.type === 'task').length;
-  const miles  = tpl.tasks.filter(t => t.type === 'milestone').length;
-  // List phase names (top-level groups)
-  const phases = tpl.tasks.filter(t => t.type === 'group' && t.parent === 1)
-    .map(t => t.name).join('　→　');
-  preview.innerHTML = `<b>範本內容：</b>${groups} 個階段、${tasks} 個任務、${miles} 個里程碑<br>
-    <span style="color:var(--t4)">${phases}</span>`;
-  preview.style.display = '';
-  // Auto-fill name if empty (use short default, not full template name)
-  const nameEl = document.getElementById('pName');
-  if (!nameEl.value.trim()) {
-    const today = new Date();
-    const ym = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
-    nameEl.value = (tpl.defaultName || tpl.name.split('（')[0]) + ' ' + ym;
-    setTimeout(() => { nameEl.select(); }, 60);
-  }
-  // Update color dot to template color
-  document.getElementById('projColorDot').style.background = tpl.color || getNextGroupColor();
-}
-
-function closeProjModal(e) {
-  if (!e || e.target === document.getElementById('projOverlay'))
-    document.getElementById('projOverlay').classList.remove('open');
-}
-
-function selectColor(el) {
-  document.querySelectorAll('.color-opt').forEach(x => x.classList.remove('active'));
-  el.classList.add('active');
-}
-
-function submitProject() {
-  const name = document.getElementById('pName').value.trim();
-  if (!name) { document.getElementById('pName').focus(); return; }
-  const start = document.getElementById('pStart').value;
-
-  // 重複名稱提醒：與其他專案同名容易混淆，提示使用者改名（建立與編輯模式皆適用）
-  const dupName = projects.some(p => p.id !== _editingProjId && p.name === name);
-  if (dupName && !confirm(`已有名稱為「${name}」的專案，重複名稱容易混淆，建議改用不同名稱。\n\n仍要使用這個名稱嗎？`)) {
-    document.getElementById('pName').focus();
-    return;
-  }
-
-  // 編輯模式：更新現有專案
-  if (_editingProjId !== null) {
-    const p = projects.find(x => x.id === _editingProjId);
-    if (p) {
-      p.name = name;
-      p.startDate = start;
-      CHART_START = new Date(start);
-      scheduleTasks();
-      recalcProjEnd();
-      updateProjUI();
-      render();
-      saveToLS();
-      if (currentUser) saveToCloud();
-    }
-    document.getElementById('projOverlay').classList.remove('open');
-    _editingProjId = null;
-    return;
-  }
-
-  const tplId   = document.getElementById('pTemplate').value;
-  const tpl     = TEMPLATES.find(t => t.id === tplId);
-  const color   = tpl ? tpl.color : getNextGroupColor();
-
-  let projTasks, projNextId;
-  if (tpl) {
-    // Deep-clone template tasks, replace root group name with project name
-    projTasks = JSON.parse(JSON.stringify(tpl.tasks));
-    projTasks[0].name = name;
-    projTasks[0].color = color;
-    projNextId = Math.max(...projTasks.map(t => t.id)) + 1;
-  } else {
-    projTasks  = [{ id:1, name, type:'group', parent:null, color, assignee:'' }];
-    projNextId = 2;
-  }
-
-  // Default end = start + 12 months for template, 3 months for blank
-  const d = new Date(start);
-  d.setMonth(d.getMonth() + (tpl ? 12 : 3));
-  const end = d.toISOString().slice(0, 10);
-
-  const newProj = {
-    id: nextProjId++,
-    name, color,
-    startDate: start,
-    endDate: end,
-    nextId: projNextId,
-    ownerId: getOwnerId(),
-    tasks: projTasks
-  };
-  projects.push(newProj);
-  document.getElementById('projOverlay').classList.remove('open');
-  if (curProj()) curProj().nextId = nextId; // 儲存舊專案的 nextId（無舊專案時跳過）
-  currentProjId = newProj.id;
-  tasks  = curProj().tasks;
-  nextId = curProj().nextId;
-  CHART_START = new Date(start);
-  CHART_END   = new Date(end);
-  collapsed.clear();
-  scheduleTasks();
-  recalcProjEnd();
-  updateProjUI();
-  render();
-  saveToLS();
-  if (currentUser) saveToCloud();
-}
-
-/* ═══════════════════════════════════════════
-   SCROLL SYNC
-═══════════════════════════════════════════ */
-function setupSync() {
-  const tb = document.getElementById('taskBody');
-  const cs = document.getElementById('chartScroll');
-  let syncing = false;
-
-  tb.addEventListener('scroll', () => {
-    if (syncing) return;
-    syncing = true;
-    cs.scrollTop = tb.scrollTop;
-    syncing = false;
-  });
-  cs.addEventListener('scroll', () => {
-    if (syncing) return;
-    syncing = true;
-    const maxTb = Math.max(0, tb.scrollHeight - tb.clientHeight);
-    const clamped = Math.min(cs.scrollTop, maxTb);
-    if (cs.scrollTop !== clamped) cs.scrollTop = clamped;
-    tb.scrollTop = clamped;
-    syncing = false;
-  });
-}
-
-/* ═══════════════════════════════════════════
-   COLUMN RESIZER
-═══════════════════════════════════════════ */
-const COL_WIDTHS = [28, null, 86, 86, 52, 130, 36, 68]; // null = 1fr
-
-function applyColGrid() {
-  const tpl = COL_WIDTHS.map(w => w === null ? 'minmax(320px,400px)' : w + 'px').join(' ');
-  document.documentElement.style.setProperty('--cg', tpl);
-}
-
-function setupColResizers() {
-  applyColGrid();
-  document.querySelectorAll('.col-rsz').forEach(handle => {
-    const ci = +handle.dataset.ci;
-    handle.addEventListener('mousedown', e => {
-      e.stopPropagation();
-      e.preventDefault();
-      const headerCell = handle.parentElement;
-      const startX = e.clientX;
-      const startW = headerCell.getBoundingClientRect().width;
-      if (COL_WIDTHS[ci] === null) {
-        COL_WIDTHS[ci] = Math.round(startW);
-        applyColGrid();
-      }
-      handle.classList.add('dragging');
-      const minW = ci === 1 ? 120 : 48;
-      const onMove = ev => {
-        COL_WIDTHS[ci] = Math.max(minW, Math.round(startW + (ev.clientX - startX)));
-        applyColGrid();
-      };
-      const onUp = () => {
-        handle.classList.remove('dragging');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-      };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
-  });
-}
-
-/* ═══════════════════════════════════════════
-   RESIZER
-═══════════════════════════════════════════ */
-function setupResizer() {
-  const rsz = document.getElementById('resizer');
-  const tp = document.getElementById('taskPanel');
-  let startX, startW;
-
-  rsz.addEventListener('mousedown', e => {
-    startX = e.clientX;
-    startW = tp.offsetWidth;
-    rsz.classList.add('drag');
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    e.preventDefault();
-  });
-
-  function onMove(e) {
-    const maxW = window.innerWidth - 300;
-    const w = Math.max(260, Math.min(maxW, startW + (e.clientX - startX)));
-    tp.style.width = w + 'px';
-    tp.style.minWidth = w + 'px';
-  }
-  function onUp() {
-    rsz.classList.remove('drag');
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-  }
-}
-
 /* ═══════════════════════════════════════════
    OWNER & SHARE SYSTEM
 ═══════════════════════════════════════════ */
@@ -2194,93 +1057,6 @@ function copyShareLink() {
       showStatus('✓ 分享連結已複製'); closeShareModal();
     });
 }
-
-/* ═══════════════════════════════════════════
-   VERSION MANAGEMENT
-═══════════════════════════════════════════ */
-function curVersions() {
-  const p = curProj();
-  if (!p.versions) p.versions = [];
-  return p.versions;
-}
-
-function openVersionPanel() {
-  document.getElementById('verPanel').classList.add('open');
-  document.getElementById('verBackdrop').classList.add('open');
-  renderVersionList();
-  setTimeout(() => document.getElementById('verNameInput').focus(), 200);
-}
-
-function closeVersionPanel() {
-  document.getElementById('verPanel').classList.remove('open');
-  document.getElementById('verBackdrop').classList.remove('open');
-}
-
-function createVersion() {
-  const inp = document.getElementById('verNameInput');
-  const name = inp.value.trim();
-  if (!name) { inp.focus(); return; }
-  const v = {
-    id: Date.now(),
-    name,
-    createdAt: new Date().toISOString(),
-    taskCount: tasks.filter(t => t.type === 'task').length,
-    snapshot: JSON.parse(JSON.stringify(tasks))
-  };
-  curVersions().unshift(v);
-  inp.value = '';
-  renderVersionList();
-  render(); // triggers save
-  showStatus('✓ 版本「' + name + '」已建立');
-}
-
-function restoreVersion(vId) {
-  const v = curVersions().find(v => v.id === vId);
-  if (!v) return;
-  if (!confirm(`還原至版本「${v.name}」？\n目前變更將被覆蓋，此操作無法復原。`)) return;
-  curProj().tasks = JSON.parse(JSON.stringify(v.snapshot));
-  tasks = curProj().tasks;
-  collapsed.clear();
-  render();
-  closeVersionPanel();
-  showStatus('✓ 已還原至「' + v.name + '」');
-}
-
-function deleteVersion(vId) {
-  const vs = curVersions();
-  const v = vs.find(v => v.id === vId);
-  if (!v) return;
-  if (!confirm(`刪除版本「${v.name}」？`)) return;
-  curProj().versions = vs.filter(v => v.id !== vId);
-  renderVersionList();
-  render();
-}
-
-function renderVersionList() {
-  const el = document.getElementById('verList');
-  const vs = curVersions();
-  if (vs.length === 0) {
-    el.innerHTML = '<div class="ver-empty">尚無版本紀錄<br>編輯完成後輸入版本名稱<br>點擊「建立版本」儲存快照</div>';
-    return;
-  }
-  el.innerHTML = '';
-  vs.forEach(v => {
-    const d = new Date(v.createdAt);
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    const item = document.createElement('div');
-    item.className = 'ver-item';
-    item.innerHTML = `
-      <div class="ver-item-name">${v.name}</div>
-      <div class="ver-item-meta">${dateStr} · ${v.taskCount} 個任務</div>
-      <div class="ver-item-actions">
-        <button class="ver-btn ver-btn-restore" onclick="restoreVersion(${v.id})">還原此版本</button>
-        <button class="ver-btn ver-btn-del" onclick="deleteVersion(${v.id})">刪除</button>
-      </div>
-    `;
-    el.appendChild(item);
-  });
-}
-
 /* ═══════════════════════════════════════════
    KEYBOARD SHORTCUTS
 ═══════════════════════════════════════════ */
@@ -2312,8 +1088,9 @@ function syncRenderDeps() {
   D.criticalTaskIds = criticalTaskIds;
   D.showBarDates = showBarDates;
   D.showBaseline = showBaseline;
-  D.currentUser = currentUser;
+  D.isDark = isDark;
   D.PPD = PPD;
+  D.PPDS = PPDS;
   D.CHART_START = CHART_START;
   D.CHART_END = CHART_END;
   D.TODAY = TODAY;
@@ -2321,21 +1098,31 @@ function syncRenderDeps() {
   D.ROW_H = ROW_H;
   D.BAR_H = BAR_H;
   D.MS_ROW_H = MS_ROW_H;
+  D.projects = projects;
+  D.currentProjId = currentProjId;
+  D.nextProjId = nextProjId;
+  D.currentUser = currentUser;
+  D.TEMPLATES = TEMPLATES;
 
   // Function refs (stable, but harmless to reassign)
   D.curProj = curProj;
   D.taskById = taskById;
   D.getVisibleRows = getVisibleRows;
   D.getRowNum = getRowNum;
+  D.getAllDescendants = getAllDescendants;
   D.dateToX = dateToX;
   D.totalW = totalW;
   D.avColor = avColor;
   D.groupBounds = groupBounds;
   D.groupProgress = groupProgress;
   D.buildDepsText = buildDepsText;
+  D.parseDepInput = parseDepInput;
   D.getTaskDepth = getTaskDepth;
   D.getCriticalPredTaskIds = getCriticalPredTaskIds;
   D.updateStats = updateStats;
+  D.updateReadOnly = updateReadOnly;
+  D.updateProjUI = updateProjUI;
+  D.updateChartStart = updateChartStart;
   D.openModal = openModal;
   D.openProjModal = openProjModal;
   D.openNameEditor = openNameEditor;
@@ -2348,6 +1135,9 @@ function syncRenderDeps() {
   D.outdentTask = outdentTask;
   D.confirmDeleteTask = confirmDeleteTask;
   D.toggleCollapse = toggleCollapse;
+  D.toggleProjMenu = toggleProjMenu;
+  D.closeProjMenuOnly = closeProjMenuOnly;
+  D.switchProject = switchProject;
   D.reorderTask = reorderTask;
   D.pushHistory = pushHistory;
   D.render = render;
@@ -2355,6 +1145,35 @@ function syncRenderDeps() {
   D.recalcProjEnd = recalcProjEnd;
   D.saveToLS = saveToLS;
   D.saveToCloud = saveToCloud;
+  D.showStatus = showStatus;
+  D.scrollToToday = scrollToToday;
+  D.getNextGroupColor = getNextGroupColor;
+  D.getOwnerId = getOwnerId;
+  D.consumeNextId = () => { const id = nextId++; if (curProj()) curProj().nextId = nextId; return id; };
+  D.loadProject = (proj) => {
+    if (curProj()) curProj().nextId = nextId;
+    currentProjId = proj.id;
+    tasks = proj.tasks;
+    nextId = proj.nextId;
+    CHART_START = new Date(proj.startDate);
+    CHART_END = new Date(proj.endDate);
+    collapsed.clear();
+    _history = [];
+  };
+  D.resetState = () => { currentProjId = null; tasks = []; nextId = 1; };
+  D.setProjects = (arr) => { projects = arr; };
+  D.setCurrentProjId = (id) => { currentProjId = id; };
+  D.setChartStart = (d) => { CHART_START = d; };
+  D.setChartEnd = (d) => { CHART_END = d; };
+  D.loadTasksFromSnapshot = (snap) => {
+    curProj().tasks = JSON.parse(JSON.stringify(snap));
+    tasks = curProj().tasks;
+    collapsed.clear();
+  };
+  D.setShowBarDates = (v) => { showBarDates = v; };
+  D.setShowBaseline = (v) => { showBaseline = v; };
+  D.setIsDark = (v) => { isDark = v; };
+  D.setPPD = (v) => { PPD = v; };
 }
 
 let _saveTimer = null;

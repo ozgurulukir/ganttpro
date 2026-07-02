@@ -4,6 +4,30 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 5: UI & interactions extraction ✅
+
+- **Goal achieved**: all UI/modal/editors/project/settings/interactions code extracted
+  into 4 ES modules. main.js reduced 3017→1770 lines (1247 lines removed).
+- **Modules created**:
+  - `ui/modal.js` (677 lines) — task editing modal, inline cell editors, deps picker,
+    delete confirm. 27 exported functions. Modal-local state (`editingTaskId`,
+    `selectedDeps`, `depsExcludeId`, `selectedSdeps`, `_deleteTargetId`) moved into module.
+  - `ui/project.js` (287 lines) — project CRUD, menu, switch, templates.
+    13 exported functions. Uses D setter callbacks (`loadProject`, `resetState`,
+    `setProjects`) for state reassignment.
+  - `ui/settings.js` (198 lines) — settings panel, zoom, stats, dark mode, baseline,
+    versions. 18 exported functions. Includes click-outside listeners.
+    Uses D setters (`setShowBarDates`, `setPPD`, `setIsDark`, `loadTasksFromSnapshot`).
+  - `interactions.js` (88 lines) — scroll sync, column resizers, panel resizer.
+    Self-contained (COL_WIDTHS as module const).
+- **D object expansion**: added `projects`, `currentProjId`, `nextProjId`, `PPDS`,
+  `isDark`, `TEMPLATES` state refs. Added setter callbacks: `consumeNextId`,
+  `loadProject`, `resetState`, `setProjects`, `setCurrentProjId`, `setChartStart/End`,
+  `loadTasksFromSnapshot`, `setShowBarDates/Baseline`, `setIsDark`, `setPPD`.
+  Added function refs: `getAllDescendants`, `parseDepInput`, `updateReadOnly`,
+  `showStatus`, `scrollToToday`, `getNextGroupColor`, `getOwnerId`, `switchProject`.
+- **Build**: 46 modules, 681 kB bundle. 86 tests green.
+
 ## 2026-07-02 — Phase 4: Render layer extraction ✅
 
 - **Goal achieved**: all DOM/canvas rendering code extracted into 10 ES modules
