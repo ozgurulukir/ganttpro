@@ -62,6 +62,7 @@ let viewMode = 'week';
 let milestoneView = false;
 let workloadView = false;
 let showBarDates = true;
+let showBaseline = true;
 const MS_ROW_H = 160;
 
 const AV_COLORS = {
