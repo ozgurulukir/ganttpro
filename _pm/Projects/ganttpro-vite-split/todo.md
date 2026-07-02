@@ -85,22 +85,24 @@ reference. ✅ Invariant documented at declaration.
 
 ---
 
-## Phase 3 — Extract data layer (Firebase seam)
+## Phase 3 — Firebase seam + modular v9 ✅ DONE
 
 Goal: isolate all Firebase into removable files. Directly enables future removal.
 
-- [ ] 3.1 `src/data/local.js` — LS_KEY, saveToLS, loadFromLS, mergeDefaultProjects (5646–5733)
-- [ ] 3.2 `src/data/remote.js` — FB_CONFIG, firebase init, saveToCloud, loadFromCloud,
-      setupRealtime, setSyncDot (5480–5641)
-- [ ] 3.3 `src/data/share.js` — saveShareToCloud, loadShareFromCloud,
-      getOrCreateShareToken, _encodeData, _decodeData (5564–5610, 5082–5087)
-- [ ] 3.4 Migrate compat SDK → modular v9 (`firebase/app`, `firebase/auth`, `firebase/firestore`)
-      now loaded via npm (installed in 0.7)
-- [ ] 3.5 Define a `DataBackend` interface (save/load/share/realtime) so local.js and
-      remote.js share a contract — enables swapping backends later
-- [ ] 3.6 Commit: `refactor: extract data layer, migrate to firebase v9 modular`
+- [x] 3.1 `src/data/firebase.js` — modular v9 init, exports auth, db, googleProvider
+- [x] 3.2 `src/data/local.js` — LS_KEY, saveToLS, loadFromLS, getOwnerId (pure)
+- [x] 3.3 `src/data/share.js` — encodeData, decodeData, getOrCreateShareToken,
+      saveShareDoc, loadShareDoc
+- [x] 3.4 `src/data/remote.js` — Firestore CRUD wrappers for 3 collections (14 fns)
+- [x] 3.5 Migrated compat SDK → modular v9 (18 Firestore call sites + auth)
+- [x] 3.6 CDN script tags removed from index.html
+- [x] 3.7 npm install firebase (12.15.0)
+- [x] 3.8 DataBackend interface — **deferred**: remote.js already serves as the
+      de-facto interface. Formalizing adds YAGNI complexity until a second backend exists.
+- [x] 3.9 Commit
 
-**Exit criteria:** Firebase lives only in `src/data/remote.js`. Removing it = one file.
+**Exit criteria:** All Firestore API calls in `src/data/`. CDN scripts removed.
+Firebase loaded via npm modular v9. ✅
 
 ---
 

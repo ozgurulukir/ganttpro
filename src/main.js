@@ -4,6 +4,11 @@ import * as Deps from "./core/deps.js";
 import * as CPM from "./core/critical-path.js";
 import * as Schedule from "./core/schedule.js";
 import * as Format from "./core/format.js";
+import { auth, googleProvider } from "./data/firebase.js";
+import { onAuthStateChanged } from "firebase/auth";
+import * as Local from "./data/local.js";
+import * as Share from "./data/share.js";
+import * as Remote from "./data/remote.js";
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
@@ -3166,21 +3171,9 @@ function updateReadOnly() {
   });
 }
 
-function getOwnerId() {
-  let id = localStorage.getItem('ganttpro_owner_id');
-  if (!id) {
-    id = 'own_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-    localStorage.setItem('ganttpro_owner_id', id);
-  }
-  return id;
-}
+function getOwnerId() { return Local.getOwnerId(); }
 
-function getOrCreateShareToken(proj) {
-  if (!proj.shareToken) {
-    proj.shareToken = 'shr_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-  }
-  return proj.shareToken;
-}
+function getOrCreateShareToken(proj) { return Share.getOrCreateShareToken(proj); }
 
 function openShareModal() {
   if (isReadOnly) return;
@@ -3229,20 +3222,17 @@ let _sharedChannels = [];
 async function loadSharedProjects() {
   if (!currentUser) return;
   try {
-    const snap = await db.collection('gantt_project_shares')
-      .where('shared_with_email', '==', currentUser.email).get();
-    if (snap.empty) return;
+    const shares = await Remote.getProjectSharesForEmail(currentUser.email);
+    if (!shares.length) return;
 
     const byOwner = {};
-    snap.forEach(doc => {
-      const s = doc.data();
+    shares.forEach(s => {
       if (!byOwner[s.owner_id]) byOwner[s.owner_id] = [];
       byOwner[s.owner_id].push(s);
     });
 
     for (const [ownerId, ownerShares] of Object.entries(byOwner)) {
-      const ownerSnap = await db.collection('gantt_user_data').doc(ownerId).get();
-      const ownerData = ownerSnap.data()?.data;
+      const ownerData = await Remote.readUserData(ownerId);
       if (!ownerData?.projects) continue;
 
       ownerShares.forEach(share => {
@@ -3268,11 +3258,9 @@ function setupSharedRealtime(ownerIds) {
 
   ownerIds.forEach(ownerId => {
     let skipFirst = true;
-    const unsub = db.collection('gantt_user_data').doc(ownerId)
-      .onSnapshot(async () => {
+    const unsub = Remote.watchUserData(ownerId, async () => {
         if (skipFirst) { skipFirst = false; return; }
-        const ownerSnap = await db.collection('gantt_user_data').doc(ownerId).get();
-        const ownerData = ownerSnap.data()?.data;
+        const ownerData = await Remote.readUserData(ownerId);
         if (!ownerData?.projects) return;
         projects = projects.map(p => {
           if (p._isShared && p._ownerId === ownerId) {
@@ -3334,10 +3322,7 @@ async function refreshCollabList() {
   const sel = document.getElementById('collabProjSelect');
   const projId = sel ? sel.value : (curProj()?.id);
   if (!projId) return;
-  const snap = await db.collection('gantt_project_shares')
-    .where('project_id', '==', String(projId))
-    .where('owner_id', '==', currentUser.uid).get();
-  _collabShares = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  _collabShares = await Remote.getProjectSharesForOwner(projId, currentUser.uid);
   renderCollabModal();
 }
 
@@ -3379,7 +3364,7 @@ async function addShare() {
     if (!projId) { showMsg('請先選擇專案'); return; }
 
     const docId = `${projId}_${email.replace(/[.@]/g,'_')}`;
-    await db.collection('gantt_project_shares').doc(docId).set({
+    await Remote.addProjectShare(docId, {
       project_id: String(projId),
       owner_id: currentUser.uid,
       shared_with_email: email,
@@ -3395,7 +3380,7 @@ async function addShare() {
 
 async function removeShare(shareId, email) {
   if (!confirm(`確定要移除 ${email} 的存取權限嗎？`)) return;
-  await db.collection('gantt_project_shares').doc(shareId).delete();
+  await Remote.removeProjectShare(shareId);
   await refreshCollabList();
 }
 
@@ -3416,8 +3401,7 @@ async function loadAdminUsers() {
   const tbody = document.getElementById('adminUserList');
   tbody.innerHTML = '<tr><td colspan="5" style="color:var(--t3);text-align:center;padding:16px">載入中…</td></tr>';
   try {
-    const snap = await db.collection('gantt_allowed_users').orderBy('added_at', 'asc').get();
-    const data = snap.docs.map(d => d.data());
+    const data = await Remote.getAllUsers();
     document.getElementById('adminUserCount').textContent = `（${data.length} 人）`;
     tbody.innerHTML = data.map(u => {
       const delBtn = u.is_admin ? '' : `<button class="btn" style="font-size:11px;padding:3px 8px;color:#E53;border-color:#E53" onclick="deleteUser('${u.email}')">刪除</button>`;
@@ -3439,7 +3423,7 @@ async function deleteUser(email) {
   if (!isAdmin()) return;
   if (!confirm(`確定要刪除用戶 ${email}？此操作無法復原。`)) return;
   try {
-    await db.collection('gantt_allowed_users').doc(email).delete();
+    await Remote.removeUser(email);
     await loadAdminUsers();
   } catch(e) { alert('刪除失敗：' + e.message); }
 }
@@ -3571,19 +3555,8 @@ function render() {
 }
 
 /* ═══════════════════════════════════════════
-   FIREBASE
+   CLOUD SYNC STATE (Firebase init in src/data/firebase.js)
 ═══════════════════════════════════════════ */
-const FB_CONFIG = {
-  apiKey: "AIzaSyA3PDiLdRhHKlGGmkT-iY7L5bTZrsSCyhY",
-  authDomain: "ganttpro-819d1.firebaseapp.com",
-  projectId: "ganttpro-819d1",
-  storageBucket: "ganttpro-819d1.firebasestorage.app",
-  messagingSenderId: "68574649003",
-  appId: "1:68574649003:web:94692e4f75bacf7669b5ee"
-};
-firebase.initializeApp(FB_CONFIG);
-const auth = firebase.auth();
-const db = firebase.firestore();
 let _myUpdate = false;
 let currentUser = null;
 let _guestMode = false;
@@ -3604,26 +3577,20 @@ async function saveToCloud() {
     const cp = curProj();
 
     if (!cp) {
-      const state = { projects: [], currentProjId: null, nextProjId };
-      await db.collection('gantt_user_data').doc(currentUser.uid)
-        .set({ data: state, updated_at: new Date().toISOString() }, { merge: true });
+      await Remote.writeUserData(currentUser.uid, { projects: [], currentProjId: null, nextProjId });
       setSyncDot('ok');
     } else if (cp._isShared && cp._permission === 'edit') {
-      const ownerSnap = await db.collection('gantt_user_data').doc(cp._ownerId).get();
-      const ownerData = ownerSnap.data()?.data;
+      const ownerData = await Remote.readUserData(cp._ownerId);
       if (!ownerData?.projects) { setSyncDot('err'); return; }
       const ownerProjects = ownerData.projects.map(p =>
         p.id === cp.id ? { ...cp, _isShared: undefined, _ownerId: undefined, _permission: undefined } : p
       );
-      await db.collection('gantt_user_data').doc(cp._ownerId)
-        .update({ data: { ...ownerData, projects: ownerProjects }, updated_at: new Date().toISOString() });
+      await Remote.updateUserData(cp._ownerId, { ...ownerData, projects: ownerProjects });
       setSyncDot('ok');
     } else if (!cp._isShared) {
       const ownProjects = projects.filter(p => !p._isShared);
-      const state = { projects: ownProjects, currentProjId, nextProjId };
       _myUpdate = true;
-      await db.collection('gantt_user_data').doc(currentUser.uid)
-        .set({ data: state, updated_at: new Date().toISOString() }, { merge: true });
+      await Remote.writeUserData(currentUser.uid, { projects: ownProjects, currentProjId, nextProjId });
       setTimeout(() => _myUpdate = false, 1000);
       setSyncDot('ok');
     }
@@ -3635,9 +3602,8 @@ async function saveToCloud() {
 async function loadFromCloud() {
   if (!currentUser) return false;
   try {
-    const snap = await db.collection('gantt_user_data').doc(currentUser.uid).get();
-    if (!snap.exists || !snap.data()?.data) return false;
-    const s = snap.data().data;
+    const s = await Remote.readUserData(currentUser.uid);
+    if (!s) return false;
     projects   = s.projects || [];
     nextProjId = s.nextProjId ?? 1;
     if (!projects.length) {
@@ -3657,52 +3623,20 @@ async function loadFromCloud() {
   } catch(e) { return false; }
 }
 
-function _encodeData(obj) {
-  try {
-    const bytes = new TextEncoder().encode(JSON.stringify(obj));
-    let bin = '';
-    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  } catch(e) { return null; }
-}
-
-function _decodeData(b64) {
-  try {
-    const std = b64.replace(/-/g,'+').replace(/_/g,'/');
-    const padded = std + '='.repeat((4 - std.length % 4) % 4);
-    const bin = atob(padded);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return JSON.parse(new TextDecoder().decode(bytes));
-  } catch(e) { console.error('[decode]', e); return null; }
-}
-
 async function loadShareFromCloud(token) {
-  // 優先從 URL hash 讀取（不受 Supabase RLS 限制）
   const hashMatch = location.hash.match(/[#&]d=([^&]*)/);
   const hashData = hashMatch ? hashMatch[1] : null;
   if (hashData) {
-    const obj = _decodeData(hashData);
+    const obj = Share.decodeData(hashData);
     if (obj) return obj;
   }
   try {
-    const snap = await db.collection('gantt_shares').doc(token).get();
-    return (snap.exists && snap.data()?.project_data) ? snap.data().project_data : null;
+    return await Share.loadShareDoc(token);
   } catch(e) { return null; }
 }
 
 function saveShareToCloud(token, project) {
-  // 編碼專案資料供 URL hash 傳遞
-  const encoded = _encodeData(project);
-  if (currentUser) {
-    try {
-      db.collection('gantt_shares').doc(token).set({
-        token, owner_id: currentUser.uid,
-        project_data: JSON.parse(JSON.stringify(project))
-      });
-    } catch(e) {}
-  }
-  return encoded;
+  return Share.saveShareDoc(token, currentUser?.uid, project);
 }
 
 let _realtimeUnsub = null;
@@ -3711,8 +3645,7 @@ function setupRealtime() {
   if (!currentUser) return;
   if (_realtimeUnsub) _realtimeUnsub();
   let skipFirst = true;
-  _realtimeUnsub = db.collection('gantt_user_data').doc(currentUser.uid)
-    .onSnapshot(async () => {
+  _realtimeUnsub = Remote.watchUserData(currentUser.uid, async () => {
       if (skipFirst) { skipFirst = false; return; }
       if (_myUpdate) return;
       const ok = await loadFromCloud();
@@ -3739,23 +3672,18 @@ function showSyncToast() {
 /* ═══════════════════════════════════════════
    LOCALSTORAGE
 ═══════════════════════════════════════════ */
-const LS_KEY = 'ganttpro_v1';
-
 function saveToLS() {
   try {
-    curProj().nextId = nextId;
-    // Only persist own projects; shared projects are re-loaded from cloud each session
+    if (curProj()) curProj().nextId = nextId;
     const ownProjects = projects.filter(p => !p._isShared);
-    localStorage.setItem(LS_KEY, JSON.stringify({ projects: ownProjects, currentProjId, nextProjId }));
+    Local.saveToLS({ projects: ownProjects, currentProjId, nextProjId });
   } catch(e) {}
 }
 
 function loadFromLS() {
   try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return false;
-    const d = JSON.parse(raw);
-    if (!d.projects?.length) return false;
+    const d = Local.loadFromLS();
+    if (!d?.projects?.length) return false;
     projects   = d.projects;
     nextProjId = d.nextProjId ?? projects.length + 1;
     currentProjId = (d.currentProjId && projects.find(p => p.id === d.currentProjId))
@@ -3834,8 +3762,7 @@ function mergeDefaultProjects() {
 async function signInWithGoogle() {
   document.getElementById('loginError').style.display = 'none';
   try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
+    await auth.signInWithPopup(googleProvider);
   } catch(e) {
     if (e.code !== 'auth/popup-closed-by-user') alert('登入失敗：' + e.message);
   }
@@ -3849,8 +3776,8 @@ async function signInAsGuest() {
 
 async function checkAuthorized() {
   if (!currentUser) return false;
-  const snap = await db.collection('gantt_allowed_users').doc(currentUser.email).get();
-  if (!snap.exists) {
+  const userData = await Remote.getAuthorizedUser(currentUser.email);
+  if (!userData) {
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('loginPanel').style.display = 'none';
     document.getElementById('registerPanel').style.display = 'flex';
@@ -3870,7 +3797,7 @@ async function submitRegister() {
   }
   errEl.style.display = 'none';
   try {
-    await db.collection('gantt_allowed_users').doc(currentUser.email).set({
+    await Remote.registerUser(currentUser.email, {
       email: currentUser.email, name: nickname,
       is_admin: false, added_at: new Date().toISOString()
     });
@@ -4003,7 +3930,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 保險：Firebase 無回應（離線、被擋）時 4 秒後仍顯示登入按鈕
   const authFallback = setTimeout(() => { if (!_appInitialized) revealLogin(); }, 4000);
 
-  auth.onAuthStateChanged(async (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (_appInitialized) return;
     clearTimeout(authFallback);
     if (user) {
@@ -4027,8 +3954,8 @@ document.addEventListener('DOMContentLoaded', async () => {
    (static + dynamic innerHTML) still resolve them globally.
    TEMPORARY — removed in Phase 6 (onclick -> addEventListener). ── */
 Object.assign(window, {
-  _decodeData,
-  _encodeData,
+  _decodeData: Share.decodeData,
+  _encodeData: Share.encodeData,
   addDepToInput,
   addShare,
   addTaskInline,

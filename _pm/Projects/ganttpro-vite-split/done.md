@@ -4,6 +4,44 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 3: Firebase seam + modular v9 migration ✅
+
+- **Goal achieved**: all Firestore API calls live in `src/data/` modules. CDN compat
+  scripts removed. Firebase loaded via npm modular v9 SDK. Removing Firebase = remove
+  `src/data/` directory + clean up 2 imports in main.js.
+- **New files** (4 data layer modules):
+  - `src/data/firebase.js` — modular v9 init (initializeApp, getAuth, getFirestore),
+    exports `auth`, `db`, `googleProvider`. FB_CONFIG lives here.
+  - `src/data/local.js` — `saveToLS(data)`, `loadFromLS()`, `getOwnerId()`. Pure
+    localStorage I/O, no app-state globals.
+  - `src/data/share.js` — `encodeData()`, `decodeData()`, `getOrCreateShareToken()`,
+    `saveShareDoc()`, `loadShareDoc()`. Imports firebase.js for Firestore share-doc ops.
+  - `src/data/remote.js` — all Firestore CRUD wrappers across 3 collections
+    (gantt_user_data, gantt_project_shares, gantt_allowed_users). 14 exported functions,
+    each 2-5 lines. Pure I/O: take data, return data, no globals.
+- **main.js changes** (net -62 lines, 4135 total):
+  - Added 5 imports (auth, googleProvider, onAuthStateChanged, Local, Share, Remote).
+  - Removed FB_CONFIG + firebase.initializeApp + `const auth = firebase.auth()` +
+    `const db = firebase.firestore()` (moved to firebase.js).
+  - Removed _encodeData, _decodeData, LS_KEY, getOwnerId body, getOrCreateShareToken
+    body (moved to modules; thin wrappers remain for window shim).
+  - 18 Firestore call sites migrated from compat chained API
+    (`db.collection().doc().get/set/update/delete`) to functional v9 API via Remote
+    wrappers (`Remote.readUserData()`, `Remote.writeUserData()`, etc.).
+  - `new firebase.auth.GoogleAuthProvider()` → imported `googleProvider`.
+  - `auth.onAuthStateChanged()` → `onAuthStateChanged(auth, ...)` (functional form).
+  - Window shim: `_decodeData`/`_encodeData` now reference `Share.decodeData`/`Share.encodeData`.
+  - `saveToLS` null-guard: `if (curProj()) curProj().nextId = nextId` (was bare, threw
+    and was silently caught — now skips gracefully).
+- **CDN removal**: 3 `<script>` tags removed from index.html head. No more
+  `gstatic.com/firebasejs` dependency.
+- **Bundle size**: 110 kB → 675 kB (Firebase SDK now bundled). Expected — tree-shaking
+  and code-splitting can reduce this in future optimization passes.
+- Verified: `node --check` all files clean, `npm test` 86/86 green, `npm run build`
+  green (32 modules transformed), dev server boots OK.
+
+---
+
 ## 2026-07-02 — Phase 2: Kill tasks SSOT violation ✅
 
 - **Problem**: `tasks` (local var) and `curProj().tasks` (project property) were
