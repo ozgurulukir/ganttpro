@@ -222,7 +222,7 @@ let projects = [
     ]
   }
 ];
-let currentProjId = 1;
+let currentProjId = 2;
 let nextProjId    = 3;
 
 // SSOT INVARIANT: tasks must always reference the same array as curProj().tasks.
