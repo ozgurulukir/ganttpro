@@ -17,7 +17,7 @@ export function populateModal(excludeId = null, checkedDeps = [], presetParent =
   sel.innerHTML = '';
   const noneOpt = document.createElement('option');
   noneOpt.value = '';
-  noneOpt.textContent = '— 無（最上層）—';
+  noneOpt.textContent = '— None (top level) —';
   sel.appendChild(noneOpt);
   const excludeSet = excludeId !== null ? new Set([excludeId, ...getAllDescendants(excludeId)]) : new Set();
   tasks.filter(t => t.type === 'group' && !excludeSet.has(t.id)).forEach(t => {
@@ -73,7 +73,7 @@ export function updateModalForType() {
   document.getElementById('rowDates').style.display = isGrp ? 'none' : '';
   document.getElementById('colEnd').style.display   = isMs ? 'none' : '';
   document.getElementById('colWday').style.display  = isMs ? 'none' : '';
-  document.getElementById('lblStart').textContent   = isMs ? '日期' : '開始日期';
+  document.getElementById('lblStart').textContent   = isMs ? 'Date' : 'Start Date';
   document.getElementById('rowDone').style.display  = (isMs || isGrp) ? 'none' : 'flex';
   document.getElementById('rowDeps').style.display  = isGrp ? 'none' : '';
   document.getElementById('rowAssignee').style.display = isGrp ? 'none' : '';
@@ -91,9 +91,9 @@ export function setupDepsInputListener(excludeId) {
     if (!val.trim()) { tip.innerHTML = ''; return; }
     const parsed = parseDepInput(val, excludeId);
     tip.innerHTML = parsed.map(p => {
-      if (p.err) return `<span style="color:var(--red)">✕ ${p.raw}：${p.err}</span>`;
+      if (p.err) return `<span style="color:var(--red)">✕ ${p.raw}: ${p.err}</span>`;
       const dt = taskById(p.taskId);
-      return `<span style="color:#10B981">✓ ${p.rowNum}${p.type}・${dt ? dt.name : ''}</span>`;
+      return `<span style="color:#10B981">✓ ${p.rowNum}${p.type} - ${dt ? dt.name : ''}</span>`;
     }).join('&nbsp;&nbsp;');
   }
 
@@ -117,7 +117,7 @@ export function renderDepsDropdown(excludeId) {
     task.type !== 'group' && task.id !== excludeId
   );
 
-  if (!rows.length) { list.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--t4);text-align:center">無可選任務</div>'; return; }
+  if (!rows.length) { list.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--t4);text-align:center">No tasks available</div>'; return; }
 
   list.innerHTML = rows.map(({task}, i) => {
     const rowNum = i + 1;
@@ -163,8 +163,8 @@ export function openModal(unused, prefillDate) {
   if (isReadOnly) return;
   if (!curProj()) { openProjModal(); return; }
   editingTaskId = null;
-  document.getElementById('modal-title').textContent = '＋ 新增任務';
-  document.getElementById('modal-submit').textContent = '新增任務';
+  document.getElementById('modal-title').textContent = '+ Add Task';
+  document.getElementById('modal-submit').textContent = 'Add Task';
   document.getElementById('fName').value = '';
   const startDate = prefillDate || TODAY_STR;
   document.getElementById('fStart').value = startDate;
@@ -188,7 +188,7 @@ export function openNameEditor(task, cell, isNew = false) {
   inp.type = 'text';
   inp.className = 'inline-input';
   inp.value = task.name;
-  inp.placeholder = '輸入任務名稱…';
+  inp.placeholder = 'Enter task name...';
   inp.style.cssText = 'width:100%;min-width:80px';
   cell.innerHTML = '';
   cell.style.overflow = 'visible';
@@ -199,7 +199,7 @@ export function openNameEditor(task, cell, isNew = false) {
     if (committed) return; committed = true;
     const name = inp.value.trim();
     if (!isNew) pushHistory();
-    task.name = name || '新任務';
+    task.name = name || 'New Task';
     recalcProjEnd(); render();
   }
   inp.addEventListener('blur', commit);
@@ -223,7 +223,7 @@ export function addTaskInline(refTaskId) {
   const parent = taskById(parentId);
   const newTask = {
     id: consumeNextId(),
-    name: '新任務',
+    name: 'New Task',
     type: 'task',
     parent: parentId,
     color: parent ? parent.color : ref.color || '#5E6AD2',
@@ -262,8 +262,8 @@ export function openModalUnder(taskId) {
   if (!task) return;
   const parentId = task.parent;
   editingTaskId = null;
-  document.getElementById('modal-title').textContent = '＋ 新增任務';
-  document.getElementById('modal-submit').textContent = '新增任務';
+  document.getElementById('modal-title').textContent = '+ Add Task';
+  document.getElementById('modal-submit').textContent = 'Add Task';
   document.getElementById('fName').value = '';
   document.getElementById('fStart').value = TODAY_STR;
   document.getElementById('fEnd').value = TODAY_STR;
@@ -280,8 +280,8 @@ export function openEditModal(taskId) {
   const task = taskById(taskId);
   if (!task) return;
   editingTaskId = taskId;
-  document.getElementById('modal-title').textContent = '✏️ 編輯任務';
-  document.getElementById('modal-submit').textContent = '儲存變更';
+  document.getElementById('modal-title').textContent = '✏️ Edit Task';
+  document.getElementById('modal-submit').textContent = 'Save Changes';
   document.getElementById('fName').value = task.name;
   document.getElementById('fType').value = task.type;
   document.getElementById('fStart').value = task.start || task.date || TODAY_STR;
@@ -314,9 +314,9 @@ export function confirmDeleteTask(id) {
   const descendants = getAllDescendants(id);
   const msg = document.getElementById('deleteModalMsg');
   if (task.type === 'group' && descendants.length > 0) {
-    msg.textContent = `此群組及其 ${descendants.length} 個子任務將一併刪除，此操作無法復原。`;
+    msg.textContent = `This group and its ${descendants.length} sub-tasks will also be deleted. This action cannot be undone.`;
   } else {
-    msg.textContent = '此操作無法復原。';
+    msg.textContent = 'This action cannot be undone.';
   }
 
   document.getElementById('deleteConfirmBtn').onclick = () => { executeDeleteTask(_deleteTargetId); };
@@ -580,7 +580,7 @@ export function renderDepsMenu() {
     t.id !== depsExcludeId
   );
   if (list.length === 0) {
-    menu.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:var(--t4)">目前無可選前置任務</div>';
+    menu.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:var(--t4)">No dependencies available</div>';
     return;
   }
   list.forEach(t => {
@@ -606,7 +606,7 @@ export function openAllDepsEditor(task, cell) {
 
   const inp = document.createElement('input');
   inp.className = 'deps-input';
-  inp.placeholder = '如：2FS, 3SS, 2FS+3';
+  inp.placeholder = 'e.g. 2FS, 3SS, 2FS+3';
   inp.value = buildDepsText(task);
   wrap.appendChild(inp);
 
@@ -636,7 +636,7 @@ export function openAllDepsEditor(task, cell) {
       const dt = taskById(p.taskId);
       return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.rowNum}${p.type}</span> <span style="color:#6EE7B7">✓ ${dt ? dt.name : ''} · ${p.type}</span></div>`;
     });
-    rows.push('<div style="margin-top:4px;color:#9CA3AF;font-size:10px">Enter 確認 &nbsp; Esc 取消</div>');
+    rows.push('<div style="margin-top:4px;color:#9CA3AF;font-size:10px">Enter to confirm &nbsp; Esc to cancel</div>');
     tip.innerHTML = rows.join('');
     positionTip();
     tip.style.display = 'block';

@@ -25,7 +25,7 @@ export function setBaseline() {
     else if (t.type === 'milestone' && t.date) dates[t.id] = { d: t.date };
   });
   p.baseline = { setAt: TODAY_STR, dates };
-  showStatus(`已設定基準線（${TODAY_STR}）`);
+  showStatus(`Baseline set (${TODAY_STR})`);
   render();
   saveToLS();
   if (currentUser) saveToCloud();
@@ -147,18 +147,18 @@ export function createVersion() {
   inp.value = '';
   renderVersionList();
   render(); // triggers save
-  showStatus('✓ 版本「' + name + '」已建立');
+  showStatus('✓ Version "' + name + '" created');
 }
 
 export function restoreVersion(vId) {
   const { loadTasksFromSnapshot, render, showStatus } = D;
   const v = curVersions().find(v => v.id === vId);
   if (!v) return;
-  if (!confirm(`還原至版本「${v.name}」？\n目前變更將被覆蓋，此操作無法復原。`)) return;
+  if (!confirm(`Restore to version "${v.name}"?\nCurrent changes will be overwritten. This cannot be undone.`)) return;
   loadTasksFromSnapshot(v.snapshot);
   render();
   closeVersionPanel();
-  showStatus('✓ 已還原至「' + v.name + '」');
+  showStatus('✓ Restored to "' + v.name + '"');
 }
 
 export function deleteVersion(vId) {
@@ -166,7 +166,7 @@ export function deleteVersion(vId) {
   const vs = curVersions();
   const v = vs.find(v => v.id === vId);
   if (!v) return;
-  if (!confirm(`刪除版本「${v.name}」？`)) return;
+  if (!confirm(`Delete version "${v.name}"?`)) return;
   curProj().versions = vs.filter(v => v.id !== vId);
   renderVersionList();
   render();
@@ -176,7 +176,7 @@ export function renderVersionList() {
   const el = document.getElementById('verList');
   const vs = curVersions();
   if (vs.length === 0) {
-    el.innerHTML = '<div class="ver-empty">尚無版本紀錄<br>編輯完成後輸入版本名稱<br>點擊「建立版本」儲存快照</div>';
+    el.innerHTML = '<div class="ver-empty">No versions yet<br>Edit your project, enter a version name,<br>and click "Create Version" to save a snapshot</div>';
     return;
   }
   el.innerHTML = '';
@@ -187,10 +187,10 @@ export function renderVersionList() {
     item.className = 'ver-item';
     item.innerHTML = `
       <div class="ver-item-name">${esc(v.name)}</div>
-      <div class="ver-item-meta">${dateStr} · ${v.taskCount} 個任務</div>
+      <div class="ver-item-meta">${dateStr} · ${v.taskCount} tasks</div>
       <div class="ver-item-actions">
-        <button class="ver-btn ver-btn-restore" data-action="restore-version" data-id="${v.id}">還原此版本</button>
-        <button class="ver-btn ver-btn-del" data-action="delete-version" data-id="${v.id}">刪除</button>
+        <button class="ver-btn ver-btn-restore" data-action="restore-version" data-id="${v.id}">Restore</button>
+        <button class="ver-btn ver-btn-del" data-action="delete-version" data-id="${v.id}">Delete</button>
       </div>
     `;
     el.appendChild(item);

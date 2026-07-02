@@ -27,7 +27,7 @@ export function updateProjUI() {
     const fallback = projects.find(x => !x._isShared) || projects[0];
     if (!fallback) {
       // No projects at all — clear header and show create modal
-      document.getElementById('projSelectorName').textContent = '— 無專案 —';
+      document.getElementById('projSelectorName').textContent = '— No projects —';
       document.getElementById('projDot').style.background = '#999';
       renderProjMenu();
       return;
@@ -72,9 +72,9 @@ export function renderProjMenu() {
     item.className = 'proj-item' + (p.id === currentProjId ? ' active' : '');
     item.innerHTML = `
       <div class="proj-item-dot" style="background:${p.color}"></div>
-      <span class="proj-item-name">${esc(p.name)}${p._isShared ? ' <span class="collab-shared-badge">共享</span>' : ''}</span>
-      ${!p._isShared ? `<span class="proj-item-edit" data-action="edit-proj" data-pid="${p.id}" title="編輯此專案">✎</span>` : ''}
-      ${!p._isShared ? `<span class="proj-item-del" data-action="delete-proj" data-pid="${p.id}" title="刪除此專案">✕</span>` : ''}
+      <span class="proj-item-name">${esc(p.name)}${p._isShared ? ' <span class="collab-shared-badge">Shared</span>' : ''}</span>
+      ${!p._isShared ? `<span class="proj-item-edit" data-action="edit-proj" data-pid="${p.id}" title="Edit project">✎</span>` : ''}
+      ${!p._isShared ? `<span class="proj-item-del" data-action="delete-proj" data-pid="${p.id}" title="Delete project">✕</span>` : ''}
     `;
     item.dataset.pid = p.id;
     menu.appendChild(item);
@@ -83,7 +83,7 @@ export function renderProjMenu() {
   menu.appendChild(div);
   const add = document.createElement('div');
   add.className = 'proj-item proj-item-new';
-  add.innerHTML = '＋ 建立新專案';
+  add.innerHTML = '+ New Project';
   add.onclick = () => { closeProjMenuOnly(); openProjModal(); };
   menu.appendChild(add);
 }
@@ -93,7 +93,7 @@ export function deleteProject(id, e) {
   e.stopPropagation();
   const p = projects.find(x => x.id === id);
   if (!p || p._isShared) return;
-  if (!confirm(`確定要刪除「${p.name}」嗎？此操作無法復原。`)) return;
+  if (!confirm(`Delete "${p.name}"? This action cannot be undone.`)) return;
   setProjects(projects.filter(x => x.id !== id));
   closeProjMenuOnly();
   const ownedLeft = D.projects.filter(x => !x._isShared);
@@ -120,8 +120,8 @@ export function openEditProjModal(id, e) {
   const p = projects.find(x => x.id === id);
   if (!p) return;
   _editingProjId = id;
-  document.getElementById('projModalTitle').textContent = '✎ 編輯專案';
-  document.getElementById('projSubmitBtn').textContent = '儲存';
+  document.getElementById('projModalTitle').textContent = '✎ Edit Project';
+  document.getElementById('projSubmitBtn').textContent = 'Save';
   document.getElementById('pName').value = p.name;
   document.getElementById('pStart').value = p.startDate;
   document.getElementById('projColorDot').style.background = p.color;
@@ -137,8 +137,8 @@ export function openEditProjModal(id, e) {
 export function openProjModal() {
   const { TODAY_STR, TEMPLATES, getNextGroupColor } = D;
   _editingProjId = null;
-  document.getElementById('projModalTitle').textContent = '◆ 建立新專案';
-  document.getElementById('projSubmitBtn').textContent = '建立專案';
+  document.getElementById('projModalTitle').textContent = '◆ New Project';
+  document.getElementById('projSubmitBtn').textContent = 'Create Project';
   document.getElementById('pName').value = '';
   document.getElementById('pStart').value = TODAY_STR;
 
@@ -149,9 +149,9 @@ export function openProjModal() {
     tplRow.className = 'form-row';
     tplRow.id = 'tplRow';
     tplRow.innerHTML =
-      '<label class="form-lbl">套用範本</label>' +
+      '<label class="form-lbl">Template</label>' +
       '<select class="form-ctrl" id="pTemplate">' +
-      '<option value="">— 空白專案 —</option></select>';
+      '<option value="">— Blank Project —</option></select>';
     startRow.insertAdjacentElement('afterend', tplRow);
     const prevDiv = document.createElement('div');
     prevDiv.id = 'templatePreview';
@@ -161,7 +161,7 @@ export function openProjModal() {
 
   // Fill template options
   const sel = document.getElementById('pTemplate');
-  sel.innerHTML = '<option value="">— 空白專案 —</option>' +
+  sel.innerHTML = '<option value="">— Blank Project —</option>' +
     TEMPLATES.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
   sel.value = '';
   document.getElementById('templatePreview').style.display = 'none';
@@ -186,8 +186,8 @@ export function onTemplateChange() {
   const miles  = tpl.tasks.filter(t => t.type === 'milestone').length;
   // List phase names (top-level groups)
   const phases = tpl.tasks.filter(t => t.type === 'group' && t.parent === 1)
-    .map(t => t.name).join('　→　');
-  preview.innerHTML = `<b>範本內容：</b>${groups} 個階段、${tasks} 個任務、${miles} 個里程碑<br>
+    .map(t => t.name).join(' → ');
+  preview.innerHTML = `<b>Template:</b> ${groups} phases, ${tasks} tasks, ${miles} milestones<br>
     <span style="color:var(--t4)">${phases}</span>`;
   preview.style.display = '';
   // Auto-fill name if empty (use short default, not full template name)
@@ -195,7 +195,7 @@ export function onTemplateChange() {
   if (!nameEl.value.trim()) {
     const today = new Date();
     const ym = today.toLocaleDateString('sv', { timeZone: 'Asia/Taipei' }).slice(0, 7);
-    nameEl.value = (tpl.defaultName || tpl.name.split('（')[0]) + ' ' + ym;
+    nameEl.value = (tpl.defaultName || tpl.name.split('(')[0]) + ' ' + ym;
     setTimeout(() => { nameEl.select(); }, 60);
   }
   // Update color dot to template color
@@ -220,7 +220,7 @@ export function submitProject() {
 
   // 重複名稱提醒
   const dupName = projects.some(p => p.id !== _editingProjId && p.name === name);
-  if (dupName && !confirm(`已有名稱為「${name}」的專案，重複名稱容易混淆，建議改用不同名稱。\n\n仍要使用這個名稱嗎？`)) {
+  if (dupName && !confirm(`A project named "${name}" already exists. Duplicate names can be confusing.\n\nUse this name anyway?`)) {
     document.getElementById('pName').focus();
     return;
   }
