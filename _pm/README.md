@@ -6,14 +6,7 @@ Finished projects move to `Archives/`. Always use full paths.
 
 ## Projects (active)
 
-- **[ganttpro-i18n](Projects/ganttpro-i18n/todo.md)** — Translate all user-facing
-  strings from zh-TW to English. 8 phases, ~3,000 CJK chars across ~20 files.
-  Status: ready.
-- **[ganttpro-security](Projects/ganttpro-security/done.md)** — Firestore security
-  rules + `firebase.json`. Complete (deploy is manual).
-- **[ganttpro-timezone](Projects/ganttpro-timezone/done.md)** — Pure-arithmetic
-  day-number model. Complete, 93 tests green cross-TZ.
-- **[ganttpro-docs](Projects/ganttpro-docs/done.md)** — README.md. Complete.
+- (none — all current projects completed)
 
 ## Projects (planned, not started)
 
@@ -33,5 +26,12 @@ Finished projects move to `Archives/`. Always use full paths.
 
 ## Archives
 
+- [ganttpro-i18n](Archives/ganttpro-i18n/done.md) — Translated all user-facing
+  strings from zh-TW to English. 8 phases, 7 commits. 93 tests green.
+- [ganttpro-security](Archives/ganttpro-security/done.md) — Firestore security
+  rules + `firebase.json`. Complete (deploy is manual).
+- [ganttpro-timezone](Archives/ganttpro-timezone/done.md) — Pure-arithmetic
+  day-number model. Complete, 93 tests green cross-TZ.
+- [ganttpro-docs](Archives/ganttpro-docs/done.md) — README.md. Complete.
 - [ganttpro-vite-split](Archives/ganttpro-vite-split/done.md) — Split 5,930-line
   `gantt.html` into 52-module Vite project. 9 phases complete, 93 tests green.
