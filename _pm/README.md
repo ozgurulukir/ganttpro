@@ -6,7 +6,9 @@ Finished projects move to `Archives/`. Always use full paths.
 
 ## Projects (active)
 
-- (none — all current projects completed)
+- **[ganttpro-i18next](Projects/ganttpro-i18next/todo.md)** — Replace hardcoded
+  English strings with i18next `t()` calls. Ship EN + zh-TW. 6 phases, ~300 keys,
+  16 JS files + index.html.
 
 ## Projects (planned, not started)
 
