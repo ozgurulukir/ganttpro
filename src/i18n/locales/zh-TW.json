@@ -113,6 +113,7 @@
   },
   "chart": {
     "today": "今日",
+    "milestones": "里程碑",
     "months": ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
     "days": ["日", "一", "二", "三", "四", "五", "六"]
   },
@@ -177,7 +178,12 @@
     "noVersions": "尚無版本紀錄<br>編輯完成後輸入版本名稱<br>點擊「建立版本」儲存快照",
     "createVersion": "建立版本",
     "restore": "還原此版本",
-    "delete": "刪除"
+    "delete": "刪除",
+    "showBarDates": "顯示長條日期",
+    "showBaseline": "顯示基準線",
+    "setBaseline": "📐 設定基準線",
+    "versionHistory": "🕐 版本紀錄",
+    "versionNamePlaceholder": "版本名稱，如 v1.0 需求確認"
   },
   "share": {
     "title": "🔗 共享專案：",
@@ -198,7 +204,8 @@
     "cannotShareSelf": "不能分享給自己",
     "selectProjectFirst": "請先選擇專案",
     "added": "✓ 已成功加入",
-    "addFailed": "加入失敗："
+    "addFailed": "加入失敗：",
+    "collabEmailPlaceholder": "輸入對方的 Gmail 帳號"
   },
   "admin": {
     "title": "👑 用戶管理",

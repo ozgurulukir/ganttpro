@@ -113,6 +113,7 @@
   },
   "chart": {
     "today": "Today",
+    "milestones": "Milestones",
     "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
     "days": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
   },
@@ -177,7 +178,12 @@
     "noVersions": "No versions yet<br>Edit your project, enter a version name,<br>and click \"Create Version\" to save a snapshot",
     "createVersion": "Create Version",
     "restore": "Restore",
-    "delete": "Delete"
+    "delete": "Delete",
+    "showBarDates": "Show bar dates",
+    "showBaseline": "Show baseline",
+    "setBaseline": "📐 Set Baseline",
+    "versionHistory": "🕐 Version History",
+    "versionNamePlaceholder": "Version name, e.g. v1.0 Requirements Review"
   },
   "share": {
     "title": "🔗 Share Project: ",
@@ -198,7 +204,8 @@
     "cannotShareSelf": "Cannot share with yourself",
     "selectProjectFirst": "Please select a project first",
     "added": "✓ Successfully added",
-    "addFailed": "Failed to add: "
+    "addFailed": "Failed to add: ",
+    "collabEmailPlaceholder": "Enter collaborator's Gmail address"
   },
   "admin": {
     "title": "👑 User Management",
