@@ -106,20 +106,23 @@ Firebase loaded via npm modular v9. ✅
 
 ---
 
-## Phase 4 — Extract render layer
+## Phase 4 — Extract render layer ✅ DONE
 
 Goal: DOM/canvas code grouped by concern. Most coupled, least testable — do last.
 
-- [ ] 4.1 `src/render/task-panel.js` — renderTaskPanel + helpers (1713–2009)
-- [ ] 4.2 `src/render/chart-header.js` — renderChartHeader (2030–2137)
-- [ ] 4.3 `src/render/chart-body.js` — renderChartBody, renderGrid (2138–2262)
-- [ ] 4.4 `src/render/bar.js` — renderBar, renderGroupBar, attachBarDrag, getWorkingSegs (2263–2477)
-- [ ] 4.5 `src/render/milestone.js` — renderMilestone, renderMilestoneTimeline (2478–2618)
-- [ ] 4.6 `src/render/arrows.js` — renderArrows (2619–2800)
-- [ ] 4.7 `src/render/workload.js` — computeWorkload, renderWorkloadPanel/Chart (2905–3000)
-- [ ] 4.8 `src/render/tooltip.js` — showTT, moveTT, hideTT, highlightRow, highlightDeps (2801–2892)
-- [ ] 4.9 `src/render/index.js` — orchestrates render() (5466–5475)
-- [ ] 4.10 Commit: `refactor: extract render layer`
+- [x] 4.1 `src/render/deps.js` — shared `D` object populated by `syncRenderDeps()`
+- [x] 4.2 `src/render/tooltip.js` — highlightRow, highlightDeps, showTT, moveTT, hideTT
+- [x] 4.3 `src/render/workload.js` — computeWorkload, renderWorkloadPanel/Chart
+- [x] 4.4 `src/render/grid.js` — renderGrid (month/week/day grid lines)
+- [x] 4.5 `src/render/bar.js` — renderBar, renderGroupBar, attachBarDrag, getWorkingSegs
+- [x] 4.6 `src/render/milestone.js` — renderMilestoneTimeline, renderMilestone
+- [x] 4.7 `src/render/arrows.js` — renderArrows (SVG FS/SS/FF/SF + critical path)
+- [x] 4.8 `src/render/chart-header.js` — renderChartHeader (month labels + day cells)
+- [x] 4.9 `src/render/chart-body.js` — renderChartBody (canvas orchestration)
+- [x] 4.10 `src/render/task-panel.js` — renderTaskPanel (left-side table)
+- [x] 4.11 Commit
+
+**Exit criteria:** all rendering code in `src/render/`. main.js reduced 4017→2951 lines. ✅
 
 ---
 

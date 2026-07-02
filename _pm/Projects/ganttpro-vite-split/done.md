@@ -4,6 +4,27 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 4: Render layer extraction ✅
+
+- **Goal achieved**: all DOM/canvas rendering code extracted into 10 ES modules
+  under `src/render/`. main.js reduced from 4017 → 2951 lines.
+- **Modules created**:
+  - `deps.js` — shared mutable `D` object (populated by `syncRenderDeps()` each render).
+  - `tooltip.js` — `highlightRow`, `highlightDeps`, `showTT`, `moveTT`, `hideTT`.
+  - `workload.js` — `computeWorkload`, `renderWorkloadPanel`, `renderWorkloadChart`.
+  - `grid.js` — `renderGrid` (month/week/day grid lines).
+  - `bar.js` — `renderBar`, `renderGroupBar`, `attachBarDrag`, `getWorkingSegs`.
+  - `milestone.js` — `renderMilestoneTimeline`, `renderMilestone`.
+  - `arrows.js` — `renderArrows` (SVG FS/SS/FF/SF + critical path arrows).
+  - `chart-header.js` — `renderChartHeader` (month labels + day/week cells).
+  - `chart-body.js` — `renderChartBody` (canvas orchestration: grid + bars + arrows).
+  - `task-panel.js` — `renderTaskPanel` (left-side table: name, dates, deps, actions).
+- **Pattern**: shared `D` object + per-function destructuring. Core functions imported
+  directly from `src/core/`. Inter-module render calls imported directly (acyclic DAG).
+- **State migration**: `dragSrcId` moved from main.js `let` to `D.dragSrcId` (owned by
+  task-panel.js). Dead variable removed. `currentUser` added to D for drag-save handlers.
+- **Build**: 42 modules transformed, 678 kB bundle. 86 tests green.
+
 ## 2026-07-02 — Phase 3: Firebase seam + modular v9 migration ✅
 
 - **Goal achieved**: all Firestore API calls live in `src/data/` modules. CDN compat

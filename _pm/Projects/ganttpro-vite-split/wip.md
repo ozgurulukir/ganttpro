@@ -2,12 +2,12 @@
 
 ## Status
 
-**Phase 3 COMPLETE ✅ (Firebase seam + modular v9).** Next: **Phase 4 — Render layer.**
+**Phase 4 COMPLETE ✅ (Render layer extraction).** Next: **Phase 5 — state.js store.**
 
 ## Active
 
-- Phase 4 next: extract DOM/canvas rendering code into `src/render/` modules. Most
-  coupled, least testable layer. Do render() orchestration last (4.9).
+- Phase 5 next: extract state into a reactive store (`src/state.js`) with ~120 renames
+  (`projects`, `currentProjId`, `tasks`, etc → `state.xxx`). Large mechanical change.
 
 ## Decisions resolved
 
@@ -18,9 +18,21 @@
 - ✅ Phase 2 state.js deferred — SSOT violation fixed via in-place mutation.
 - ✅ DataBackend interface deferred — remote.js is de-facto interface until 2nd backend.
 
-## Phase 0 revisions (see done.md)
+## Phase 4 details
 
-- 0.6 keep CDN scripts · 0.7 defer firebase npm install · 0.8 Prettier only (ESLint later).
+- **10 render modules** in `src/render/`:
+  `deps.js` (shared D object), `tooltip.js`, `workload.js`, `grid.js`, `bar.js`,
+  `milestone.js`, `arrows.js`, `chart-header.js`, `chart-body.js`, `task-panel.js`.
+- **Render extraction pattern**: shared mutable `D` object populated by `syncRenderDeps()`
+  before each render cycle. Render modules destructure `const { x, y } = D;` at function top.
+  Core functions imported directly. Inter-module render functions imported directly (acyclic).
+- **dragSrcId** moved to `D.dragSrcId` (owned by task-panel.js). Dead `let dragSrcId` removed
+  from main.js.
+- **currentUser** added to D for bar/milestone drag handlers.
+- **main.js**: 4017 → 2951 lines (1066 lines removed).
+- **Render module dependency DAG** (acyclic):
+  tooltip, grid, arrows, workload (leaves) ← bar, milestone ← chart-header, chart-body ← main.js.
+  task-panel → workload, tooltip.
 
 ## Notes for future phases
 
@@ -36,4 +48,5 @@
   `firebase.js` (init+exports) ← `remote.js` (Firestore CRUD) + `share.js` (share I/O) +
   `local.js` (localStorage). main.js imports all four. Auth functions stay in main.js
   until Phase 8.
-- Bundle size 675 kB (Firebase SDK bundled). Future: code-splitting / dynamic import.
+- Bundle size 678 kB (Firebase SDK + render modules bundled). Future: code-splitting / dynamic import.
+- Window shim at end of main.js still exposes ~187 functions for inline onclick (Phase 6 removes).
