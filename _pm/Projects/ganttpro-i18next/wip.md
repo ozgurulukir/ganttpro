@@ -11,12 +11,20 @@
 
 ## Phase 2: Create full locale JSONs ✅
 
-- [x] `en.json` — 231 keys (15 namespaces: common, login, toolbar, status, taskPanel, tooltip, workload, chart, modal, project, settings, share, admin, export, holidays)
-- [x] `zh-TW.json` — 231 keys (same structure, original Traditional Chinese strings)
-- [x] Key parity verified: 231/231 match
+- [x] `en.json` — 238 keys (15 namespaces)
+- [x] `zh-TW.json` — 238 keys (same structure, original Traditional Chinese strings)
+- [x] Key parity verified: 238/238 match
 - [x] JSON validity verified
+- [x] 93/93 tests pass, build succeeds
+
+## Phase 3: Add data-i18n attributes to index.html ✅
+
+- [x] 104 `data-i18n` / `data-i18n-title` / `data-i18n-placeholder` attributes added
+- [x] Covers: login screen, toolbar, version panel, share/collab/admin modals, task table headers, status bar, delete/task/project modals
+- [x] Added 7 missing keys to locale JSONs (settings.showBarDates, settings.showBaseline, settings.setBaseline, settings.versionHistory, settings.versionNamePlaceholder, share.collabEmailPlaceholder, chart.milestones)
+- [x] All HTML keys verified present in locale files
 - [x] 93/93 tests pass, build succeeds
 
 ## Next
 
-Phase 3: Add `data-i18n` attributes to `index.html` static strings.
+Phase 4: Replace hardcoded strings in 16 JS modules with `t()` calls (~150 sites).
