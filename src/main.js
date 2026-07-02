@@ -358,7 +358,7 @@ function parseDepInput(val, taskId) { return Deps.parseDepInput(val, taskId, tas
 
 /* schedule adapters: pure logic in core/schedule.js; bind global state. */
 function allGroupMembersScheduled(groupId, scheduled) { return Schedule.allGroupMembersScheduled(tasks, groupId, scheduled); }
-function scheduleTasks() { return Schedule.scheduleTasks(tasks, curProj().startDate); }
+function scheduleTasks() { const p = curProj(); return p ? Schedule.scheduleTasks(tasks, p.startDate) : []; }
 
 function reorderTask(srcId, targetId, insertBefore) {
   const src = taskById(srcId);
@@ -827,16 +827,16 @@ function setupRealtime() {
 }
 
 function showSyncToast() {
-  let t = document.getElementById('syncToast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'syncToast';
-    t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--t1);color:var(--surface);padding:8px 14px;border-radius:8px;font-size:12px;z-index:9999;opacity:0;transition:opacity .3s';
-    document.body.appendChild(t);
+  let el = document.getElementById('syncToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'syncToast';
+    el.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--t1);color:var(--surface);padding:8px 14px;border-radius:8px;font-size:12px;z-index:9999;opacity:0;transition:opacity .3s';
+    document.body.appendChild(el);
   }
-  t.textContent = '📡 ' + t('status.dataUpdated');
-  t.style.opacity = '1';
-  setTimeout(() => t.style.opacity = '0', 2500);
+  el.textContent = '📡 ' + t('status.dataUpdated');
+  el.style.opacity = '1';
+  setTimeout(() => el.style.opacity = '0', 2500);
 }
 
 /* ═══════════════════════════════════════════
