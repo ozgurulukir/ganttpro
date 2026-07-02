@@ -1072,6 +1072,7 @@ function wireStaticEvents() {
 ══════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
   wireStaticEvents();
+  syncRenderDeps();
   const urlParams = new URLSearchParams(location.search);
   const shareToken = urlParams.get('share');
 
