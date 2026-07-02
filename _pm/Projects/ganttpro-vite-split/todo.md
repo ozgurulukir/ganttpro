@@ -67,16 +67,21 @@ so they're testable in Node. `main.js` passes current state at call sites.
 
 ---
 
-## Phase 2 — Establish state store (SSOT)
+## Phase 2 — Kill tasks SSOT violation ✅ DONE
 
 Goal: kill the `tasks` ↔ `curProj().tasks` dual source of truth (review #9).
 
-- [ ] 2.1 `src/state.js` — single store: projects, currentProjId, nextProjId,
-      collapsed, isDark, viewMode, milestoneView, workloadView, showBarDates,
-      showCriticalPath, showBaseline + accessors (curProj, getTasks, setTasks)
-- [ ] 2.2 Replace all top-level `let` globals in main.js with imports from state.js
-- [ ] 2.3 Remove manual `curProj().tasks = tasks` write-backs (now handled by store)
-- [ ] 2.4 Commit: `refactor: single state store (SSOT)`
+- [x] 2.1 ~~`src/state.js` — single store~~ **DEFERRED**: `projects` is reassigned
+      5×, `currentProjId` 8× — ES module read-only bindings require `state.xxx`
+      object + ~120 renames. Actual SSOT bug fixed without it (see 2.3).
+- [x] 2.2 ~~Replace all top-level `let` globals~~ **DEFERRED** (same rationale).
+- [x] 2.3 Remove manual `curProj().tasks = tasks` write-backs — **DONE**: fixed 4
+      broken `tasks = newArray` reassignments (in-place mutation or curProj-first
+      pattern), removed all 4 write-backs. Zero remain (grep-verified).
+- [x] 2.4 Commit
+
+**Exit criteria:** `tasks` and `curProj().tasks` always share the same array
+reference. ✅ Invariant documented at declaration.
 
 ---
 

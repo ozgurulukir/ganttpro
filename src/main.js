@@ -182,7 +182,9 @@ let projects = [
 let currentProjId = 1;
 let nextProjId    = 3;
 
-// These always point to the current project (reassigned on switch)
+// SSOT INVARIANT: tasks must always reference the same array as curProj().tasks.
+// Mutate in-place (push/splice/length=0); NEVER reassign (tasks = newArray breaks the link).
+// On project switch/load: tasks = curProj().tasks (sync FROM project).
 let tasks  = projects[0].tasks;
 let nextId = projects[0].nextId;
 
@@ -213,10 +215,10 @@ function pushHistory() {
 function undo() {
   if (!_history.length) return;
   const snap = _history.pop();
-  tasks = snap.tasks;
-  nextId = snap.nextId;
-  curProj().tasks = tasks;
-  curProj().nextId = nextId;
+  curProj().tasks = snap.tasks;
+  curProj().nextId = snap.nextId;
+  tasks = curProj().tasks;
+  nextId = curProj().nextId;
   scheduleTasks();
   recalcProjEnd();
   render();
@@ -2142,7 +2144,7 @@ function openNameEditor(task, cell, isNew = false) {
     if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
     if (e.key === 'Escape') {
       committed = true;
-      if (isNew) { tasks = tasks.filter(t => t.id !== task.id); curProj().tasks = tasks; }
+      if (isNew) { const _f = tasks.filter(t => t.id !== task.id); tasks.length = 0; tasks.push(..._f); }
       render();
     }
   });
@@ -2275,8 +2277,9 @@ function executeDeleteTask(id) {
     if (t.ffdeps) t.ffdeps = t.ffdeps.filter(d => !toDelete.has(d));
     if (t.sfdeps) t.sfdeps = t.sfdeps.filter(d => !toDelete.has(d));
   });
-  tasks = tasks.filter(t => !toDelete.has(t.id));
-  curProj().tasks = tasks;
+  const _filtered = tasks.filter(t => !toDelete.has(t.id));
+  tasks.length = 0;
+  tasks.push(..._filtered);
   render();
   saveToLS();
   if (currentUser) saveToCloud();
@@ -2656,8 +2659,9 @@ function outdentTask(id) {
   const subtree = tasks.filter(t => subtreeIds.has(t.id));
 
   // Remove subtree from main array
-  tasks = tasks.filter(t => !subtreeIds.has(t.id));
-  curProj().tasks = tasks;
+  const _remaining = tasks.filter(t => !subtreeIds.has(t.id));
+  tasks.length = 0;
+  tasks.push(..._remaining);
 
   // Find insertion point: after last descendant of parent in remaining tasks
   function isDescOf(checkId, ancestorId) {

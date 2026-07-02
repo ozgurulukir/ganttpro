@@ -4,6 +4,31 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 2: Kill tasks SSOT violation ✅
+
+- **Problem**: `tasks` (local var) and `curProj().tasks` (project property) were
+  dual sources of truth. In-place mutations were safe (shared reference), but 4
+  sites reassigned `tasks = newArray`, breaking the reference. Each required a
+  manual `curProj().tasks = tasks` write-back — fragile and easy to forget.
+- **Fix** (4 sites, 8 line changes):
+  1. **Undo** (was line 216–219): Reversed to curProj-first pattern — write to
+     `curProj()` then sync `tasks` FROM it (same as project switch).
+  2. **Escape-cancel new task** (was line 2145): In-place mutation
+     (`length=0; push(...filtered)`) instead of reassignment.
+  3. **Delete task** (was line 2278–2279): Same in-place mutation pattern.
+  4. **Outdent/move subtree** (was line 2659–2660): Same in-place mutation pattern.
+- All 4 `curProj().tasks = tasks` write-backs removed. Zero remain (grep-verified).
+- Added SSOT INVARIANT comment at `tasks` declaration documenting the rule.
+- **Decision: state.js deferred.** `projects` is reassigned 5× and `currentProjId`
+  8× — ES module bindings are read-only, so moving them requires a `state.xxx`
+  object with ~120 reference renames. The actual SSOT bug (broken `tasks`
+  references) is fixed without that churn. Full state.js creation deferred to when
+  we're already doing large-scale renames (Phase 4–5).
+- Verified: `npm test` 86/86 green, `npm run build` green, grep confirms zero
+  write-backs remaining.
+
+---
+
 ## 2026-07-02 — Phase 1.6: Extract `src/core/format.js` ✅ — PHASE 1 COMPLETE
 
 - Moved 6 formatting/color helpers to a pure module. `dateToX(str, chartStart,
