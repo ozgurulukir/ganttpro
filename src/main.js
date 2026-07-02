@@ -251,7 +251,7 @@ function pushHistory() {
 }
 
 function undo() {
-  if (!_history.length) return;
+  if (!_history.length || !curProj()) return;
   const snap = _history.pop();
   curProj().tasks = snap.tasks;
   curProj().nextId = snap.nextId;
@@ -698,8 +698,10 @@ function syncRenderDeps() {
   D.setChartStart = (d) => { CHART_START = d; };
   D.setChartEnd = (d) => { CHART_END = d; };
   D.loadTasksFromSnapshot = (snap) => {
-    curProj().tasks = JSON.parse(JSON.stringify(snap));
-    tasks = curProj().tasks;
+    const p = curProj();
+    if (!p) return;
+    p.tasks = JSON.parse(JSON.stringify(snap));
+    tasks = p.tasks;
     collapsed.clear();
   };
   D.setShowBarDates = (v) => { showBarDates = v; };
