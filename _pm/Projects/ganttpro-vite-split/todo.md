@@ -128,14 +128,80 @@ Goal: DOM/canvas code grouped by concern. Most coupled, least testable — do la
 
 ## Phase 5 — Extract UI & interactions
 
-- [ ] 5.1 `src/ui/modal.js` — openModal, closeModal, submitTask, populateModal, deps UI (3540–3958, 4059–4357)
-- [ ] 5.2 `src/ui/project.js` — openProjModal, submitProject, switchProject, renderProjMenu, deleteProject (4664–4955)
-- [ ] 5.3 `src/ui/settings.js` — settings, baseline, versions, dark mode, stats (3011–3539, 5365–5446)
-- [ ] 5.4 `src/interactions/dnd.js` — drag reorder (in renderTaskPanel + reorderTask 4514–4537)
-- [ ] 5.5 `src/interactions/resize.js` — setupColResizers, setupResizer (4988–5047)
-- [ ] 5.6 `src/interactions/scroll-sync.js` — setupSync (4956–4976)
-- [ ] 5.7 `src/interactions/keyboard.js` — shortcuts (5451–5460)
-- [ ] 5.8 Commit: `refactor: extract ui + interactions`
+Goal: extract modal/editors, project CRUD, settings/stats/versions, and setup
+wiring from main.js into `src/ui/` + `src/interactions.js`.
+
+Same D-object pattern as Phase 4. UI functions fire between renders, but D holds
+stable function refs + mutable state refs (tasks array, collapsed Set) so reads
+are always current. `syncRenderDeps()` already refreshes primitives each cycle.
+
+Key D additions needed: `editingTaskId`, `selectedDeps`, `depsExcludeId`,
+`viewMode`, `PPDS`, `zoom`, `projects`, `currentProjId`, `nextId`, `isDark`.
+
+- [ ] 5.1 `src/ui/modal.js` (~650 lines) — task editing modal + inline editors
+      Functions (current main.js lines):
+      - `populateModal` (716), `syncWday` (754), `syncEndFromWday` (759),
+        `updateModalForType` (773)
+      - `setupDepsInputListener` (785), `renderDepsDropdown` (808),
+        `addDepToInput` (838)
+      - `openModal` (861), `openModalUnder` (955), `openEditModal` (973),
+        `closeModal` (997)
+      - `openNameEditor` (884), `openDateEditor` (1124), `openStartEditor` (1148),
+        `openEndEditor` (1176), `openWdayEditor` (1204)
+      - `addTaskInline` (914)
+      - `confirmDeleteTask` (1005), `closeDeleteModal` (1022),
+        `executeDeleteTask` (1029)
+      - `submitTask` (1049)
+      - `toggleDepsMenu` (1228), `closeDepsOutside` (1241), `toggleDepOpt` (1249),
+        `removeDepTag` (1256), `renderDepsMenu` (1263)
+      - `openDepsEditor` (1291), `openAllDepsEditor` (1300)
+      D deps: tasks, nextId, curProj, isReadOnly, milestoneView, collapsed,
+      taskById, pushHistory, render, scheduleTasks, recalcProjEnd, saveToLS,
+      saveToCloud, currentUser, wouldCreateCycle, parseDepInput, buildDepsText,
+      dateToX, outdentTask, indentTask, editingTaskId, selectedDeps, depsExcludeId
+
+- [ ] 5.2 `src/ui/project.js` (~280 lines) — project CRUD + menu
+      Functions:
+      - `switchProject` (1521), `updateProjUI` (1542)
+      - `toggleProjMenu` (1562), `closeProjOnOutside` (1574),
+        `closeProjMenuOnly` (1579)
+      - `renderProjMenu` (1584)
+      - `deleteProject` (1608), `openEditProjModal` (1636)
+      - `openProjModal` (1656), `onTemplateChange` (1695),
+        `closeProjModal` (1722), `selectColor` (1727)
+      - `submitProject` (1732)
+      D deps: projects, currentProjId, tasks, nextId, curProj, pushHistory,
+      render, saveToLS, saveToCloud, currentUser, updateChartStart, updateReadOnly
+
+- [ ] 5.3 `src/ui/settings.js` (~250 lines) — settings, zoom, stats, versions
+      Functions:
+      - `toggleSettings` (630), `closeSettings` (646)
+      - `toggleExportMenu` (635), `closeExportMenu` (638)
+      - `onSettingBarDatesChange` (603), `onSettingBaselineChange` (609),
+        `setBaseline` (615)
+      - `applyZoom` (655), `zoomIn` (669), `zoomOut` (670),
+        `fitToFrame` (671), `scrollToToday` (687)
+      - `updateStats` (696), `toggleDark` (707)
+      - `curVersions` (2201), `openVersionPanel` (2207),
+        `closeVersionPanel` (2214), `createVersion` (2219),
+        `restoreVersion` (2237), `deleteVersion` (2249),
+        `renderVersionList` (2259)
+      D deps: tasks, curProj, PPD, PPDS, viewMode, zoom, isDark,
+      pushHistory, render, saveToLS, saveToCloud, updateChartStart, recalcProjEnd
+
+- [ ] 5.4 `src/interactions.js` (~110 lines) — DOM setup/wiring
+      Functions:
+      - `setupSync` (1813), `applyColGrid` (1840)
+      - `setupColResizers` (1845), `setupResizer` (1879)
+      - Keyboard shortcuts (2287–2296)
+      D deps: minimal — mainly calls render(), updateChartStart()
+
+- [ ] 5.5 Commit: `refactor: extract ui + interactions (Phase 5)`
+
+**Stays in main.js**: state declarations, core wrappers (taskById, dateToX, etc.),
+render() orchestrator, syncRenderDeps, save/load (Phase 8 territory),
+auth/collab/admin (Phase 8), window shim (Phase 6), reorderTask/outdentTask/
+indentTask (tree ops used via D).
 
 ---
 

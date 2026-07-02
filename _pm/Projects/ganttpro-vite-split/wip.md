@@ -2,12 +2,15 @@
 
 ## Status
 
-**Phase 4 COMPLETE ✅ (Render layer extraction).** Next: **Phase 5 — state.js store.**
+**Phase 5 PLANNED — ready to execute.** See todo.md § Phase 5 for function-level
+breakdown with current main.js line numbers.
 
 ## Active
 
-- Phase 5 next: extract state into a reactive store (`src/state.js`) with ~120 renames
-  (`projects`, `currentProjId`, `tasks`, etc → `state.xxx`). Large mechanical change.
+- Phase 5: extract UI & interactions (4 modules, ~1290 lines).
+  Order: 5.1 modal.js → 5.2 project.js → 5.3 settings.js → 5.4 interactions.js.
+  Same D-object pattern as Phase 4. Key D additions: editingTaskId, selectedDeps,
+  depsExcludeId, viewMode, PPDS, zoom, projects, currentProjId, nextId, isDark.
 
 ## Decisions resolved
 
