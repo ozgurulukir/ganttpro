@@ -36,6 +36,13 @@
 - [x] Updated `calendar.test.js` for locale key format
 - [x] 93/93 tests pass, build succeeds
 
+## Phase 5: Locale switcher UI ✅
+
+- [x] Added `<select id="langSelect">` to toolbar HTML (EN / 繁中)
+- [x] Wired `change` event in main.js: `setLocale(value)` → `render()`
+- [x] Initial value set from `getLocale()` on load
+- [x] 93/93 tests pass, build succeeds
+
 ## Next
 
-Phase 5: Add locale switcher UI to toolbar.
+Phase 6: Final verification — tests, build, manual smoke test.
