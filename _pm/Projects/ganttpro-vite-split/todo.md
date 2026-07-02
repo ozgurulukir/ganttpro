@@ -52,8 +52,9 @@ so they're testable in Node. `main.js` passes current state at call sites.
 - [x] 1.3 `src/core/deps.js` — wouldCreateCycle, parseDepInput, buildDepsText,
       lagsFromParsed → **20 node:test tests, all pass** (cycle detection covered);
       imports tree.js resolvers; thin bound wrappers in main.js
-- [ ] 1.4 `src/core/critical-path.js` — computeCriticalPath, getCriticalPredTaskIds,
-      prevWorkingDay (3017–3147) → tests with known-good CPM cases
+- [x] 1.4 `src/core/critical-path.js` — computeCriticalPath, getCriticalPredTaskIds,
+      prevWorkingDay → **11 node:test tests, all pass** (linear/parallel/milestone
+      CPM cases + float classification); imports calendar.js + tree.js
 - [ ] 1.5 `src/core/schedule.js` — scheduleTasks, autoScheduleFromDeps,
       allGroupMembersScheduled (4358–4505) → tests (FS/SS/FF/SF + lag)
 - [ ] 1.6 `src/core/format.js` — dateToX, toStr, initials, hexToRgba, darkenColor,

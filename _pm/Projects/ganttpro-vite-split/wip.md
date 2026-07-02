@@ -2,15 +2,14 @@
 
 ## Status
 
-**Phase 1.1–1.3 ✅.** Next: **Phase 1.4 — `critical-path.js` (CPM).**
+**Phase 1.1–1.4 ✅.** Next: **Phase 1.5 — `schedule.js`.**
 
 ## Active
 
-- Phase 1.4 next: `src/core/critical-path.js` — computeCriticalPath,
-  getCriticalPredTaskIds, prevWorkingDay. CPM forward/backward pass with
-  known-good test cases (FS/SS/FF/SF + lag).
-- **Tooling**: Prettier-on-write still active. Write=ok for new files;
-  Python surgery for main.js edits.
+- Phase 1.5 next: `src/core/schedule.js` — scheduleTasks, autoScheduleFromDeps,
+  allGroupMembersScheduled (FS/SS/FF/SF + lag forward pass).
+- **Tooling**: Prettier-on-write confirmed DISABLED (subagent probe). Edit/Write
+  tools now used directly for all files including main.js.
 
 ## Decisions resolved
 

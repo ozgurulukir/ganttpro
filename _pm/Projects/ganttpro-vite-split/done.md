@@ -4,6 +4,21 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 1.4: Extract `src/core/critical-path.js` ✅
+
+- Moved 3 CPM functions (prevWorkingDay, computeCriticalPath, getCriticalPredTaskIds)
+  to a pure module; imports calendar.js (isNonWorkday, countWorkingDays,
+  subtractWorkingDays, addWorkingDays, shiftWorkingDays) + tree.js (taskById).
+- `main.js` keeps thin bound wrappers (zero call-site changes); Edit tool used
+  directly now that Prettier is confirmed disabled (subagent probe verified).
+- `tests/critical-path.test.js`: 11 node:test tests, **all pass** — prevWorkingDay
+  (weekend/holiday skip), computeCriticalPath (linear chain all-critical, parallel
+  paths with float, milestone exclusion from result set), getCriticalPredTaskIds
+  (direct pred, milestone-transparent tracing, non-critical skip).
+- Verified: `node --check` clean, `npm test` 56/56 green, `npm run build` green.
+
+---
+
 ## 2026-07-02 — Phase 1.3: Extract `src/core/deps.js` ✅
 
 - Moved 4 dependency functions to a pure module; imports tree.js resolvers
