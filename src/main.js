@@ -38,6 +38,9 @@ import {
 } from "./ui/settings.js";
 import { setupSync, applyColGrid, setupColResizers, setupResizer } from "./interactions.js";
 import { exportPNG, exportCSV, exportPDF } from "./export.js";
+import { signInWithGoogle, signInAsGuest, checkAuthorized, submitRegister, signOut, isAdmin } from "./auth.js";
+import { openShareModal, closeShareModal, copyShareLink, openCollabModal, closeCollabModal, onCollabProjChange, addShare, removeShare } from "./collab.js";
+import { openAdminPanel, closeAdminPanel, deleteUser } from "./admin.js";
 import { auth, googleProvider } from "./data/firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import * as Local from "./data/local.js";
@@ -504,9 +507,6 @@ function recalcProjEnd() {
 let isReadOnly = false;
 let _isShareLinkMode = false;
 
-const ADMIN_EMAIL = 's19800430@gmail.com';
-function isAdmin() { return currentUser?.email === ADMIN_EMAIL; }
-
 function updateReadOnly() {
   const cp = curProj();
   // Use !! to ensure boolean (avoid undefined causing toggle() to act as actual toggle)
@@ -523,28 +523,6 @@ function updateReadOnly() {
 }
 
 function getOwnerId() { return Local.getOwnerId(); }
-
-function getOrCreateShareToken(proj) { return Share.getOrCreateShareToken(proj); }
-
-function openShareModal() {
-  if (isReadOnly) return;
-  const proj = curProj();
-  const token = getOrCreateShareToken(proj);
-  document.getElementById('shareModalProjName').textContent = proj.name;
-  const note = document.querySelector('.share-owner-note');
-  if (note) note.innerHTML = '💡 此連結為唯讀連結。只有您（專案建立者）在一般模式下可以編輯。';
-  render();
-  const encoded = saveShareToCloud(token, proj);
-  const hash = encoded ? '#d=' + encoded : '';
-  const url = location.origin + location.pathname + '?share=' + token + hash;
-  document.getElementById('shareLinkInput').value = url;
-  if (!encoded && note) note.innerHTML = '⚠️ 連結產生失敗，請稍後再試。';
-  document.getElementById('shareOverlay').classList.add('open');
-}
-
-function closeShareModal() {
-  document.getElementById('shareOverlay').classList.remove('open');
-}
 
 /* ═══════════════════════════════════════════
    COLLABORATION — SHARED PROJECTS
@@ -616,160 +594,6 @@ function setupSharedRealtime(ownerIds) {
   });
 }
 
-/* ═══════════════════════════════════════════
-   COLLABORATION — COLLAB MODAL
-═══════════════════════════════════════════ */
-let _collabShares = [];
-
-async function openCollabModal() {
-  if (isReadOnly) return;
-  const overlay = document.getElementById('collabOverlay');
-  overlay.classList.add('open');
-  document.getElementById('collabMsg').style.display = 'none';
-  document.getElementById('collabEmailInput').value = '';
-
-  // 填入所有「我擁有」的專案（排除別人分享給我的）
-  const sel = document.getElementById('collabProjSelect');
-  const ownedProjects = projects.filter(p => !p._isShared);
-  sel.innerHTML = ownedProjects.map(p =>
-    `<option value="${p.id}">${p.name}</option>`
-  ).join('');
-  // 預設選目前專案
-  const cur = curProj();
-  if (cur && !cur._isShared) sel.value = cur.id;
-
-  await refreshCollabList();
-}
-
-function closeCollabModal() {
-  document.getElementById('collabOverlay').classList.remove('open');
-}
-
-async function onCollabProjChange() {
-  document.getElementById('collabMsg').style.display = 'none';
-  await refreshCollabList();
-}
-
-async function refreshCollabList() {
-  const sel = document.getElementById('collabProjSelect');
-  const projId = sel ? sel.value : (curProj()?.id);
-  if (!projId) return;
-  _collabShares = await Remote.getProjectSharesForOwner(projId, currentUser.uid);
-  renderCollabModal();
-}
-
-function renderCollabModal() {
-  const list = document.getElementById('collabShareList');
-  if (!_collabShares.length) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--t3);text-align:center;padding:12px 0">尚未分享給任何人</div>';
-    return;
-  }
-  list.innerHTML = _collabShares.map(s => `
-    <div class="collab-share-item">
-      <span class="ci-email" title="${s.shared_with_email}">${s.shared_with_email}</span>
-      <span class="ci-perm ${s.permission}">${s.permission === 'read' ? '唯讀' : '共同編輯'}</span>
-      <span class="ci-del" data-action="remove-share" data-share-id="${s.id}" data-email="${s.shared_with_email}" title="移除">✕</span>
-    </div>
-  `).join('');
-}
-
-async function addShare() {
-  const emailInput = document.getElementById('collabEmailInput');
-  const email = (emailInput.value || '').trim().toLowerCase();
-  const perm  = document.getElementById('collabPermSelect').value;
-  const msgEl = document.getElementById('collabMsg');
-
-  const showMsg = (txt, ok) => {
-    msgEl.textContent = txt;
-    msgEl.style.color = ok ? '#0a0' : '#E53';
-    msgEl.style.display = 'block';
-  };
-
-  msgEl.style.display = 'none';
-
-  if (!email || !email.includes('@')) { showMsg('請輸入有效的 Gmail 帳號'); return; }
-  if (currentUser && email === currentUser.email) { showMsg('不能分享給自己'); return; }
-
-  try {
-    const sel = document.getElementById('collabProjSelect');
-    const projId = sel?.value;
-    if (!projId) { showMsg('請先選擇專案'); return; }
-
-    const docId = `${projId}_${email.replace(/[.@]/g,'_')}`;
-    await Remote.addProjectShare(docId, {
-      project_id: String(projId),
-      owner_id: currentUser.uid,
-      shared_with_email: email,
-      permission: perm
-    });
-    showMsg('✓ 已成功加入', true);
-    emailInput.value = '';
-    await refreshCollabList();
-  } catch(e) {
-    showMsg('加入失敗：' + e.message);
-  }
-}
-
-async function removeShare(shareId, email) {
-  if (!confirm(`確定要移除 ${email} 的存取權限嗎？`)) return;
-  await Remote.removeProjectShare(shareId);
-  await refreshCollabList();
-}
-
-/* ═══════════════════════════════════════════
-   ADMIN PANEL
-═══════════════════════════════════════════ */
-async function openAdminPanel() {
-  if (!isAdmin()) return;
-  document.getElementById('adminOverlay').classList.add('open');
-  await loadAdminUsers();
-}
-
-function closeAdminPanel() {
-  document.getElementById('adminOverlay').classList.remove('open');
-}
-
-async function loadAdminUsers() {
-  const tbody = document.getElementById('adminUserList');
-  tbody.innerHTML = '<tr><td colspan="5" style="color:var(--t3);text-align:center;padding:16px">載入中…</td></tr>';
-  try {
-    const data = await Remote.getAllUsers();
-    document.getElementById('adminUserCount').textContent = `（${data.length} 人）`;
-    tbody.innerHTML = data.map(u => {
-      const delBtn = u.is_admin ? '' : `<button class="btn" style="font-size:11px;padding:3px 8px;color:#E53;border-color:#E53" data-action="delete-user" data-email="${u.email}">刪除</button>`;
-      const dateStr = u.added_at ? new Date(u.added_at).toLocaleDateString('zh-TW') : '—';
-      return `<tr>
-        <td>${u.name || '—'}</td>
-        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${u.email}">${u.email}</td>
-        <td>${u.is_admin ? '管理員' : '用戶'}</td>
-        <td style="color:var(--t3)">${dateStr}</td>
-        <td>${delBtn}</td>
-      </tr>`;
-    }).join('');
-  } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="5" style="color:#E53;text-align:center">載入失敗：${e.message}</td></tr>`;
-  }
-}
-
-async function deleteUser(email) {
-  if (!isAdmin()) return;
-  if (!confirm(`確定要刪除用戶 ${email}？此操作無法復原。`)) return;
-  try {
-    await Remote.removeUser(email);
-    await loadAdminUsers();
-  } catch(e) { alert('刪除失敗：' + e.message); }
-}
-
-function copyShareLink() {
-  const val = document.getElementById('shareLinkInput').value;
-  navigator.clipboard.writeText(val)
-    .then(() => { showStatus('✓ 分享連結已複製到剪貼簿'); closeShareModal(); })
-    .catch(() => {
-      const inp = document.getElementById('shareLinkInput');
-      inp.select(); document.execCommand('copy');
-      showStatus('✓ 分享連結已複製'); closeShareModal();
-    });
-}
 /* ═══════════════════════════════════════════
    KEYBOARD SHORTCUTS
 ═══════════════════════════════════════════ */
@@ -887,6 +711,15 @@ function syncRenderDeps() {
   D.setShowBaseline = (v) => { showBaseline = v; };
   D.setIsDark = (v) => { isDark = v; };
   D.setPPD = (v) => { PPD = v; };
+
+  // Auth/callback refs for auth/collab/admin modules
+  D.GetCurrentUser = () => currentUser;
+  D.SetCurrentUser = (u) => { currentUser = u; };
+  D.SetGuestMode = (v) => { _guestMode = v; };
+  D.SetAppInitialized = (v) => { _appInitialized = v; };
+  D.IsGuestMode = () => _guestMode;
+  D.initApp = initApp;
+  D.setSyncDot = setSyncDot;
 }
 
 let _saveTimer = null;
@@ -981,10 +814,6 @@ async function loadShareFromCloud(token) {
   try {
     return await Share.loadShareDoc(token);
   } catch(e) { return null; }
-}
-
-function saveShareToCloud(token, project) {
-  return Share.saveShareDoc(token, currentUser?.uid, project);
 }
 
 let _realtimeUnsub = null;
@@ -1102,77 +931,6 @@ function mergeDefaultProjects() {
       }
     }
   });
-}
-
-/* ═══════════════════════════════════════════
-   AUTH
-═══════════════════════════════════════════ */
-async function signInWithGoogle() {
-  document.getElementById('loginError').style.display = 'none';
-  try {
-    await auth.signInWithPopup(googleProvider);
-  } catch(e) {
-    if (e.code !== 'auth/popup-closed-by-user') alert('登入失敗：' + e.message);
-  }
-}
-
-async function signInAsGuest() {
-  _guestMode = true;
-  await initApp();
-  setSyncDot('local');
-}
-
-async function checkAuthorized() {
-  if (!currentUser) return false;
-  const userData = await Remote.getAuthorizedUser(currentUser.email);
-  if (!userData) {
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('loginPanel').style.display = 'none';
-    document.getElementById('registerPanel').style.display = 'flex';
-    document.getElementById('registerNickname').focus();
-    return false;
-  }
-  return true;
-}
-
-async function submitRegister() {
-  const nickname = document.getElementById('registerNickname').value.trim();
-  const errEl = document.getElementById('registerError');
-  if (!nickname) {
-    errEl.textContent = '請填寫暱稱';
-    errEl.style.display = '';
-    return;
-  }
-  errEl.style.display = 'none';
-  try {
-    await Remote.registerUser(currentUser.email, {
-      email: currentUser.email, name: nickname,
-      is_admin: false, added_at: new Date().toISOString()
-    });
-    document.getElementById('registerPanel').style.display = 'none';
-    document.getElementById('loginPanel').style.display = 'flex';
-    await initApp();
-  } catch(e) {
-    errEl.textContent = '註冊失敗：' + e.message;
-    errEl.style.display = '';
-  }
-}
-
-async function signOut() {
-  if (!_guestMode) await auth.signOut();
-  currentUser = null;
-  _guestMode = false;
-  _appInitialized = false;
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('loginPanel').style.display = 'flex';
-  document.getElementById('registerPanel').style.display = 'none';
-  document.getElementById('registerNickname').value = '';
-  document.getElementById('registerError').style.display = 'none';
-  document.getElementById('loginError').style.display = 'none';
-  document.getElementById('appToolbar').style.display = 'none';
-  document.getElementById('main').style.display = 'none';
-  document.getElementById('userDisplay').innerHTML = '';
-  document.getElementById('signOutBtn').style.display = 'none';
 }
 
 function showApp() {

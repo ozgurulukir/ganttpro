@@ -4,6 +4,27 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 8: Auth/admin/collab extraction ✅
+
+- **Goal achieved**: auth, collab/share, and admin functions extracted into 3
+  ES modules. main.js reduced 1451→1206 lines (245 removed).
+- **Modules created**:
+  - `auth.js` (80 lines) — signInWithGoogle, signInAsGuest, checkAuthorized,
+    submitRegister, signOut, isAdmin. ADMIN_EMAIL moved to module-local.
+    Uses D getters/setters for currentUser, _guestMode, _appInitialized.
+  - `collab.js` (134 lines) — openShareModal, closeShareModal, copyShareLink,
+    openCollabModal, closeCollabModal, onCollabProjChange, addShare, removeShare
+    + private refreshCollabList, renderCollabModal. _collabShares moved to
+    module-local. Calls Share module directly (no wrapper indirection).
+  - `admin.js` (43 lines) — openAdminPanel, closeAdminPanel, deleteUser
+    + private loadAdminUsers. Imports isAdmin from auth.js.
+- **D additions**: GetCurrentUser, SetCurrentUser, SetGuestMode, SetAppInitialized,
+  IsGuestMode, initApp, setSyncDot — getter/setter/callback refs bridging
+  main.js state to extracted modules.
+- **Kept in main.js**: initApp orchestrator, loadSharedProjects, setupSharedRealtime,
+  updateReadOnly, all data sync (save/load/realtime), showApp, updateUserDisplay.
+- **Build**: 50 modules, 673 kB bundle. 86 tests green.
+
 ## 2026-07-02 — Phase 7: Export layer ✅
 
 - **Goal achieved**: exportPNG, exportCSV, exportPDF extracted to `src/export.js`.

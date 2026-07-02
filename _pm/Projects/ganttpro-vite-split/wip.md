@@ -2,11 +2,11 @@
 
 ## Status
 
-**Phase 7 COMPLETE ✅ (Export layer).** Next: **Phase 8 — Auth/admin/collab.**
+**Phase 8 COMPLETE ✅ (Auth/admin/collab).** Next: **Phase 9 — Hardening/polish.**
 
 ## Active
 
-- Phase 8: extract auth, admin, collab Firebase-dependent UI into modules.
+- Phase 9: code-split bundle (dynamic import), dead code removal, final review.
 
 ## Decisions resolved
 

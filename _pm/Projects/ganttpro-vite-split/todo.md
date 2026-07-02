@@ -154,14 +154,12 @@ Goal: DOM/canvas code grouped by concern. Most coupled, least testable — do la
 
 ---
 
-## Phase 8 — Auth / admin / collab (Firebase-dependent UI)
+## Phase 8 — Auth / admin / collab ✅ DONE
 
-Goal: group removable Firebase UI for clean future removal.
-
-- [ ] 8.1 `src/auth/` — signInWithGoogle, signInAsGuest, signOut, checkAuthorized, submitRegister, onAuthStateChanged (5738–5927)
-- [ ] 8.2 `src/admin/` — admin panel (5309–5349)
-- [ ] 8.3 `src/collab/` — collab modal, addShare, removeShare, loadSharedProjects (5131–5304)
-- [ ] 8.4 Commit
+- [x] 8.1 `src/auth.js` — signIn, signOut, register, checkAuthorized, isAdmin (80 lines)
+- [x] 8.2 `src/collab.js` — share modal, collab modal, addShare, removeShare (134 lines)
+- [x] 8.3 `src/admin.js` — admin panel, deleteUser (43 lines)
+- [x] 8.4 Commit
 
 ---
 
