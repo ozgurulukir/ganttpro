@@ -2,6 +2,7 @@ import * as Remote from "./data/remote.js";
 import * as Share from "./data/share.js";
 import { D } from "./render/deps.js";
 import { esc } from "./core/format.js";
+import { t } from "./i18n/index.js";
 
 let _collabShares = [];
 
@@ -12,14 +13,14 @@ export function openShareModal() {
   const token = Share.getOrCreateShareToken(proj);
   document.getElementById('shareModalProjName').textContent = proj.name;
   const note = document.querySelector('.share-owner-note');
-  if (note) note.innerHTML = '💡 This is a read-only link. Only you (the project owner) can edit in normal mode.';
+  if (note) note.innerHTML = '💡 ' + t('share.ownerNote');
   render();
   const user = D.GetCurrentUser();
   const encoded = Share.saveShareDoc(token, user?.uid, proj);
   const hash = encoded ? '#d=' + encoded : '';
   const url = location.origin + location.pathname + '?share=' + token + hash;
   document.getElementById('shareLinkInput').value = url;
-  if (!encoded && note) note.innerHTML = '⚠️ Failed to generate link. Please try again.';
+  if (!encoded && note) note.innerHTML = '⚠️ ' + t('share.linkFailed');
   document.getElementById('shareOverlay').classList.add('open');
 }
 
@@ -31,11 +32,11 @@ export function copyShareLink() {
   const { showStatus } = D;
   const val = document.getElementById('shareLinkInput').value;
   navigator.clipboard.writeText(val)
-    .then(() => { showStatus('✓ Share link copied to clipboard'); closeShareModal(); })
+    .then(() => { showStatus(t('share.linkCopied')); closeShareModal(); })
     .catch(() => {
       const inp = document.getElementById('shareLinkInput');
       inp.select(); document.execCommand('copy');
-      showStatus('✓ Share link copied'); closeShareModal();
+      showStatus(t('share.linkCopiedShort')); closeShareModal();
     });
 }
 
@@ -78,7 +79,7 @@ async function refreshCollabList() {
 function renderCollabModal() {
   const list = document.getElementById('collabShareList');
   if (!_collabShares.length) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--t3);text-align:center;padding:12px 0">Not shared with anyone yet</div>';
+    list.innerHTML = `<div style="font-size:12px;color:var(--t3);text-align:center;padding:12px 0">${t('share.notSharedYet')}</div>`;
     return;
   }
   list.innerHTML = _collabShares.map(s => `
@@ -105,13 +106,13 @@ export async function addShare() {
 
   msgEl.style.display = 'none';
 
-  if (!email || !email.includes('@')) { showMsg('Please enter a valid Gmail address'); return; }
-  if (user && email === user.email) { showMsg('Cannot share with yourself'); return; }
+  if (!email || !email.includes('@')) { showMsg(t('share.invalidEmail')); return; }
+  if (user && email === user.email) { showMsg(t('share.cannotShareSelf')); return; }
 
   try {
     const sel = document.getElementById('collabProjSelect');
     const projId = sel?.value;
-    if (!projId) { showMsg('Please select a project first'); return; }
+    if (!projId) { showMsg(t('share.selectProjectFirst')); return; }
 
     const docId = `${projId}_${email.replace(/[.@]/g,'_')}`;
     await Remote.addProjectShare(docId, {
@@ -120,11 +121,11 @@ export async function addShare() {
       shared_with_email: email,
       permission: perm
     });
-    showMsg('✓ Successfully added', true);
+    showMsg(t('share.added'), true);
     emailInput.value = '';
     await refreshCollabList();
   } catch(e) {
-    showMsg('Failed to add: ' + e.message);
+    showMsg(t('share.addFailed') + e.message);
   }
 }
 

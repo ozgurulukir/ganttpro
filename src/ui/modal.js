@@ -2,6 +2,7 @@
 import { D } from '../render/deps.js';
 import { countWorkingDays, addWorkingDays } from '../core/calendar.js';
 import { lagsFromParsed } from '../core/deps.js';
+import { t } from '../i18n/index.js';
 
 /* Modal-local state (moved from main.js — only used here). */
 let editingTaskId = null;
@@ -17,7 +18,7 @@ export function populateModal(excludeId = null, checkedDeps = [], presetParent =
   sel.innerHTML = '';
   const noneOpt = document.createElement('option');
   noneOpt.value = '';
-  noneOpt.textContent = '— None (top level) —';
+  noneOpt.textContent = t('modal.noneTopLevel');
   sel.appendChild(noneOpt);
   const excludeSet = excludeId !== null ? new Set([excludeId, ...getAllDescendants(excludeId)]) : new Set();
   tasks.filter(t => t.type === 'group' && !excludeSet.has(t.id)).forEach(t => {
@@ -73,7 +74,7 @@ export function updateModalForType() {
   document.getElementById('rowDates').style.display = isGrp ? 'none' : '';
   document.getElementById('colEnd').style.display   = isMs ? 'none' : '';
   document.getElementById('colWday').style.display  = isMs ? 'none' : '';
-  document.getElementById('lblStart').textContent   = isMs ? 'Date' : 'Start Date';
+  document.getElementById('lblStart').textContent   = isMs ? t('modal.date') : t('modal.startDate');
   document.getElementById('rowDone').style.display  = (isMs || isGrp) ? 'none' : 'flex';
   document.getElementById('rowDeps').style.display  = isGrp ? 'none' : '';
   document.getElementById('rowAssignee').style.display = isGrp ? 'none' : '';
@@ -117,7 +118,7 @@ export function renderDepsDropdown(excludeId) {
     task.type !== 'group' && task.id !== excludeId
   );
 
-  if (!rows.length) { list.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--t4);text-align:center">No tasks available</div>'; return; }
+  if (!rows.length) { list.innerHTML = `<div style="padding:10px;font-size:12px;color:var(--t4);text-align:center">${t('common.none')}</div>`; return; }
 
   list.innerHTML = rows.map(({task}, i) => {
     const rowNum = i + 1;
@@ -163,8 +164,8 @@ export function openModal(unused, prefillDate) {
   if (isReadOnly) return;
   if (!curProj()) { openProjModal(); return; }
   editingTaskId = null;
-  document.getElementById('modal-title').textContent = '+ Add Task';
-  document.getElementById('modal-submit').textContent = 'Add Task';
+  document.getElementById('modal-title').textContent = t('modal.newTask');
+  document.getElementById('modal-submit').textContent = t('modal.addTask');
   document.getElementById('fName').value = '';
   const startDate = prefillDate || TODAY_STR;
   document.getElementById('fStart').value = startDate;
@@ -262,8 +263,8 @@ export function openModalUnder(taskId) {
   if (!task) return;
   const parentId = task.parent;
   editingTaskId = null;
-  document.getElementById('modal-title').textContent = '+ Add Task';
-  document.getElementById('modal-submit').textContent = 'Add Task';
+  document.getElementById('modal-title').textContent = t('modal.newTask');
+  document.getElementById('modal-submit').textContent = t('modal.addTask');
   document.getElementById('fName').value = '';
   document.getElementById('fStart').value = TODAY_STR;
   document.getElementById('fEnd').value = TODAY_STR;
@@ -280,8 +281,8 @@ export function openEditModal(taskId) {
   const task = taskById(taskId);
   if (!task) return;
   editingTaskId = taskId;
-  document.getElementById('modal-title').textContent = '✏️ Edit Task';
-  document.getElementById('modal-submit').textContent = 'Save Changes';
+  document.getElementById('modal-title').textContent = t('modal.editTask');
+  document.getElementById('modal-submit').textContent = t('modal.saveChanges');
   document.getElementById('fName').value = task.name;
   document.getElementById('fType').value = task.type;
   document.getElementById('fStart').value = task.start || task.date || TODAY_STR;
@@ -314,9 +315,9 @@ export function confirmDeleteTask(id) {
   const descendants = getAllDescendants(id);
   const msg = document.getElementById('deleteModalMsg');
   if (task.type === 'group' && descendants.length > 0) {
-    msg.textContent = `This group and its ${descendants.length} sub-tasks will also be deleted. This action cannot be undone.`;
+    msg.textContent = t('modal.deleteGroupMsg', { count: descendants.length });
   } else {
-    msg.textContent = 'This action cannot be undone.';
+    msg.textContent = t('modal.deleteMsg');
   }
 
   document.getElementById('deleteConfirmBtn').onclick = () => { executeDeleteTask(_deleteTargetId); };
@@ -580,7 +581,7 @@ export function renderDepsMenu() {
     t.id !== depsExcludeId
   );
   if (list.length === 0) {
-    menu.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:var(--t4)">No dependencies available</div>';
+    menu.innerHTML = `<div style="padding:10px;text-align:center;font-size:12px;color:var(--t4)">${t('modal.noDepsAvailable')}</div>`;
     return;
   }
   list.forEach(t => {
@@ -636,7 +637,7 @@ export function openAllDepsEditor(task, cell) {
       const dt = taskById(p.taskId);
       return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.rowNum}${p.type}</span> <span style="color:#6EE7B7">✓ ${dt ? dt.name : ''} · ${p.type}</span></div>`;
     });
-    rows.push('<div style="margin-top:4px;color:#9CA3AF;font-size:10px">Enter to confirm &nbsp; Esc to cancel</div>');
+    rows.push(`<div style="margin-top:4px;color:#9CA3AF;font-size:10px">${t('modal.enterConfirm')} &nbsp; ${t('modal.escCancel')}</div>`);
     tip.innerHTML = rows.join('');
     positionTip();
     tip.style.display = 'block';

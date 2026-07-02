@@ -25,9 +25,9 @@ test('dateKey — normalizes Date and string to YYYY-MM-DD', () => {
   assert.equal(dateKey('2026-07-06'), '2026-07-06');
 });
 
-test('getHoliday — returns TW holiday name or null', () => {
-  assert.equal(getHoliday('2026-01-01'), 'New Year\'s Day');
-  assert.equal(getHoliday('2026-02-28'), 'Peace Memorial Day');
+test('getHoliday — returns TW holiday key or null', () => {
+  assert.equal(getHoliday('2026-01-01'), 'holidays.newYear');
+  assert.equal(getHoliday('2026-02-28'), 'holidays.peaceMemorialDay');
   assert.equal(getHoliday('2026-07-02'), null);
 });
 

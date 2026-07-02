@@ -2,6 +2,7 @@ import { countWorkingDays, nextWorkingDay } from "./core/calendar.js";
 import { darkenColor } from "./core/format.js";
 import { parseDate, formatDate, addDays, dayOfWeek } from "./core/date.js";
 import { D } from "./render/deps.js";
+import { t } from "./i18n/index.js";
 
 export function exportPNG() {
   const { getVisibleRows, curProj, totalW, dateToX, groupBounds,
@@ -39,7 +40,7 @@ export function exportPNG() {
   ctx.fillText(proj.name || 'GanttPro', 10, HDR / 2 - 6);
   ctx.fillStyle = '#6B7280';
   ctx.font = '11px -apple-system,system-ui,sans-serif';
-  ctx.fillText(`Export date: ${TODAY_STR}  Tasks: ${rows.filter(r=>r.task.type==='task').length}  Milestones: ${rows.filter(r=>r.task.type==='milestone').length}`, 10, HDR / 2 + 10);
+  ctx.fillText(`${t('export.exportDate')}: ${TODAY_STR}  ${t('export.tasks')}: ${rows.filter(r=>r.task.type==='task').length}  ${t('export.milestones')}: ${rows.filter(r=>r.task.type==='milestone').length}`, 10, HDR / 2 + 10);
 
   // ─── 表頭列 ───
   ctx.fillStyle = '#F9FAFB';
@@ -59,7 +60,7 @@ export function exportPNG() {
     if (mx >= PANEL) {
       ctx.fillStyle = '#374151';
       ctx.font = '10px -apple-system,system-ui,sans-serif';
-      ctx.fillText(`${y} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]}`, mx+3, HDR + THDR/2);
+      ctx.fillText(`${y} ${t('chart.months', { returnObjects: true })[m]}`, mx+3, HDR + THDR/2);
     }
     mnDn = Math.floor(Date.UTC(y, m + 1, 1) / 86400000);
   }
@@ -87,7 +88,7 @@ export function exportPNG() {
     ctx.globalAlpha = 1;
     ctx.fillStyle = '#EF4444';
     ctx.font = 'bold 9px sans-serif';
-    ctx.fillText('Today', todayX+2, HDR+6);
+    ctx.fillText(t('chart.today'), todayX+2, HDR+6);
   }
 
   // ─── 任務列 ───
@@ -250,28 +251,28 @@ export function exportCSV() {
   const { curProj, tasks, groupBounds, buildDepsText, TODAY_STR } = D;
   const proj = curProj();
   if (!proj) return;
-  const lines = [['#','Task Name','Type','Assignee','Start Date','End Date','Workdays','Progress%','Dependencies','Done']];
-  let num = 0;
-  const walk = (parentId, depth) => {
-    tasks.filter(t => t.parent === parentId).forEach(t => {
-      num++;
-      const isGrp = t.type === 'group';
-      const gb = isGrp ? groupBounds(t.id) : null;
-      lines.push([
-        num,
-        '  '.repeat(depth) + t.name,
-        isGrp ? 'Group' : t.type === 'milestone' ? 'Milestone' : 'Task',
-        t.assignee || '',
-        isGrp ? (gb.s || '') : (t.start || t.date || ''),
-        isGrp ? (gb.e || '') : (t.end || t.date || ''),
-        t.type === 'task' && t.start && t.end ? countWorkingDays(t.start, t.end) : '',
-        t.type === 'task' ? (t.done ? 100 : (t.progress || 0)) : '',
-        buildDepsText(t),
-        t.done ? 'Y' : ''
-      ]);
-      walk(t.id, depth + 1);
-    });
-  };
+  const lines = [['#',t('export.taskName'),t('export.type') || 'Type',t('export.assignee') || 'Assignee',t('export.startDate'),t('export.endDate'),t('export.workdays'),t('export.progress'),t('export.dependencies'),t('export.done')]];
+   let num = 0;
+   const walk = (parentId, depth) => {
+     tasks.filter(tk => tk.parent === parentId).forEach(tk => {
+       num++;
+       const isGrp = tk.type === 'group';
+       const gb = isGrp ? groupBounds(tk.id) : null;
+       lines.push([
+         num,
+         '  '.repeat(depth) + tk.name,
+         isGrp ? t('export.typeGroup') : tk.type === 'milestone' ? t('export.typeMilestone') : t('export.typeTask'),
+         tk.assignee || '',
+         isGrp ? (gb.s || '') : (tk.start || tk.date || ''),
+         isGrp ? (gb.e || '') : (tk.end || tk.date || ''),
+         tk.type === 'task' && tk.start && tk.end ? countWorkingDays(tk.start, tk.end) : '',
+         tk.type === 'task' ? (tk.done ? 100 : (tk.progress || 0)) : '',
+         buildDepsText(tk),
+         tk.done ? 'Y' : ''
+       ]);
+       walk(tk.id, depth + 1);
+     });
+   };
   walk(null, 0);
   const esc = v => { v = String(v ?? ''); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
   const csv = '\ufeff' + lines.map(r => r.map(esc).join(',')).join('\r\n');
@@ -290,7 +291,7 @@ export function exportPDF() {
   const now = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Taipei' });
   document.getElementById('printProjName').textContent = proj.name;
   document.getElementById('printMeta').textContent =
-    `Printed: ${now}  |  Period: ${proj.startDate} ~ ${proj.endDate}  |  ${tasks.length} tasks`;
+    `${t('export.printed')}: ${now}  |  ${t('export.period')}: ${proj.startDate} ~ ${proj.endDate}  |  ${t('export.taskCount', { count: tasks.length })}`;
 
   // Temporarily remove dark mode for print (white background)
   const wasDark = document.body.classList.contains('dark');

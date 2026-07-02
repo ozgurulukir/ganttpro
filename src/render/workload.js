@@ -3,17 +3,18 @@ import { D } from './deps.js';
 import { isNonWorkday } from '../core/calendar.js';
 import { initials } from '../core/format.js';
 import { parseDate, formatDate } from '../core/date.js';
+import { t } from '../i18n/index.js';
 
 export function computeWorkload() {
   const { tasks } = D;
   const byName = new Map();
-  tasks.filter(t => t.type === 'task' && t.start && t.end && !t.done).forEach(t => {
-    const name = t.assignee || 'Unassigned';
+  tasks.filter(tk => tk.type === 'task' && tk.start && tk.end && !tk.done).forEach(tk => {
+    const name = tk.assignee || t('workload.unassigned');
     if (!byName.has(name)) byName.set(name, { days: new Map(), count: 0 });
     const rec = byName.get(name);
     rec.count++;
-    let dn = parseDate(t.start);
-    const endDn = parseDate(t.end);
+    let dn = parseDate(tk.start);
+    const endDn = parseDate(tk.end);
     while (dn <= endDn) {
       const ds = formatDate(dn);
       if (!isNonWorkday(ds)) {
@@ -22,8 +23,9 @@ export function computeWorkload() {
       dn++;
     }
   });
+  const unassigned = t('workload.unassigned');
   const names = [...byName.keys()].sort((a, b) =>
-    a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b, 'en'));
+    a === unassigned ? 1 : b === unassigned ? -1 : a.localeCompare(b, 'en'));
   return { names, byName };
 }
 
@@ -35,7 +37,7 @@ export function renderWorkloadPanel(body) {
     empty.className = 'panel-empty';
     const txt = document.createElement('div');
     txt.className = 'panel-empty-txt';
-    txt.textContent = 'No active tasks';
+    txt.textContent = t('workload.noActiveTasks');
     empty.appendChild(txt);
     body.appendChild(empty);
     return;
@@ -57,7 +59,7 @@ export function renderWorkloadPanel(body) {
     nc.appendChild(nm);
     const cnt = document.createElement('span');
     cnt.style.cssText = 'font-size:11px;color:var(--t3);margin-left:auto;margin-right:8px;flex-shrink:0';
-    cnt.textContent = byName.get(name).count + ' active';
+    cnt.textContent = byName.get(name).count + ' ' + t('workload.active');
     nc.appendChild(cnt);
     row.appendChild(nc);
     body.appendChild(row);
@@ -78,7 +80,7 @@ export function renderWorkloadChart(canvas, tw) {
     line.style.cssText = `left:${tx}px;height:${th}px`;
     const lbl = document.createElement('div');
     lbl.className = 'today-lbl';
-    lbl.textContent = 'Today';
+    lbl.textContent = t('workload.today');
     line.appendChild(lbl);
     canvas.appendChild(line);
   }
@@ -94,7 +96,7 @@ export function renderWorkloadChart(canvas, tw) {
       c.className = 'wl-cell';
       c.style.cssText = `left:${x}px;width:${PPD}px;background:${
         count >= 3 ? 'rgba(239,68,68,.55)' : count === 2 ? 'rgba(94,106,210,.5)' : 'rgba(94,106,210,.22)'}`;
-      c.title = `${name}  ${day}: ${count} tasks`;
+      c.title = `${name}  ${day}: ${count} ${t('workload.active')}`;
       if (PPD >= 18) c.textContent = count;
       row.appendChild(c);
     });

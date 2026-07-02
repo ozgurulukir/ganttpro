@@ -4,6 +4,7 @@ import { darkenColor, initials } from '../core/format.js';
 import { countWorkingDays } from '../core/calendar.js';
 import { highlightRow } from './tooltip.js';
 import { renderWorkloadPanel } from './workload.js';
+import { t } from '../i18n/index.js';
 
 export function renderTaskPanel() {
   const {
@@ -29,12 +30,12 @@ export function renderTaskPanel() {
     empty.className = 'panel-empty';
     const txt = document.createElement('div');
     txt.className = 'panel-empty-txt';
-    txt.textContent = curProj() ? 'No tasks yet' : 'No projects yet';
+    txt.textContent = curProj() ? t('taskPanel.noTasks') : t('taskPanel.noProjects');
     empty.appendChild(txt);
     if (!isReadOnly && !milestoneView) {
       const cta = document.createElement('button');
       cta.className = 'btn btn-primary';
-      cta.textContent = curProj() ? '+ Add Task' : '+ Create Your First Project';
+      cta.textContent = curProj() ? t('taskPanel.addTask') : t('taskPanel.createFirstProject');
       cta.onclick = () => curProj() ? openModal() : openProjModal();
       empty.appendChild(cta);
     }
@@ -128,7 +129,7 @@ export function renderTaskPanel() {
     if (task.type === 'milestone') {
       const badge = document.createElement('span');
       badge.className = 'ms-badge';
-      badge.textContent = '◆ Milestone';
+      badge.textContent = '◆ ' + t('taskPanel.milestone');
       nc.appendChild(badge);
     }
 
@@ -138,7 +139,7 @@ export function renderTaskPanel() {
       av.className = 'assignee-av';
       av.textContent = initials(task.assignee);
       av.style.background = avColor(task.assignee);
-      av.title = 'Assignee: ' + task.assignee;
+      av.title = t('taskPanel.assigneeTitle') + task.assignee;
       nc.appendChild(av);
     }
 
@@ -157,7 +158,7 @@ export function renderTaskPanel() {
       const sv = task.start || task.date || '';
       if (task.pinStart && sv) {
         sc.innerHTML = '<span class="pin-dot"></span>' + sv;
-        sc.title = 'Fixed date — not auto-scheduled';
+        sc.title = t('taskPanel.fixedDate');
       } else {
         sc.textContent = sv;
       }
@@ -242,7 +243,7 @@ export function renderTaskPanel() {
       const mb = document.createElement('span');
       mb.textContent = '◆';
       mb.style.cssText = `font-size:13px;color:${task.color};cursor:pointer;opacity:${task.done ? 0.3 : 1};transition:opacity .12s`;
-      mb.title = task.done ? 'Click to mark as incomplete' : 'Click to mark as done';
+      mb.title = task.done ? t('taskPanel.markIncomplete') : t('taskPanel.markDone');
       mb.onclick = e => {
         e.stopPropagation();
         pushHistory();
@@ -269,7 +270,7 @@ export function renderTaskPanel() {
     const outBtn = document.createElement('div');
     outBtn.className = 'row-action-btn';
     outBtn.textContent = '←';
-    outBtn.title = 'Outdent (move to parent level)';
+    outBtn.title = t('taskPanel.outdent');
     if (canOutdent) outBtn.onclick = e => { e.stopPropagation(); outdentTask(task.id); };
     else outBtn.style.visibility = 'hidden';
     ac.appendChild(outBtn);
@@ -277,7 +278,7 @@ export function renderTaskPanel() {
     const inBtn = document.createElement('div');
     inBtn.className = 'row-action-btn';
     inBtn.textContent = '→';
-    inBtn.title = 'Indent (nest under previous sibling)';
+    inBtn.title = t('taskPanel.indent');
     if (canIndent) inBtn.onclick = e => { e.stopPropagation(); indentTask(task.id); };
     else inBtn.style.visibility = 'hidden';
     ac.appendChild(inBtn);
@@ -285,14 +286,14 @@ export function renderTaskPanel() {
     const addBtn = document.createElement('div');
     addBtn.className = 'row-action-btn add';
     addBtn.textContent = '+';
-    addBtn.title = 'Add task under this node';
+    addBtn.title = t('taskPanel.addSubtask');
     addBtn.onclick = e => { e.stopPropagation(); addTaskInline(task.id); };
     ac.appendChild(addBtn);
 
     const delBtn = document.createElement('div');
     delBtn.className = 'row-action-btn del';
     delBtn.textContent = '✕';
-    delBtn.title = 'Delete task';
+    delBtn.title = t('taskPanel.deleteTask');
     delBtn.onclick = e => { e.stopPropagation(); confirmDeleteTask(task.id); };
     ac.appendChild(delBtn);
 

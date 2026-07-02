@@ -2,6 +2,7 @@
 import { D } from './deps.js';
 import { countWorkingDays } from '../core/calendar.js';
 import { esc } from '../core/format.js';
+import { t } from '../i18n/index.js';
 
 export function highlightRow(id, on) {
   document.querySelectorAll(`[data-id="${id}"]`).forEach(el => {
@@ -46,35 +47,35 @@ export function showTT(e, task) {
   if (task.type === 'task') {
     const wdays = task.wday || countWorkingDays(task.start, task.end);
     const tprog = task.done ? 100 : (task.progress || 0);
-    h += `<div class="tt-r"><span>Start</span><span>${task.start}</span></div>`;
-    h += `<div class="tt-r"><span>End</span><span>${task.end}</span></div>`;
-    h += `<div class="tt-r"><span>Workdays</span><span>${wdays}d</span></div>`;
-    h += `<div class="tt-r"><span>Progress</span><span>${tprog}%</span></div>`;
-    if (task.assignee) h += `<div class="tt-r"><span>Assignee</span><span>${esc(task.assignee)}</span></div>`;
+    h += `<div class="tt-r"><span>${t('tooltip.start')}</span><span>${task.start}</span></div>`;
+    h += `<div class="tt-r"><span>${t('tooltip.end')}</span><span>${task.end}</span></div>`;
+    h += `<div class="tt-r"><span>${t('tooltip.workdays')}</span><span>${wdays}d</span></div>`;
+    h += `<div class="tt-r"><span>${t('tooltip.progress')}</span><span>${tprog}%</span></div>`;
+    if (task.assignee) h += `<div class="tt-r"><span>${t('tooltip.assignee')}</span><span>${esc(task.assignee)}</span></div>`;
     const _bl = (curProj()?.baseline?.dates || {})[task.id];
     if (_bl && _bl.e && task.end && _bl.e !== task.end) {
       const late = task.end > _bl.e;
       const dd = countWorkingDays(late ? _bl.e : task.end, late ? task.end : _bl.e) - 1;
-      h += `<div class="tt-r"><span>Baseline drift</span><span style="color:${late ? '#EF4444' : '#10B981'}">${late ? '+' : '-'}${dd} workdays</span></div>`;
+      h += `<div class="tt-r"><span>${t('tooltip.baselineDrift')}</span><span style="color:${late ? '#EF4444' : '#10B981'}">${late ? '+' : '-'}${dd} workdays</span></div>`;
     }
     h += `<div class="tt-pb"><div class="tt-pf" style="width:${tprog}%;background:${task.color}"></div></div>`;
     const _ovd = !task.done && task.end && task.end < TODAY_STR;
-    h += `<div class="tt-r"><span>Status</span><span style="color:${task.done?'#10B981':_ovd?'#EF4444':'#9CA3AF'}">${task.done ? '✓ Done' : _ovd ? '⚠ Overdue' : '⏳ Pending'}</span></div>`;
-    if ((task.deps||[]).length)   h += `<div class="tt-r"><span>FS dep</span><span>${task.deps.length}</span></div>`;
-    if ((task.sdeps||[]).length)  h += `<div class="tt-r"><span>SS dep</span><span style="color:#F59E0B">${task.sdeps.length}</span></div>`;
-    if ((task.ffdeps||[]).length) h += `<div class="tt-r"><span>FF dep</span><span style="color:#10B981">${task.ffdeps.length}</span></div>`;
-    if ((task.sfdeps||[]).length) h += `<div class="tt-r"><span>SF dep</span><span style="color:#8B5CF6">${task.sfdeps.length}</span></div>`;
+    h += `<div class="tt-r"><span>${t('tooltip.status')}</span><span style="color:${task.done?'#10B981':_ovd?'#EF4444':'#9CA3AF'}">${task.done ? t('tooltip.done') : _ovd ? t('tooltip.overdue') : t('tooltip.pending')}</span></div>`;
+    if ((task.deps||[]).length)   h += `<div class="tt-r"><span>${t('tooltip.fsDep')}</span><span>${task.deps.length}</span></div>`;
+    if ((task.sdeps||[]).length)  h += `<div class="tt-r"><span>${t('tooltip.ssDep')}</span><span style="color:#F59E0B">${task.sdeps.length}</span></div>`;
+    if ((task.ffdeps||[]).length) h += `<div class="tt-r"><span>${t('tooltip.ffDep')}</span><span style="color:#10B981">${task.ffdeps.length}</span></div>`;
+    if ((task.sfdeps||[]).length) h += `<div class="tt-r"><span>${t('tooltip.sfDep')}</span><span style="color:#8B5CF6">${task.sfdeps.length}</span></div>`;
   } else if (task.type === 'milestone') {
-    h += `<div class="tt-r"><span>Date</span><span>${task.date}</span></div>`;
-    h += `<div class="tt-r"><span>Assignee</span><span>${esc(task.assignee) || '—'}</span></div>`;
-    h += `<div class="tt-r"><span>FS dep</span><span>${(task.deps||[]).length}</span></div>`;
+    h += `<div class="tt-r"><span>${t('tooltip.date')}</span><span>${task.date}</span></div>`;
+    h += `<div class="tt-r"><span>${t('tooltip.assignee')}</span><span>${esc(task.assignee) || '—'}</span></div>`;
+    h += `<div class="tt-r"><span>${t('tooltip.fsDep')}</span><span>${(task.deps||[]).length}</span></div>`;
   } else if (task.type === 'group') {
     const b = groupBounds(task.id);
     const prog = groupProgress(task.id);
-    if (b.s) h += `<div class="tt-r"><span>Start</span><span>${b.s}</span></div>`;
-    if (b.e) h += `<div class="tt-r"><span>End</span><span>${b.e}</span></div>`;
-    h += `<div class="tt-r"><span>Sub-tasks</span><span>${tasks.filter(t=>t.parent===task.id&&t.type==='task').length}</span></div>`;
-    h += `<div class="tt-r"><span>Overall progress</span><span>${prog}%</span></div>`;
+    if (b.s) h += `<div class="tt-r"><span>${t('tooltip.start')}</span><span>${b.s}</span></div>`;
+    if (b.e) h += `<div class="tt-r"><span>${t('tooltip.end')}</span><span>${b.e}</span></div>`;
+    h += `<div class="tt-r"><span>${t('tooltip.subTasks')}</span><span>${tasks.filter(tk=>tk.parent===task.id&&tk.type==='task').length}</span></div>`;
+    h += `<div class="tt-r"><span>${t('tooltip.overallProgress')}</span><span>${prog}%</span></div>`;
     h += `<div class="tt-pb"><div class="tt-pf" style="width:${prog}%;background:${task.color}"></div></div>`;
   }
   tt.innerHTML = h;

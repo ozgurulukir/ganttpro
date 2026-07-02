@@ -3,6 +3,7 @@ import { D } from './deps.js';
 import { isNonWorkday } from '../core/calendar.js';
 import { parseDate, formatDate } from '../core/date.js';
 import { highlightRow } from './tooltip.js';
+import { t } from '../i18n/index.js';
 import { renderGrid } from './grid.js';
 import { renderBar, renderGroupBar } from './bar.js';
 import { renderMilestone } from './milestone.js';
@@ -42,7 +43,7 @@ export function renderChartBody() {
     line.style.cssText = `left:${tx}px;height:${th}px`;
     const lbl = document.createElement('div');
     lbl.className = 'today-lbl';
-    lbl.textContent = 'Today';
+    lbl.textContent = t('chart.today');
     line.appendChild(lbl);
     canvas.appendChild(line);
   }

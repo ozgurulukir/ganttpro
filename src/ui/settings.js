@@ -1,6 +1,7 @@
 /* Settings panel, zoom, stats, dark mode, baseline, versions. */
 import { D } from '../render/deps.js';
 import { esc } from '../core/format.js';
+import { t } from '../i18n/index.js';
 
 export function onSettingBarDatesChange() {
   const { setShowBarDates, render } = D;
@@ -25,7 +26,7 @@ export function setBaseline() {
     else if (t.type === 'milestone' && t.date) dates[t.id] = { d: t.date };
   });
   p.baseline = { setAt: TODAY_STR, dates };
-  showStatus(`Baseline set (${TODAY_STR})`);
+  showStatus(t('settings.baselineSet', { date: TODAY_STR }));
   render();
   saveToLS();
   if (currentUser) saveToCloud();
@@ -147,18 +148,18 @@ export function createVersion() {
   inp.value = '';
   renderVersionList();
   render(); // triggers save
-  showStatus('✓ Version "' + name + '" created');
+  showStatus(t('settings.versionCreated', { name }));
 }
 
 export function restoreVersion(vId) {
   const { loadTasksFromSnapshot, render, showStatus } = D;
   const v = curVersions().find(v => v.id === vId);
   if (!v) return;
-  if (!confirm(`Restore to version "${v.name}"?\nCurrent changes will be overwritten. This cannot be undone.`)) return;
+  if (!confirm(t('settings.restoreConfirm', { name: v.name }))) return;
   loadTasksFromSnapshot(v.snapshot);
   render();
   closeVersionPanel();
-  showStatus('✓ Restored to "' + v.name + '"');
+  showStatus(t('settings.restored', { name: v.name }));
 }
 
 export function deleteVersion(vId) {
@@ -166,7 +167,7 @@ export function deleteVersion(vId) {
   const vs = curVersions();
   const v = vs.find(v => v.id === vId);
   if (!v) return;
-  if (!confirm(`Delete version "${v.name}"?`)) return;
+  if (!confirm(t('settings.deleteVersionConfirm', { name: v.name }))) return;
   curProj().versions = vs.filter(v => v.id !== vId);
   renderVersionList();
   render();
@@ -176,7 +177,7 @@ export function renderVersionList() {
   const el = document.getElementById('verList');
   const vs = curVersions();
   if (vs.length === 0) {
-    el.innerHTML = '<div class="ver-empty">No versions yet<br>Edit your project, enter a version name,<br>and click "Create Version" to save a snapshot</div>';
+    el.innerHTML = `<div class="ver-empty">${t('settings.noVersions')}</div>`;
     return;
   }
   el.innerHTML = '';
@@ -189,8 +190,8 @@ export function renderVersionList() {
       <div class="ver-item-name">${esc(v.name)}</div>
       <div class="ver-item-meta">${dateStr} · ${v.taskCount} tasks</div>
       <div class="ver-item-actions">
-        <button class="ver-btn ver-btn-restore" data-action="restore-version" data-id="${v.id}">Restore</button>
-        <button class="ver-btn ver-btn-del" data-action="delete-version" data-id="${v.id}">Delete</button>
+        <button class="ver-btn ver-btn-restore" data-action="restore-version" data-id="${v.id}">${t('settings.restore')}</button>
+        <button class="ver-btn ver-btn-del" data-action="delete-version" data-id="${v.id}">${t('settings.delete')}</button>
       </div>
     `;
     el.appendChild(item);

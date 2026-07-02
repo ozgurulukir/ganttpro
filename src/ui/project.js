@@ -2,6 +2,7 @@
 import { D } from '../render/deps.js';
 import { esc } from '../core/format.js';
 import { parseDate, formatDate } from '../core/date.js';
+import { t } from '../i18n/index.js';
 
 let _editingProjId = null;
 
@@ -27,7 +28,7 @@ export function updateProjUI() {
     const fallback = projects.find(x => !x._isShared) || projects[0];
     if (!fallback) {
       // No projects at all — clear header and show create modal
-      document.getElementById('projSelectorName').textContent = '— No projects —';
+      document.getElementById('projSelectorName').textContent = t('project.noProjects');
       document.getElementById('projDot').style.background = '#999';
       renderProjMenu();
       return;
@@ -83,7 +84,7 @@ export function renderProjMenu() {
   menu.appendChild(div);
   const add = document.createElement('div');
   add.className = 'proj-item proj-item-new';
-  add.innerHTML = '+ New Project';
+  add.innerHTML = t('project.newProject');
   add.onclick = () => { closeProjMenuOnly(); openProjModal(); };
   menu.appendChild(add);
 }
@@ -93,7 +94,7 @@ export function deleteProject(id, e) {
   e.stopPropagation();
   const p = projects.find(x => x.id === id);
   if (!p || p._isShared) return;
-  if (!confirm(`Delete "${p.name}"? This action cannot be undone.`)) return;
+  if (!confirm(t('project.deleteConfirm', { name: p.name }))) return;
   setProjects(projects.filter(x => x.id !== id));
   closeProjMenuOnly();
   const ownedLeft = D.projects.filter(x => !x._isShared);
@@ -120,8 +121,8 @@ export function openEditProjModal(id, e) {
   const p = projects.find(x => x.id === id);
   if (!p) return;
   _editingProjId = id;
-  document.getElementById('projModalTitle').textContent = '✎ Edit Project';
-  document.getElementById('projSubmitBtn').textContent = 'Save';
+  document.getElementById('projModalTitle').textContent = t('project.editProject');
+  document.getElementById('projSubmitBtn').textContent = t('common.save');
   document.getElementById('pName').value = p.name;
   document.getElementById('pStart').value = p.startDate;
   document.getElementById('projColorDot').style.background = p.color;
@@ -137,8 +138,8 @@ export function openEditProjModal(id, e) {
 export function openProjModal() {
   const { TODAY_STR, TEMPLATES, getNextGroupColor } = D;
   _editingProjId = null;
-  document.getElementById('projModalTitle').textContent = '◆ New Project';
-  document.getElementById('projSubmitBtn').textContent = 'Create Project';
+  document.getElementById('projModalTitle').textContent = t('project.createProject');
+  document.getElementById('projSubmitBtn').textContent = t('project.createBtn');
   document.getElementById('pName').value = '';
   document.getElementById('pStart').value = TODAY_STR;
 
@@ -161,7 +162,7 @@ export function openProjModal() {
 
   // Fill template options
   const sel = document.getElementById('pTemplate');
-  sel.innerHTML = '<option value="">— Blank Project —</option>' +
+  sel.innerHTML = `<option value="">${t('project.blankProject')}</option>` +
     TEMPLATES.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
   sel.value = '';
   document.getElementById('templatePreview').style.display = 'none';
@@ -187,7 +188,7 @@ export function onTemplateChange() {
   // List phase names (top-level groups)
   const phases = tpl.tasks.filter(t => t.type === 'group' && t.parent === 1)
     .map(t => t.name).join(' → ');
-  preview.innerHTML = `<b>Template:</b> ${groups} phases, ${tasks} tasks, ${miles} milestones<br>
+  preview.innerHTML = `<b>${t('project.template')}:</b> ${t('project.templatePreview', { groups, tasks, miles })}<br>
     <span style="color:var(--t4)">${phases}</span>`;
   preview.style.display = '';
   // Auto-fill name if empty (use short default, not full template name)
@@ -220,7 +221,7 @@ export function submitProject() {
 
   // 重複名稱提醒
   const dupName = projects.some(p => p.id !== _editingProjId && p.name === name);
-  if (dupName && !confirm(`A project named "${name}" already exists. Duplicate names can be confusing.\n\nUse this name anyway?`)) {
+  if (dupName && !confirm(t('project.duplicateName', { name }))) {
     document.getElementById('pName').focus();
     return;
   }

@@ -45,7 +45,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import * as Local from "./data/local.js";
 import * as Share from "./data/share.js";
 import * as Remote from "./data/remote.js";
-import { initI18n, translateDOM } from "./i18n/index.js";
+import { initI18n, translateDOM, t } from "./i18n/index.js";
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
@@ -457,7 +457,7 @@ function indentTask(id) {
   }
   if (!prevSibling) return;
   if (getTaskDepth(prevSibling.id) + 1 >= 5) {
-    showStatus('Maximum depth reached (5 levels)'); return;
+    showStatus(t('modal.indentLimit')); return;
   }
   pushHistory();
   task.parent = prevSibling.id;
@@ -740,7 +740,7 @@ function setSyncDot(state) {
   const dot = document.getElementById('syncDot');
   if (!dot) return;
   dot.className = 'sync-dot' + (state ? ' ' + state : '');
-  dot.title = { saving:'Saving...', ok:'Synced', err:'Sync failed', off:'Read-only', local:'Local mode (no cloud sync)' }[state] || 'Cloud sync';
+  dot.title = { saving:t('status.syncSaving'), ok:t('status.syncOk'), err:t('status.syncErr'), off:t('status.syncOff'), local:t('status.syncLocal') }[state] || t('status.syncDefault');
 }
 
 async function saveToCloud() {
@@ -834,7 +834,7 @@ function showSyncToast() {
     t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--t1);color:var(--surface);padding:8px 14px;border-radius:8px;font-size:12px;z-index:9999;opacity:0;transition:opacity .3s';
     document.body.appendChild(t);
   }
-  t.textContent = '📡 Another user has updated the data';
+  t.textContent = '📡 ' + t('status.dataUpdated');
   t.style.opacity = '1';
   setTimeout(() => t.style.opacity = '0', 2500);
 }

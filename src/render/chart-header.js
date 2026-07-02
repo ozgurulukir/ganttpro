@@ -4,6 +4,7 @@ import { toStr } from '../core/format.js';
 import { isNonWorkday, getHoliday } from '../core/calendar.js';
 import { parseDate, formatDate, dayOfWeek } from '../core/date.js';
 import { renderMilestoneTimeline } from './milestone.js';
+import { t } from '../i18n/index.js';
 
 export function renderChartHeader() {
   const { CHART_START, CHART_END, PPD, TODAY, TODAY_STR, milestoneView, tasks, dateToX, totalW } = D;
@@ -32,7 +33,7 @@ export function renderChartHeader() {
     const el = document.createElement('div');
     el.className = 'month-label';
     el.style.cssText = `left:${x1}px;width:${x2 - x1}px`;
-    const mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const mn = t('chart.months', { returnObjects: true });
     el.innerHTML = `<span class="month-label-in">${y} ${mn[m]}</span>`;
     mRow.appendChild(el);
     curDn = monthEndDn + 1;
@@ -40,7 +41,7 @@ export function renderChartHeader() {
 
   // Sub-header: granularity based on PPD (not viewMode)
   const gran = PPD >= 18 ? 'day' : PPD >= 5 ? 'week' : 'month';
-  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dayNames = t('chart.days', { returnObjects: true });
 
   if (gran === 'day') {
     let dn = parseDate(toStr(CHART_START));
@@ -55,7 +56,7 @@ export function renderChartHeader() {
       const dayColor = isTdy ? '' : hol ? ' day-sun' : dow === 6 ? ' day-sat' : dow === 0 ? ' day-sun' : ' day-weekday';
       el.className = 'week-cell day-cell' + dayColor + (isTdy ? ' today-wk' : '') + (off ? ' wknd-cell' : '');
       el.style.cssText = `left:${x}px;width:${PPD}px`;
-      if (hol) el.title = hol;
+      if (hol) el.title = t(hol);
       const dayDate = new Date(dn * 86400000).getUTCDate();
       el.innerHTML = `<span>${dayDate}</span><span class="day-dow">${dayNames[dow]}</span>`;
       wRow.appendChild(el);
@@ -99,7 +100,7 @@ export function renderChartHeader() {
       const el = document.createElement('div');
       el.className = 'week-cell' + (isTdyMon ? ' today-wk' : '');
       el.style.cssText = `left:${x1}px;width:${x2 - x1}px`;
-      const mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const mn = t('chart.months', { returnObjects: true });
       el.textContent = mn[m];
       wRow.appendChild(el);
       mnDn = monthEndDn + 1;

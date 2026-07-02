@@ -3,6 +3,7 @@ import { D } from './deps.js';
 import { isNonWorkday } from '../core/calendar.js';
 import { parseDate, formatDate, addDays } from '../core/date.js';
 import { showTT, moveTT, hideTT } from './tooltip.js';
+import { t } from '../i18n/index.js';
 
 /* Single horizontal milestone timeline — all milestones on one spine */
 export function renderMilestoneTimeline(row, groupTask, msList) {
@@ -26,7 +27,7 @@ export function renderMilestoneTimeline(row, groupTask, msList) {
     tl.style.left = tx + 'px';
     const tlbl = document.createElement('div');
     tlbl.className = 'today-lbl';
-    tlbl.textContent = 'Today';
+    tlbl.textContent = t('chart.today');
     tl.appendChild(tlbl);
     row.appendChild(tl);
   }

@@ -69,7 +69,8 @@
     "syncErr": "Sync failed",
     "syncOff": "Read-only",
     "syncLocal": "Local mode (no cloud sync)",
-    "syncDefault": "Cloud sync"
+    "syncDefault": "Cloud sync",
+    "dataUpdated": "Another user has updated the data"
   },
   "taskPanel": {
     "noTasks": "No tasks yet",
@@ -223,6 +224,8 @@
     "tasks": "Tasks",
     "milestones": "Milestones",
     "taskName": "Task Name",
+    "type": "Type",
+    "assignee": "Assignee",
     "startDate": "Start Date",
     "endDate": "End Date",
     "workdays": "Workdays",

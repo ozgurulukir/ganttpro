@@ -69,7 +69,8 @@
     "syncErr": "同步失敗",
     "syncOff": "唯讀模式",
     "syncLocal": "本地模式（不同步雲端）",
-    "syncDefault": "雲端同步"
+    "syncDefault": "雲端同步",
+    "dataUpdated": "其他用戶已更新資料"
   },
   "taskPanel": {
     "noTasks": "這個專案還沒有任務",
@@ -223,6 +224,8 @@
     "tasks": "任務數",
     "milestones": "里程碑",
     "taskName": "任務名稱",
+    "type": "類型",
+    "assignee": "負責人",
     "startDate": "開始日期",
     "endDate": "結束日期",
     "workdays": "工作日",

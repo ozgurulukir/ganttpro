@@ -1,6 +1,7 @@
 import { auth, googleProvider } from "./data/firebase.js";
 import * as Remote from "./data/remote.js";
 import { D } from "./render/deps.js";
+import { t } from "./i18n/index.js";
 
 const ADMIN_EMAIL = 's19800430@gmail.com';
 
@@ -14,7 +15,7 @@ export async function signInWithGoogle() {
   try {
     await auth.signInWithPopup(googleProvider);
   } catch(e) {
-    if (e.code !== 'auth/popup-closed-by-user') alert('Login failed: ' + e.message);
+    if (e.code !== 'auth/popup-closed-by-user') alert(t('login.registerFailed') + e.message);
   }
 }
 
@@ -43,7 +44,7 @@ export async function submitRegister() {
   const nickname = document.getElementById('registerNickname').value.trim();
   const errEl = document.getElementById('registerError');
   if (!nickname) {
-    errEl.textContent = 'Please enter a nickname';
+    errEl.textContent = t('login.nicknameRequired');
     errEl.style.display = '';
     return;
   }
@@ -57,7 +58,7 @@ export async function submitRegister() {
     document.getElementById('loginPanel').style.display = 'flex';
     await D.initApp();
   } catch(e) {
-    errEl.textContent = 'Registration failed: ' + e.message;
+    errEl.textContent = t('login.registerFailed') + e.message;
     errEl.style.display = '';
   }
 }
