@@ -2,12 +2,12 @@
 
 ## Status
 
-**Phase 1.1–1.4 ✅.** Next: **Phase 1.5 — `schedule.js`.**
+**Phase 1.1–1.5 ✅.** Next: **Phase 1.6 — `format.js`.**
 
 ## Active
 
-- Phase 1.5 next: `src/core/schedule.js` — scheduleTasks, autoScheduleFromDeps,
-  allGroupMembersScheduled (FS/SS/FF/SF + lag forward pass).
+- Phase 1.6 next: `src/core/format.js` — dateToX, toStr, initials, hexToRgba,
+  darkenColor, avColor. Pure formatting/color helpers (low risk, high coverage).
 - **Tooling**: Prettier-on-write confirmed DISABLED (subagent probe). Edit/Write
   tools now used directly for all files including main.js.
 

@@ -4,6 +4,23 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 1.5: Extract `src/core/schedule.js` ✅
+
+- Moved 3 scheduler functions (allGroupMembersScheduled, scheduleTasks,
+  autoScheduleFromDeps) to a pure module; imports calendar.js (6 fns) +
+  tree.js (taskById, groupBounds). State (tasks, projStart) passed as params.
+- These MUTATE task objects in place (set start/end/date) — that's the
+  scheduler's job; deterministic and testable because inputs are explicit.
+- `main.js` keeps thin bound wrappers (zero call-site changes; scheduleTasks
+  had 18 call sites).
+- `tests/schedule.test.js`: 14 node:test tests, **all pass** — FS chain,
+  wday>1 spans, SS (start-with), FF (finish-with), milestone dating, positive
+  FS lag, group-bounds dependency, null-projStart no-op, autoScheduleFromDeps
+  (push-later / already-later / milestone / no-deps).
+- Verified: `node --check` clean, `npm test` 70/70 green, `npm run build` green.
+
+---
+
 ## 2026-07-02 — Phase 1.4: Extract `src/core/critical-path.js` ✅
 
 - Moved 3 CPM functions (prevWorkingDay, computeCriticalPath, getCriticalPredTaskIds)
