@@ -4,6 +4,17 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 7: Export layer ✅
+
+- **Goal achieved**: exportPNG, exportCSV, exportPDF extracted to `src/export.js`.
+  main.js reduced 1736→1448 lines (288 removed).
+- **Module**: `src/export.js` (295 lines) — 3 exported functions.
+  Direct imports from `core/calendar.js` (countWorkingDays, nextWorkingDay) and
+  `core/format.js` (darkenColor). D deps for state-bound wrappers (getVisibleRows,
+  curProj, totalW, dateToX, groupBounds, buildDepsText) and state values
+  (milestoneView, ROW_H, MS_ROW_H, TODAY_STR, CHART_START/END, PPD, etc.).
+- **Build**: 47 modules, 672 kB bundle. 86 tests green.
+
 ## 2026-07-02 — Phase 6: Kill inline onclick + window shim ✅
 
 - **Goal achieved**: all 71 static inline handlers in index.html and 8 dynamic

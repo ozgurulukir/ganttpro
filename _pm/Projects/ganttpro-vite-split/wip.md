@@ -2,11 +2,11 @@
 
 ## Status
 
-**Phase 6 COMPLETE ✅ (Kill inline onclick + window shim).** Next: **Phase 7 — Export layer (png/pdf/csv).**
+**Phase 7 COMPLETE ✅ (Export layer).** Next: **Phase 8 — Auth/admin/collab.**
 
 ## Active
 
-- Phase 7: extract export functions (exportPNG, exportPDF, exportCSV) into `src/export/` module.
+- Phase 8: extract auth, admin, collab Firebase-dependent UI into modules.
 
 ## Decisions resolved
 

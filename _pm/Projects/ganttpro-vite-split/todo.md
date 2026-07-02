@@ -147,10 +147,10 @@ Goal: DOM/canvas code grouped by concern. Most coupled, least testable — do la
 
 ---
 
-## Phase 7 — Export layer
+## Phase 7 — Export layer ✅ DONE
 
-- [ ] 7.1 `src/export/png.js` (3157–3389), `pdf.js` (5112–5126), `csv.js` (3390–3426)
-- [ ] 7.2 Commit
+- [x] 7.1 `src/export.js` — exportPNG, exportCSV, exportPDF (295 lines)
+- [x] 7.2 Commit
 
 ---
 
