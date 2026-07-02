@@ -69,8 +69,8 @@ export function syncEndFromWday() {
 })();
 
 export function updateModalForType() {
-  const t = document.getElementById('fType').value;
-  const isMs = t === 'milestone', isGrp = t === 'group';
+  const typeVal = document.getElementById('fType').value;
+  const isMs = typeVal === 'milestone', isGrp = typeVal === 'group';
   document.getElementById('rowDates').style.display = isGrp ? 'none' : '';
   document.getElementById('colEnd').style.display   = isMs ? 'none' : '';
   document.getElementById('colWday').style.display  = isMs ? 'none' : '';
