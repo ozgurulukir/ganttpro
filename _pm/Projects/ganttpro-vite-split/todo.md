@@ -138,14 +138,12 @@ Goal: DOM/canvas code grouped by concern. Most coupled, least testable — do la
 
 ---
 
-## Phase 6 — Replace inline `onclick` with `addEventListener`
+## Phase 6 — Replace inline `onclick` with `addEventListener` ✅ DONE
 
-Goal: kill global-function soup, enable tree-shaking. Required before build pays off.
-
-- [ ] 6.1 Inventory all `onclick="fn()"` in index.html (~30+ handlers)
-- [ ] 6.2 Wire each via `addEventListener` or event delegation in relevant module
-- [ ] 6.3 Remove `window.fn = ...` exposures
-- [ ] 6.4 Commit: `refactor: replace inline handlers with addEventListener`
+- [x] 6.1 Inventory all inline handlers (71 static in index.html, 8 dynamic innerHTML)
+- [x] 6.2 Wire via `addEventListener` + event delegation (`wireStaticEvents()` in main.js)
+- [x] 6.3 Remove `Object.assign(window, {...})` shim (180 entries)
+- [x] 6.4 Commit
 
 ---
 

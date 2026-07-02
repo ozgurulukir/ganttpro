@@ -28,7 +28,7 @@
 
     <!-- 登入面板 -->
     <div id="loginPanel" style="display:none;flex-direction:column;align-items:center;gap:16px;width:100%">
-      <button class="google-btn" onclick="signInWithGoogle()">
+      <button class="google-btn" id="loginGoogleBtn">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
           <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.083 17.64 11.775 17.64 9.2z" fill="#4285F4"/>
           <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
@@ -43,7 +43,7 @@
         <span style="font-size:11px;color:var(--t4)">或</span>
         <hr style="flex:1;border:none;border-top:1px solid var(--border)">
       </div>
-      <button onclick="signInAsGuest()" style="width:100%;padding:10px 0;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--t2);font-size:13px;font-family:inherit;cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--s-hover)'" onmouseout="this.style.background='transparent'">
+      <button id="loginGuestBtn" style="width:100%;padding:10px 0;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--t2);font-size:13px;font-family:inherit;cursor:pointer;transition:background .15s">
         本地模式（不同步雲端）
       </button>
     </div>
@@ -52,11 +52,10 @@
     <div id="registerPanel" style="display:none;flex-direction:column;align-items:center;gap:16px;width:100%">
       <p style="color:var(--t2);font-size:13px;text-align:center;margin:0">歡迎使用 GanttPro！請填寫暱稱完成註冊</p>
       <input id="registerNickname" type="text" placeholder="請輸入暱稱（最多 20 字）" maxlength="20"
-        onkeydown="if(event.key==='Enter')submitRegister()"
         style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;
                background:var(--bg);color:var(--t1);font-size:13px;font-family:inherit;
                box-sizing:border-box;outline:none">
-      <button class="google-btn" style="width:100%;justify-content:center" onclick="submitRegister()">完成註冊</button>
+      <button class="google-btn" id="registerSubmitBtn" style="width:100%;justify-content:center">完成註冊</button>
       <p id="registerError" style="color:#e53;font-size:13px;text-align:center;margin:0;display:none"></p>
     </div>
   </div>
@@ -68,124 +67,123 @@
     <div class="logo-icon">G</div>
     GanttPro
   </div>
-  <div class="proj-selector" id="projSelector" onclick="toggleProjMenu(event)">
+  <div class="proj-selector" id="projSelector">
     <div class="proj-sel-dot" id="projDot" style="background:#5E6AD2"></div>
     <span class="proj-sel-name" id="projSelectorName">載入中…</span>
     <span class="proj-sel-arrow">▾</span>
-    <div class="proj-menu" id="projMenu" onclick="event.stopPropagation()"></div>
+    <div class="proj-menu" id="projMenu"></div>
   </div>
-  <button class="btn btn-owner-only proj-share-btn" onclick="openCollabModal()" title="共享此專案">🔗</button>
+  <button class="btn btn-owner-only proj-share-btn" id="shareBtn" title="共享此專案">🔗</button>
   <div class="sep"></div>
-  <button class="btn btn-primary" onclick="openModal()" style="display:none">＋ 新增任務</button>
-  <button class="btn" id="undoBtn" onclick="undo()" title="復原 (⌘Z)" disabled>↩ 復原</button>
-  <button class="btn" onclick="scrollToToday()" title="跳至今日">📍 今日</button>
-  <button class="btn" onclick="expandAll()">⊞ 全展開</button>
-  <button class="btn" onclick="collapseAll()">⊟ 全收合</button>
+  <button class="btn btn-primary" id="addTaskBtn" style="display:none">＋ 新增任務</button>
+  <button class="btn" id="undoBtn" title="復原 (⌘Z)" disabled>↩ 復原</button>
+  <button class="btn" id="todayBtn" title="跳至今日">📍 今日</button>
+  <button class="btn" id="expandAllBtn">⊞ 全展開</button>
+  <button class="btn" id="collapseAllBtn">⊟ 全收合</button>
   <div class="spacer"></div>
   <div class="btn-group" id="chartViewBtns">
-    <button class="btn active" data-cv="gantt" onclick="setChartView('gantt')">甘特圖</button>
-    <button class="btn" data-cv="milestone" onclick="setChartView('milestone')">◆ 里程碑</button>
-    <button class="btn" data-cv="workload" onclick="setChartView('workload')">工作量</button>
+    <button class="btn active" data-cv="gantt">甘特圖</button>
+    <button class="btn" data-cv="milestone">◆ 里程碑</button>
+    <button class="btn" data-cv="workload">工作量</button>
   </div>
   <div class="sep"></div>
   <div class="btn-group" id="viewBtns">
-    <button class="btn" data-v="day" onclick="setView('day')">日</button>
-    <button class="btn active" data-v="week" onclick="setView('week')">週</button>
-    <button class="btn" data-v="month" onclick="setView('month')">月</button>
+    <button class="btn" data-v="day">日</button>
+    <button class="btn active" data-v="week">週</button>
+    <button class="btn" data-v="month">月</button>
   </div>
-  <button class="btn zoom-btn" onclick="zoomOut()" title="縮小">－</button>
-  <button class="btn zoom-btn" onclick="zoomIn()" title="放大">＋</button>
-  <button class="btn fit-btn" onclick="fitToFrame()" title="縮放至適合視窗"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4.5V1h3.5M8.5 1H12v3.5M12 8.5V12H8.5M4.5 12H1V8.5"/></svg></button>
-  <button class="btn" id="cpBtn" onclick="toggleCriticalPath()" title="顯示關鍵路徑">◆ 關鍵路徑</button>
+  <button class="btn zoom-btn" data-zoom="out" title="縮小">－</button>
+  <button class="btn zoom-btn" data-zoom="in" title="放大">＋</button>
+  <button class="btn fit-btn" id="fitBtn" title="縮放至適合視窗"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4.5V1h3.5M8.5 1H12v3.5M12 8.5V12H8.5M4.5 12H1V8.5"/></svg></button>
+  <button class="btn" id="cpBtn" title="顯示關鍵路徑">◆ 關鍵路徑</button>
   <div class="settings-wrap" id="exportWrap">
-    <button class="btn" onclick="toggleExportMenu()" title="匯出圖檔">⬇ 匯出</button>
+    <button class="btn" id="exportToggleBtn" title="匯出圖檔">⬇ 匯出</button>
     <div class="settings-panel" id="exportPanel">
-      <button class="settings-action" onclick="exportPNG();closeExportMenu()">🖼 匯出 PNG</button>
-      <button class="settings-action" onclick="exportPDF();closeExportMenu()">📄 匯出 PDF</button>
-      <button class="settings-action" onclick="exportCSV();closeExportMenu()">📊 匯出 CSV (Excel)</button>
+      <button class="settings-action" data-export="png">🖼 匯出 PNG</button>
+      <button class="settings-action" data-export="pdf">📄 匯出 PDF</button>
+      <button class="settings-action" data-export="csv">📊 匯出 CSV (Excel)</button>
     </div>
   </div>
   <div class="readonly-badge">👁 唯讀模式</div>
-  <button class="btn btn-owner-only" id="collabBtn" onclick="openCollabModal()" title="協作管理">👥 協作</button>
-  <button class="btn" id="darkBtn" onclick="toggleDark()" title="深色模式">🌙</button>
+  <button class="btn btn-owner-only" id="collabBtn" title="協作管理">👥 協作</button>
+  <button class="btn" id="darkBtn" title="深色模式">🌙</button>
   <div class="settings-wrap" id="settingsWrap">
-    <button class="btn" id="settingsBtn" onclick="toggleSettings()" title="設定">⚙ 設定</button>
+    <button class="btn" id="settingsBtn" title="設定">⚙ 設定</button>
     <div class="settings-panel" id="settingsPanel">
       <label class="settings-item">
-        <input type="checkbox" id="settingBarDates" checked onchange="onSettingBarDatesChange()">
+        <input type="checkbox" id="settingBarDates" checked>
         顯示 Bar 日期
       </label>
       <label class="settings-item">
-        <input type="checkbox" id="settingBaseline" checked onchange="onSettingBaselineChange()">
+        <input type="checkbox" id="settingBaseline" checked>
         顯示基準線
       </label>
       <div class="settings-sep"></div>
-      <button class="settings-action" onclick="setBaseline();closeSettings()">📐 設定基準線</button>
-      <button class="settings-action btn-owner-only" id="settingVersionBtn" onclick="openVersionPanel();closeSettings()">🕐 版本紀錄</button>
+      <button class="settings-action" id="setBaselineBtn">📐 設定基準線</button>
+      <button class="settings-action btn-owner-only" id="settingVersionBtn">🕐 版本紀錄</button>
     </div>
   </div>
-  <button class="btn" id="adminBtn" onclick="openAdminPanel()" title="管理員面板" style="display:none">👑 Admin</button>
+  <button class="btn" id="adminBtn" title="管理員面板" style="display:none">👑 Admin</button>
   <div id="userDisplay"></div>
-  <button class="btn" id="signOutBtn" onclick="signOut()" title="登出" style="display:none">登出</button>
+  <button class="btn" id="signOutBtn" title="登出" style="display:none">登出</button>
   <div class="sync-dot" id="syncDot" title="雲端同步狀態"></div>
 </div>
 
 <!-- VERSION PANEL -->
-<div class="ver-backdrop" id="verBackdrop" onclick="closeVersionPanel()"></div>
+<div class="ver-backdrop" id="verBackdrop"></div>
 <div class="ver-panel" id="verPanel">
   <div class="ver-head">
     <span class="ver-head-title">🕐 版本紀錄</span>
-    <button class="ver-close" onclick="closeVersionPanel()">✕</button>
+    <button class="ver-close" id="verCloseBtn">✕</button>
   </div>
   <div class="ver-create">
-    <input id="verNameInput" placeholder="版本名稱，如 v1.0 需求確認" maxlength="60"
-      onkeydown="if(event.key==='Enter')createVersion()">
-    <button onclick="createVersion()">建立版本</button>
+    <input id="verNameInput" placeholder="版本名稱，如 v1.0 需求確認" maxlength="60">
+    <button id="createVersionBtn">建立版本</button>
   </div>
   <div class="ver-list" id="verList"></div>
 </div>
 
 <!-- SHARE MODAL -->
-<div class="overlay" id="shareOverlay" onclick="closeShareModal()">
-  <div class="modal share-modal" onclick="event.stopPropagation()">
-    <button class="modal-close" onclick="closeShareModal()">✕</button>
+<div class="overlay" id="shareOverlay">
+  <div class="modal share-modal" id="shareModalBox">
+    <button class="modal-close" id="shareCloseBtn">✕</button>
     <div class="modal-title">🔗 分享專案：<span id="shareModalProjName" style="color:var(--accent);font-size:14px"></span></div>
     <p class="share-note">將此連結分享給其他人，對方可以唯讀瀏覽此專案，無法進行任何編輯。</p>
     <div class="share-link-row">
       <input class="share-link-input" id="shareLinkInput" readonly>
-      <button class="share-copy-btn" onclick="copyShareLink()">複製連結</button>
+      <button class="share-copy-btn" id="copyShareLinkBtn">複製連結</button>
     </div>
     <div class="share-owner-note">💡 此連結為唯讀連結。只有您（專案建立者）在一般模式下可以編輯。</div>
   </div>
 </div>
 
 <!-- COLLAB MODAL -->
-<div class="collab-overlay" id="collabOverlay" onclick="closeCollabModal()">
-  <div class="collab-box" onclick="event.stopPropagation()">
+<div class="collab-overlay" id="collabOverlay">
+  <div class="collab-box" id="collabBox">
     <div class="collab-title">🔗 共享管理</div>
     <div class="collab-proj-row">
       <label class="collab-proj-label">專案</label>
-      <select id="collabProjSelect" class="collab-proj-select" onchange="onCollabProjChange()"></select>
+      <select id="collabProjSelect" class="collab-proj-select"></select>
     </div>
     <div class="collab-share-list" id="collabShareList"></div>
     <div class="collab-add-row">
-      <input id="collabEmailInput" type="email" placeholder="輸入對方的 Gmail 帳號" onkeydown="if(event.key==='Enter')addShare()">
+      <input id="collabEmailInput" type="email" placeholder="輸入對方的 Gmail 帳號">
       <select id="collabPermSelect">
         <option value="read">唯讀</option>
         <option value="edit">共同編輯</option>
       </select>
-      <button class="btn btn-primary" onclick="addShare()">加入</button>
+      <button class="btn btn-primary" id="addShareBtn">加入</button>
     </div>
     <p id="collabMsg" style="font-size:12px;color:#E53;margin:8px 0 0;display:none"></p>
     <div class="collab-footer">
-      <button class="btn" onclick="closeCollabModal()">關閉</button>
+      <button class="btn" id="closeCollabBtn">關閉</button>
     </div>
   </div>
 </div>
 
 <!-- ADMIN PANEL -->
-<div class="admin-overlay" id="adminOverlay" onclick="closeAdminPanel()">
-  <div class="admin-box" onclick="event.stopPropagation()">
+<div class="admin-overlay" id="adminOverlay">
+  <div class="admin-box" id="adminBox">
     <div class="admin-title">👑 用戶管理
       <span style="font-size:12px;font-weight:400;color:var(--t3)" id="adminUserCount"></span>
     </div>
@@ -198,7 +196,7 @@
       </table>
     </div>
     <div style="display:flex;justify-content:flex-end;margin-top:16px">
-      <button class="btn" onclick="closeAdminPanel()">關閉</button>
+      <button class="btn" id="closeAdminBtn">關閉</button>
     </div>
   </div>
 </div>
@@ -261,21 +259,21 @@
 </div>
 
 <!-- DELETE CONFIRM MODAL -->
-<div class="overlay" id="deleteOverlay" onclick="closeDeleteModal(event)">
-  <div class="modal" onclick="event.stopPropagation()" style="width:320px;padding:20px 20px 16px">
+<div class="overlay" id="deleteOverlay">
+  <div class="modal" id="deleteModalBox" style="width:320px;padding:20px 20px 16px">
     <div class="modal-title" style="font-size:14px;margin-bottom:6px">刪除任務</div>
     <p id="deleteModalMsg" style="font-size:12px;color:var(--t3);margin:0 0 18px;line-height:1.5">此操作無法復原。</p>
     <div style="display:flex;justify-content:flex-end;gap:8px">
-      <button onclick="closeDeleteModal()" style="height:28px;padding:0 12px;border-radius:5px;font-size:12px;border:1px solid var(--border);background:var(--surface);color:var(--t2);cursor:pointer">取消</button>
+      <button id="deleteCancelBtn" style="height:28px;padding:0 12px;border-radius:5px;font-size:12px;border:1px solid var(--border);background:var(--surface);color:var(--t2);cursor:pointer">取消</button>
       <button id="deleteConfirmBtn" style="height:28px;padding:0 12px;border-radius:5px;font-size:12px;border:none;background:var(--red);color:#fff;cursor:pointer">刪除</button>
     </div>
   </div>
 </div>
 
 <!-- ADD TASK MODAL -->
-<div class="overlay" id="overlay" onclick="closeModal(event)">
-  <div class="modal" onclick="event.stopPropagation()">
-    <button class="modal-close" onclick="closeModal()" title="關閉">✕</button>
+<div class="overlay" id="overlay">
+  <div class="modal" id="taskModalBox">
+    <button class="modal-close" id="taskModalCloseBtn" title="關閉">✕</button>
     <div class="modal-title" id="modal-title">＋ 新增任務</div>
     <div class="form-row">
       <label class="form-lbl">任務名稱</label>
@@ -284,7 +282,7 @@
     <div class="form-row-2" style="grid-template-columns:1fr 1fr">
       <div>
         <label class="form-lbl">類型</label>
-        <select class="form-ctrl" id="fType" onchange="updateModalForType()">
+        <select class="form-ctrl" id="fType">
           <option value="task">一般任務</option>
           <option value="milestone">里程碑</option>
           <option value="group">群組</option>
@@ -313,7 +311,7 @@
       <label class="form-lbl">前置任務</label>
       <div id="fDepsWrap">
         <input class="form-ctrl" id="fDeps" placeholder="輸入列號（如 2、2SS、2FS+3）或從下方選擇" autocomplete="off">
-        <div id="fDepsList" onmousedown="event.preventDefault()"></div>
+        <div id="fDepsList"></div>
       </div>
       <div id="fDepsTip" style="font-size:11px;color:var(--t3);margin-top:4px;line-height:1.5"></div>
     </div>
@@ -324,22 +322,22 @@
     </div>
     <div class="form-row" id="rowDone" style="display:flex;align-items:center;gap:10px;margin-bottom:0">
       <label class="form-lbl" style="margin-bottom:0">已完成</label>
-      <div class="check-box" id="fDone" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'✓':'';if(this.classList.contains('done'))document.getElementById('fProgress').value=100"></div>
+      <div class="check-box" id="fDone"></div>
       <label class="form-lbl" style="margin-bottom:0;margin-left:14px">進度</label>
       <input class="form-ctrl" type="number" id="fProgress" min="0" max="100" step="5" value="0" style="width:70px;text-align:center">
       <span style="font-size:12px;color:var(--t3)">%</span>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">取消</button>
-      <button class="btn btn-primary" id="modal-submit" onclick="submitTask()">新增任務</button>
+      <button class="btn" id="taskCancelBtn">取消</button>
+      <button class="btn btn-primary" id="modal-submit">新增任務</button>
     </div>
   </div>
 </div>
 
 <!-- NEW PROJECT MODAL -->
-<div class="overlay" id="projOverlay" onclick="closeProjModal(event)">
-  <div class="modal" onclick="event.stopPropagation()">
-    <button class="modal-close" onclick="closeProjModal()" title="關閉">✕</button>
+<div class="overlay" id="projOverlay">
+  <div class="modal" id="projModalBox">
+    <button class="modal-close" id="projModalCloseBtn" title="關閉">✕</button>
     <div class="modal-title" id="projModalTitle">◆ 建立新專案</div>
     <div class="form-row">
       <label class="form-lbl">專案名稱</label>
@@ -351,7 +349,7 @@
     </div>
     <div class="form-row">
       <label class="form-lbl">套用範本</label>
-      <select class="form-ctrl" id="pTemplate" onchange="onTemplateChange()">
+      <select class="form-ctrl" id="pTemplate">
         <option value="">— 空白專案 —</option>
       </select>
     </div>
@@ -364,8 +362,8 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeProjModal()">取消</button>
-      <button class="btn btn-primary" id="projSubmitBtn" onclick="submitProject()">建立專案</button>
+      <button class="btn" id="projCancelBtn">取消</button>
+      <button class="btn btn-primary" id="projSubmitBtn">建立專案</button>
     </div>
   </div>
 </div>

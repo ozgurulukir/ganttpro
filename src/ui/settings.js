@@ -189,8 +189,8 @@ export function renderVersionList() {
       <div class="ver-item-name">${v.name}</div>
       <div class="ver-item-meta">${dateStr} · ${v.taskCount} 個任務</div>
       <div class="ver-item-actions">
-        <button class="ver-btn ver-btn-restore" onclick="restoreVersion(${v.id})">還原此版本</button>
-        <button class="ver-btn ver-btn-del" onclick="deleteVersion(${v.id})">刪除</button>
+        <button class="ver-btn ver-btn-restore" data-action="restore-version" data-id="${v.id}">還原此版本</button>
+        <button class="ver-btn ver-btn-del" data-action="delete-version" data-id="${v.id}">刪除</button>
       </div>
     `;
     el.appendChild(item);

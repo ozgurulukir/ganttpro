@@ -955,7 +955,7 @@ function renderCollabModal() {
     <div class="collab-share-item">
       <span class="ci-email" title="${s.shared_with_email}">${s.shared_with_email}</span>
       <span class="ci-perm ${s.permission}">${s.permission === 'read' ? '唯讀' : '共同編輯'}</span>
-      <span class="ci-del" onclick="removeShare('${s.id}','${s.shared_with_email}')" title="移除">✕</span>
+      <span class="ci-del" data-action="remove-share" data-share-id="${s.id}" data-email="${s.shared_with_email}" title="移除">✕</span>
     </div>
   `).join('');
 }
@@ -1023,7 +1023,7 @@ async function loadAdminUsers() {
     const data = await Remote.getAllUsers();
     document.getElementById('adminUserCount').textContent = `（${data.length} 人）`;
     tbody.innerHTML = data.map(u => {
-      const delBtn = u.is_admin ? '' : `<button class="btn" style="font-size:11px;padding:3px 8px;color:#E53;border-color:#E53" onclick="deleteUser('${u.email}')">刪除</button>`;
+      const delBtn = u.is_admin ? '' : `<button class="btn" style="font-size:11px;padding:3px 8px;color:#E53;border-color:#E53" data-action="delete-user" data-email="${u.email}">刪除</button>`;
       const dateStr = u.added_at ? new Date(u.added_at).toLocaleDateString('zh-TW') : '—';
       return `<tr>
         <td>${u.name || '—'}</td>
@@ -1517,9 +1517,158 @@ async function initApp() {
 }
 
 /* ═══════════════════════════════════════════
-   INIT
+   EVENT WIRING — replaces all inline onclick/onchange/onkeydown
 ═══════════════════════════════════════════ */
+function wireStaticEvents() {
+  const $ = id => document.getElementById(id);
+  const clk = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
+  const overlayClose = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', e => { if (e.target === el) fn(); }); };
+
+  // ── Login ──
+  clk('loginGoogleBtn', signInWithGoogle);
+  const guestBtn = $('loginGuestBtn');
+  if (guestBtn) {
+    guestBtn.addEventListener('click', signInAsGuest);
+    guestBtn.addEventListener('mouseover', () => guestBtn.style.background = 'var(--s-hover)');
+    guestBtn.addEventListener('mouseout', () => guestBtn.style.background = 'transparent');
+  }
+  const regNick = $('registerNickname');
+  if (regNick) regNick.addEventListener('keydown', e => { if (e.key === 'Enter') submitRegister(); });
+  clk('registerSubmitBtn', submitRegister);
+
+  // ── Toolbar ──
+  const projSel = $('projSelector');
+  if (projSel) projSel.addEventListener('click', e => { if (!e.target.closest('#projMenu')) toggleProjMenu(e); });
+  clk('shareBtn', openCollabModal);
+  clk('addTaskBtn', openModal);
+  clk('undoBtn', undo);
+  clk('todayBtn', scrollToToday);
+  clk('expandAllBtn', expandAll);
+  clk('collapseAllBtn', collapseAll);
+  document.querySelectorAll('[data-cv]').forEach(b => b.addEventListener('click', () => setChartView(b.dataset.cv)));
+  document.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => setView(b.dataset.v)));
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => b.dataset.zoom === 'in' ? zoomIn() : zoomOut()));
+  clk('fitBtn', fitToFrame);
+  clk('cpBtn', toggleCriticalPath);
+  clk('exportToggleBtn', toggleExportMenu);
+  document.querySelectorAll('[data-export]').forEach(b => b.addEventListener('click', () => {
+    const fmt = b.dataset.export;
+    if (fmt === 'png') exportPNG();
+    else if (fmt === 'pdf') exportPDF();
+    else if (fmt === 'csv') exportCSV();
+    closeExportMenu();
+  }));
+  clk('collabBtn', openCollabModal);
+  clk('darkBtn', toggleDark);
+  clk('settingsBtn', toggleSettings);
+  const bd = $('settingBarDates'); if (bd) bd.addEventListener('change', onSettingBarDatesChange);
+  const bl = $('settingBaseline'); if (bl) bl.addEventListener('change', onSettingBaselineChange);
+  clk('setBaselineBtn', () => { setBaseline(); closeSettings(); });
+  clk('settingVersionBtn', () => { openVersionPanel(); closeSettings(); });
+  clk('adminBtn', openAdminPanel);
+  clk('signOutBtn', signOut);
+
+  // ── Version panel ──
+  clk('verBackdrop', closeVersionPanel);
+  clk('verCloseBtn', closeVersionPanel);
+  const verName = $('verNameInput');
+  if (verName) verName.addEventListener('keydown', e => { if (e.key === 'Enter') createVersion(); });
+  clk('createVersionBtn', createVersion);
+
+  // ── Share modal ──
+  overlayClose('shareOverlay', closeShareModal);
+  clk('shareCloseBtn', closeShareModal);
+  clk('copyShareLinkBtn', copyShareLink);
+
+  // ── Collab modal ──
+  overlayClose('collabOverlay', closeCollabModal);
+  const cProj = $('collabProjSelect'); if (cProj) cProj.addEventListener('change', onCollabProjChange);
+  const cEmail = $('collabEmailInput'); if (cEmail) cEmail.addEventListener('keydown', e => { if (e.key === 'Enter') addShare(); });
+  clk('addShareBtn', addShare);
+  clk('closeCollabBtn', closeCollabModal);
+
+  // ── Admin panel ──
+  overlayClose('adminOverlay', closeAdminPanel);
+  clk('closeAdminBtn', closeAdminPanel);
+
+  // ── Delete modal ──
+  overlayClose('deleteOverlay', () => closeDeleteModal());
+  clk('deleteCancelBtn', () => closeDeleteModal());
+
+  // ── Task modal ──
+  overlayClose('overlay', () => closeModal());
+  clk('taskModalCloseBtn', () => closeModal());
+  const fType = $('fType'); if (fType) fType.addEventListener('change', updateModalForType);
+  const fDepsList = $('fDepsList');
+  if (fDepsList) {
+    fDepsList.addEventListener('mousedown', e => e.preventDefault());
+    fDepsList.addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="add-dep"]');
+      if (!btn) return;
+      const exc = btn.dataset.exclude;
+      addDepToInput(Number(btn.dataset.row), btn.dataset.type, exc === 'null' ? null : Number(exc));
+    });
+  }
+  const fDone = $('fDone');
+  if (fDone) fDone.addEventListener('click', () => {
+    fDone.classList.toggle('done');
+    fDone.textContent = fDone.classList.contains('done') ? '✓' : '';
+    if (fDone.classList.contains('done')) $('fProgress').value = 100;
+  });
+  clk('taskCancelBtn', () => closeModal());
+  clk('modal-submit', submitTask);
+
+  // ── Project modal ──
+  overlayClose('projOverlay', () => closeProjModal());
+  clk('projModalCloseBtn', () => closeProjModal());
+  const pTpl = $('pTemplate'); if (pTpl) pTpl.addEventListener('change', onTemplateChange);
+  clk('projCancelBtn', () => closeProjModal());
+  clk('projSubmitBtn', submitProject);
+
+  // ── Dynamic delegation ──
+  const verList = $('verList');
+  if (verList) verList.addEventListener('click', e => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const id = Number(btn.dataset.id);
+    if (btn.dataset.action === 'restore-version') restoreVersion(id);
+    else if (btn.dataset.action === 'delete-version') deleteVersion(id);
+  });
+
+  const projMenu = $('projMenu');
+  if (projMenu) projMenu.addEventListener('click', e => {
+    e.stopPropagation();
+    const actEl = e.target.closest('[data-action]');
+    if (actEl) {
+      const pid = Number(actEl.dataset.pid);
+      if (actEl.dataset.action === 'edit-proj') openEditProjModal(pid, e);
+      else if (actEl.dataset.action === 'delete-proj') deleteProject(pid, e);
+      return;
+    }
+    const item = e.target.closest('.proj-item');
+    if (item && item.dataset.pid) switchProject(Number(item.dataset.pid));
+  });
+
+  const csl = $('collabShareList');
+  if (csl) csl.addEventListener('click', e => {
+    const btn = e.target.closest('[data-action="remove-share"]');
+    if (!btn) return;
+    removeShare(btn.dataset.shareId, btn.dataset.email);
+  });
+
+  const aul = $('adminUserList');
+  if (aul) aul.addEventListener('click', e => {
+    const btn = e.target.closest('[data-action="delete-user"]');
+    if (!btn) return;
+    deleteUser(btn.dataset.email);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
+  wireStaticEvents();
   const urlParams = new URLSearchParams(location.search);
   const shareToken = urlParams.get('share');
 
@@ -1584,187 +1733,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-/* ── PHASE 0 COMPAT SHIM ──────────────────────────────────────
-   Module scope hides these from window; inline onclick handlers
-   (static + dynamic innerHTML) still resolve them globally.
-   TEMPORARY — removed in Phase 6 (onclick -> addEventListener). ── */
-Object.assign(window, {
-  _decodeData: Share.decodeData,
-  _encodeData: Share.encodeData,
-  addDepToInput,
-  addShare,
-  addTaskInline,
-  allGroupMembersScheduled,
-  applyColGrid,
-  applyZoom,
-  attachBarDrag,
-  autoScheduleFromDeps,
-  avColor,
-  buildDepsText,
-  checkAuthorized,
-  closeAdminPanel,
-  closeCollabModal,
-  closeDeleteModal,
-  closeDepsOutside,
-  closeExportMenu,
-  closeModal,
-  closeProjMenuOnly,
-  closeProjModal,
-  closeProjOnOutside,
-  closeSettings,
-  closeShareModal,
-  closeVersionPanel,
-  collapseAll,
-  computeCriticalPath,
-  computeWorkload,
-  confirmDeleteTask,
-  copyShareLink,
-  createVersion,
-  curProj,
-  curVersions,
-  darkenColor,
-  dateToX,
-  deleteProject,
-  deleteUser,
-  deleteVersion,
-  executeDeleteTask,
-  expandAll,
-  exportCSV,
-  exportPDF,
-  exportPNG,
-  fitToFrame,
-  getAllDescendants,
-  getCriticalPredTaskIds,
-  getNextGroupColor,
-  getOrCreateShareToken,
-  getOwnerId,
-  getPredIds,
-  getRowNum,
-  getSuccIds,
-  getTaskByRowNum,
-  getTaskDepth,
-  getTreeLines,
-  getVisibleRows,
-  getWorkingSegs,
-  groupAllDone,
-  groupBounds,
-  groupProgress,
-  hasMilestoneDescendant,
-  hexToRgba,
-  hideTT,
-  highlightDeps,
-  highlightRow,
-  indentTask,
-  initApp,
-  initials,
-  isAdmin,
-  isDescendant,
-  lagsFromParsed,
-  loadAdminUsers,
-  loadFromCloud,
-  loadFromLS,
-  loadShareFromCloud,
-  loadSharedProjects,
-  mergeDefaultProjects,
-  moveTT,
-  onCollabProjChange,
-  onSettingBarDatesChange,
-  onSettingBaselineChange,
-  onTemplateChange,
-  openAdminPanel,
-  openAllDepsEditor,
-  openCollabModal,
-  openDateEditor,
-  openDepsEditor,
-  openEditModal,
-  openEditProjModal,
-  openEndEditor,
-  openModal,
-  openModalUnder,
-  openNameEditor,
-  openProjModal,
-  openShareModal,
-  openStartEditor,
-  openVersionPanel,
-  openWdayEditor,
-  outdentTask,
-  parseDepInput,
-  populateModal,
-  prevWorkingDay,
-  pushHistory,
-  recalcProjEnd,
-  refreshCollabList,
-  removeDepTag,
-  removeShare,
-  render,
-  renderArrows,
-  renderBar,
-  renderChartBody,
-  renderChartHeader,
-  renderCollabModal,
-  renderDepsDropdown,
-  renderDepsMenu,
-  renderGrid,
-  renderGroupBar,
-  renderMilestone,
-  renderMilestoneTimeline,
-  renderProjMenu,
-  renderTaskPanel,
-  renderVersionList,
-  renderWorkloadChart,
-  renderWorkloadPanel,
-  reorderTask,
-  restoreVersion,
-  saveShareToCloud,
-  saveToCloud,
-  saveToLS,
-  scheduleTasks,
-  scrollToToday,
-  selectColor,
-  setBaseline,
-  setChartView,
-  setSyncDot,
-  setView,
-  setupColResizers,
-  setupDepsInputListener,
-  setupRealtime,
-  setupResizer,
-  setupSharedRealtime,
-  setupSync,
-  showApp,
-  showStatus,
-  showSyncToast,
-  showTT,
-  signInAsGuest,
-  signInWithGoogle,
-  signOut,
-  submitProject,
-  submitRegister,
-  submitTask,
-  switchProject,
-  syncEndFromWday,
-  syncWday,
-  taskById,
-  toStr,
-  toggleBarDates,
-  toggleCollapse,
-  toggleCriticalPath,
-  toggleDark,
-  toggleDepOpt,
-  toggleDepsMenu,
-  toggleExportMenu,
-  toggleProjMenu,
-  toggleSettings,
-  totalW,
-  undo,
-  updateChartStart,
-  updateDepsTags,
-  updateModalForType,
-  updateProjUI,
-  updateReadOnly,
-  updateStats,
-  updateUserDisplay,
-  wouldCreateCycle,
-  zoomIn,
-  zoomOut,
-});

@@ -124,7 +124,7 @@ export function renderDepsDropdown(excludeId) {
     const selType = selMap[rowNum] || '';
     const isSel = !!selType;
     const typeBtns = ['FS','SS','FF','SF'].map(t =>
-      `<button class="dep-type-btn${selType===t?' active':''}" onclick="addDepToInput(${rowNum},'${t}',${JSON.stringify(excludeId)})">${t}</button>`
+      `<button class="dep-type-btn${selType===t?' active':''}" data-action="add-dep" data-row="${rowNum}" data-type="${t}" data-exclude="${excludeId}">${t}</button>`
     ).join('');
     return `<div class="dep-li${isSel?' dep-sel':''}">
       <span class="dep-li-num">#${rowNum}</span>

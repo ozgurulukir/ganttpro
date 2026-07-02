@@ -4,6 +4,24 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 6: Kill inline onclick + window shim ✅
+
+- **Goal achieved**: all 71 static inline handlers in index.html and 8 dynamic
+  innerHTML handlers replaced with `addEventListener` + event delegation.
+  180-entry `Object.assign(window, {...})` shim deleted entirely.
+- **index.html**: all `onclick`/`onchange`/`onkeydown`/`onmouseover`/`onmouseout`/
+  `onmousedown` attributes removed. Elements given `id` or `data-*` attributes
+  for querySelector targeting.
+- **Dynamic innerHTML** (6 sites across modal.js, project.js, settings.js, main.js):
+  converted to `data-action` attributes + event delegation on parent containers
+  (`#verList`, `#fDepsList`, `#projMenu`, `#collabShareList`, `#adminUserList`).
+- **wireStaticEvents()** function (~120 lines) in main.js: called once during
+  `DOMContentLoaded`. Uses `overlayClose` helper for backdrop-click-to-close
+  pattern (`e.target === e.currentTarget`).
+- **main.js**: 1770→1735 lines net (added wireStaticEvents ~120 lines, removed
+  shim ~180 lines).
+- **Build**: 46 modules, 672 kB bundle. 86 tests green.
+
 ## 2026-07-02 — Phase 5: UI & interactions extraction ✅
 
 - **Goal achieved**: all UI/modal/editors/project/settings/interactions code extracted

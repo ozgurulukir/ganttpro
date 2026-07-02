@@ -71,10 +71,10 @@ export function renderProjMenu() {
     item.innerHTML = `
       <div class="proj-item-dot" style="background:${p.color}"></div>
       <span class="proj-item-name">${p.name}${p._isShared ? ' <span class="collab-shared-badge">共享</span>' : ''}</span>
-      ${!p._isShared ? `<span class="proj-item-edit" onclick="openEditProjModal(${p.id},event)" title="編輯此專案">✎</span>` : ''}
-      ${!p._isShared ? `<span class="proj-item-del" onclick="deleteProject(${p.id},event)" title="刪除此專案">✕</span>` : ''}
+      ${!p._isShared ? `<span class="proj-item-edit" data-action="edit-proj" data-pid="${p.id}" title="編輯此專案">✎</span>` : ''}
+      ${!p._isShared ? `<span class="proj-item-del" data-action="delete-proj" data-pid="${p.id}" title="刪除此專案">✕</span>` : ''}
     `;
-    item.addEventListener('click', () => switchProject(p.id));
+    item.dataset.pid = p.id;
     menu.appendChild(item);
   });
   const div = document.createElement('div'); div.className = 'proj-menu-div';
@@ -148,7 +148,7 @@ export function openProjModal() {
     tplRow.id = 'tplRow';
     tplRow.innerHTML =
       '<label class="form-lbl">套用範本</label>' +
-      '<select class="form-ctrl" id="pTemplate" onchange="onTemplateChange()">' +
+      '<select class="form-ctrl" id="pTemplate">' +
       '<option value="">— 空白專案 —</option></select>';
     startRow.insertAdjacentElement('afterend', tplRow);
     const prevDiv = document.createElement('div');

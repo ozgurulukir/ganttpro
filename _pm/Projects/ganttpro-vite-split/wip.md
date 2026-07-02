@@ -2,12 +2,11 @@
 
 ## Status
 
-**Phase 5 COMPLETE ✅ (UI & interactions extraction).** Next: **Phase 6 — Replace inline onclick.**
+**Phase 6 COMPLETE ✅ (Kill inline onclick + window shim).** Next: **Phase 7 — Export layer (png/pdf/csv).**
 
 ## Active
 
-- Phase 6: replace inline `onclick="fn()"` in index.html with `addEventListener`.
-  Enables removing the ~187-entry window shim. Required before tree-shaking pays off.
+- Phase 7: extract export functions (exportPNG, exportPDF, exportCSV) into `src/export/` module.
 
 ## Decisions resolved
 
