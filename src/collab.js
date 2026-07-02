@@ -130,7 +130,7 @@ export async function addShare() {
 }
 
 export async function removeShare(shareId, email) {
-  if (!confirm(`Remove access for ${email}?`)) return;
+  if (!confirm(t('share.removeAccess', { email }))) return;
   await Remote.removeProjectShare(shareId);
   await refreshCollabList();
 }
