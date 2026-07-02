@@ -276,6 +276,7 @@ export function submitProject() {
     tasks: projTasks
   };
   projects.push(newProj);
+  D.nextProjId = nextProjId + 1;
   document.getElementById('projOverlay').classList.remove('open');
   if (curProj()) curProj().nextId = D.nextId; // 儲存舊專案的 nextId
   loadProject(newProj);

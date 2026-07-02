@@ -787,8 +787,8 @@ async function loadFromCloud() {
       nextId = 1;
       return true;
     }
-    currentProjId = (s.currentProjId && projects.find(p => p.id === s.currentProjId))
-      ? s.currentProjId : projects[0].id;
+    currentProjId = (s.currentProjId && projects.find(p => p.id === Number(s.currentProjId)))
+      ? Number(s.currentProjId) : projects[0].id;
     tasks  = curProj().tasks;
     nextId = curProj().nextId;
     CHART_START = new Date(curProj().startDate);
@@ -856,8 +856,8 @@ function loadFromLS() {
     if (!d?.projects?.length) return false;
     projects   = d.projects;
     nextProjId = d.nextProjId ?? projects.length + 1;
-    currentProjId = (d.currentProjId && projects.find(p => p.id === d.currentProjId))
-      ? d.currentProjId : projects[0].id;
+    currentProjId = (d.currentProjId && projects.find(p => p.id === Number(d.currentProjId)))
+      ? Number(d.currentProjId) : projects[0].id;
     tasks  = curProj().tasks;
     nextId = curProj().nextId;
     CHART_START = new Date(curProj().startDate);
