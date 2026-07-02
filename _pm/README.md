@@ -6,14 +6,14 @@ Finished projects move to `Archives/`. Always use full paths.
 
 ## Projects (active)
 
-- **[ganttpro-security](Projects/ganttpro-security/todo.md)** — Firestore security
-  rules + `firebase.json`. Admin hardcoded by email, cross-doc collab rules.
+- **[ganttpro-i18n](Projects/ganttpro-i18n/todo.md)** — Translate all user-facing
+  strings from zh-TW to English. 8 phases, ~3,000 CJK chars across ~20 files.
   Status: ready.
-- **[ganttpro-timezone](Projects/ganttpro-timezone/todo.md)** — Pure-arithmetic
-  day-number model to eliminate UTC/local Date frame-mix. 15-step refactor.
-  Status: ready.
-- **[ganttpro-docs](Projects/ganttpro-docs/todo.md)** — README.md with architecture
-  overview, module map, dev setup. Status: ready.
+- **[ganttpro-security](Projects/ganttpro-security/done.md)** — Firestore security
+  rules + `firebase.json`. Complete (deploy is manual).
+- **[ganttpro-timezone](Projects/ganttpro-timezone/done.md)** — Pure-arithmetic
+  day-number model. Complete, 93 tests green cross-TZ.
+- **[ganttpro-docs](Projects/ganttpro-docs/done.md)** — README.md. Complete.
 
 ## Projects (planned, not started)
 
@@ -34,4 +34,4 @@ Finished projects move to `Archives/`. Always use full paths.
 ## Archives
 
 - [ganttpro-vite-split](Archives/ganttpro-vite-split/done.md) — Split 5,930-line
-  `gantt.html` into 51-module Vite project. 9 phases complete, 86 tests green.
+  `gantt.html` into 52-module Vite project. 9 phases complete, 93 tests green.
