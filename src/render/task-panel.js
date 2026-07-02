@@ -29,12 +29,12 @@ export function renderTaskPanel() {
     empty.className = 'panel-empty';
     const txt = document.createElement('div');
     txt.className = 'panel-empty-txt';
-    txt.textContent = curProj() ? '這個專案還沒有任務' : '還沒有專案';
+    txt.textContent = curProj() ? 'No tasks yet' : 'No projects yet';
     empty.appendChild(txt);
     if (!isReadOnly && !milestoneView) {
       const cta = document.createElement('button');
       cta.className = 'btn btn-primary';
-      cta.textContent = curProj() ? '＋ 新增任務' : '＋ 建立第一個專案';
+      cta.textContent = curProj() ? '+ Add Task' : '+ Create Your First Project';
       cta.onclick = () => curProj() ? openModal() : openProjModal();
       empty.appendChild(cta);
     }
@@ -128,7 +128,7 @@ export function renderTaskPanel() {
     if (task.type === 'milestone') {
       const badge = document.createElement('span');
       badge.className = 'ms-badge';
-      badge.textContent = '◆ 里程碑';
+      badge.textContent = '◆ Milestone';
       nc.appendChild(badge);
     }
 
@@ -138,7 +138,7 @@ export function renderTaskPanel() {
       av.className = 'assignee-av';
       av.textContent = initials(task.assignee);
       av.style.background = avColor(task.assignee);
-      av.title = '負責人：' + task.assignee;
+      av.title = 'Assignee: ' + task.assignee;
       nc.appendChild(av);
     }
 
@@ -157,7 +157,7 @@ export function renderTaskPanel() {
       const sv = task.start || task.date || '';
       if (task.pinStart && sv) {
         sc.innerHTML = '<span class="pin-dot"></span>' + sv;
-        sc.title = '固定日期，不隨排程自動移動';
+        sc.title = 'Fixed date — not auto-scheduled';
       } else {
         sc.textContent = sv;
       }
@@ -242,7 +242,7 @@ export function renderTaskPanel() {
       const mb = document.createElement('span');
       mb.textContent = '◆';
       mb.style.cssText = `font-size:13px;color:${task.color};cursor:pointer;opacity:${task.done ? 0.3 : 1};transition:opacity .12s`;
-      mb.title = task.done ? '點擊標記為未完成' : '點擊標記為完成';
+      mb.title = task.done ? 'Click to mark as incomplete' : 'Click to mark as done';
       mb.onclick = e => {
         e.stopPropagation();
         pushHistory();
@@ -269,7 +269,7 @@ export function renderTaskPanel() {
     const outBtn = document.createElement('div');
     outBtn.className = 'row-action-btn';
     outBtn.textContent = '←';
-    outBtn.title = '升階（移到上一層）';
+    outBtn.title = 'Outdent (move to parent level)';
     if (canOutdent) outBtn.onclick = e => { e.stopPropagation(); outdentTask(task.id); };
     else outBtn.style.visibility = 'hidden';
     ac.appendChild(outBtn);
@@ -277,7 +277,7 @@ export function renderTaskPanel() {
     const inBtn = document.createElement('div');
     inBtn.className = 'row-action-btn';
     inBtn.textContent = '→';
-    inBtn.title = '降階（縮入前一個兄弟）';
+    inBtn.title = 'Indent (nest under previous sibling)';
     if (canIndent) inBtn.onclick = e => { e.stopPropagation(); indentTask(task.id); };
     else inBtn.style.visibility = 'hidden';
     ac.appendChild(inBtn);
@@ -285,14 +285,14 @@ export function renderTaskPanel() {
     const addBtn = document.createElement('div');
     addBtn.className = 'row-action-btn add';
     addBtn.textContent = '+';
-    addBtn.title = '在此節點下新增任務';
+    addBtn.title = 'Add task under this node';
     addBtn.onclick = e => { e.stopPropagation(); addTaskInline(task.id); };
     ac.appendChild(addBtn);
 
     const delBtn = document.createElement('div');
     delBtn.className = 'row-action-btn del';
     delBtn.textContent = '✕';
-    delBtn.title = '刪除任務';
+    delBtn.title = 'Delete task';
     delBtn.onclick = e => { e.stopPropagation(); confirmDeleteTask(task.id); };
     ac.appendChild(delBtn);
 

@@ -8,7 +8,7 @@ export function computeWorkload() {
   const { tasks } = D;
   const byName = new Map();
   tasks.filter(t => t.type === 'task' && t.start && t.end && !t.done).forEach(t => {
-    const name = t.assignee || '未指派';
+    const name = t.assignee || 'Unassigned';
     if (!byName.has(name)) byName.set(name, { days: new Map(), count: 0 });
     const rec = byName.get(name);
     rec.count++;
@@ -23,7 +23,7 @@ export function computeWorkload() {
     }
   });
   const names = [...byName.keys()].sort((a, b) =>
-    a === '未指派' ? 1 : b === '未指派' ? -1 : a.localeCompare(b, 'zh-Hant'));
+    a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b, 'en'));
   return { names, byName };
 }
 
@@ -35,7 +35,7 @@ export function renderWorkloadPanel(body) {
     empty.className = 'panel-empty';
     const txt = document.createElement('div');
     txt.className = 'panel-empty-txt';
-    txt.textContent = '沒有進行中的任務';
+    txt.textContent = 'No active tasks';
     empty.appendChild(txt);
     body.appendChild(empty);
     return;
@@ -57,7 +57,7 @@ export function renderWorkloadPanel(body) {
     nc.appendChild(nm);
     const cnt = document.createElement('span');
     cnt.style.cssText = 'font-size:11px;color:var(--t3);margin-left:auto;margin-right:8px;flex-shrink:0';
-    cnt.textContent = byName.get(name).count + ' 項進行中';
+    cnt.textContent = byName.get(name).count + ' active';
     nc.appendChild(cnt);
     row.appendChild(nc);
     body.appendChild(row);
@@ -78,7 +78,7 @@ export function renderWorkloadChart(canvas, tw) {
     line.style.cssText = `left:${tx}px;height:${th}px`;
     const lbl = document.createElement('div');
     lbl.className = 'today-lbl';
-    lbl.textContent = '今日';
+    lbl.textContent = 'Today';
     line.appendChild(lbl);
     canvas.appendChild(line);
   }
@@ -94,7 +94,7 @@ export function renderWorkloadChart(canvas, tw) {
       c.className = 'wl-cell';
       c.style.cssText = `left:${x}px;width:${PPD}px;background:${
         count >= 3 ? 'rgba(239,68,68,.55)' : count === 2 ? 'rgba(94,106,210,.5)' : 'rgba(94,106,210,.22)'}`;
-      c.title = `${name}　${day}：${count} 項任務`;
+      c.title = `${name}  ${day}: ${count} tasks`;
       if (PPD >= 18) c.textContent = count;
       row.appendChild(c);
     });

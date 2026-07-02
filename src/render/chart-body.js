@@ -42,7 +42,7 @@ export function renderChartBody() {
     line.style.cssText = `left:${tx}px;height:${th}px`;
     const lbl = document.createElement('div');
     lbl.className = 'today-lbl';
-    lbl.textContent = '今日';
+    lbl.textContent = 'Today';
     line.appendChild(lbl);
     canvas.appendChild(line);
   }

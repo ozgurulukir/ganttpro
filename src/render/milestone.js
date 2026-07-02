@@ -26,7 +26,7 @@ export function renderMilestoneTimeline(row, groupTask, msList) {
     tl.style.left = tx + 'px';
     const tlbl = document.createElement('div');
     tlbl.className = 'today-lbl';
-    tlbl.textContent = '今日';
+    tlbl.textContent = 'Today';
     tl.appendChild(tlbl);
     row.appendChild(tl);
   }
