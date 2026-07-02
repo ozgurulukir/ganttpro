@@ -182,7 +182,7 @@ export function renderVersionList() {
   el.innerHTML = '';
   vs.forEach(v => {
     const d = new Date(v.createdAt);
-    const dateStr = d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const dateStr = d.toLocaleString('en-US', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     const item = document.createElement('div');
     item.className = 'ver-item';
     item.innerHTML = `
