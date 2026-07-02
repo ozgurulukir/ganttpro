@@ -16,14 +16,14 @@ import {
   addWorkingDays,
   shiftWorkingDays
 } from './calendar.js';
+import { parseDate, formatDate } from './date.js';
 import { taskById } from './tree.js';
 
 /** Last working day before exclusive `endStr` (YYYY-MM-DD). */
 export function prevWorkingDay(endStr) {
-  const d = new Date(endStr);
-  d.setDate(d.getDate() - 1);
-  while (isNonWorkday(d)) d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  let dn = parseDate(endStr) - 1;
+  while (isNonWorkday(formatDate(dn))) dn--;
+  return formatDate(dn);
 }
 
 /**

@@ -4,20 +4,23 @@
  * `dateToX` and `avColor` take their config (chart start / pixels-per-day,
  * assignee-color map) as explicit parameters; the rest are fully pure.
  *
- * Extracted verbatim from main.js (Phase 1.6); only the state previously read
- * as globals is now passed explicitly.
+ * Timezone-safe: dateToX uses integer day-number arithmetic.
  */
+
+import { diffDays, parseDate } from './date.js';
 
 /** Fallback palette for assignees without an explicit color. */
 const AV_PALETTE = ['#5E6AD2','#10B981','#F59E0B','#EF4444','#8B5CF6','#0EA5E9','#EC4899','#14B8A6'];
 
 /** Pixel x-position of a date string, relative to `chartStart` at `ppd` px/day. */
 export function dateToX(str, chartStart, ppd) {
-  const diff = (new Date(str) - chartStart) / 86400000;
-  return Math.round(diff * ppd);
+  const startStr = chartStart instanceof Date
+    ? chartStart.toISOString().slice(0, 10)
+    : String(chartStart);
+  return Math.round(diffDays(str, startStr) * ppd);
 }
 
-/** Date → 'YYYY-MM-DD' string. */
+/** Date → 'YYYY-MM-DD' string (UTC-safe). */
 export function toStr(d) {
   return d.toISOString().split('T')[0];
 }

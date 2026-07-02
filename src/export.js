@@ -1,5 +1,6 @@
 import { countWorkingDays, nextWorkingDay } from "./core/calendar.js";
 import { darkenColor } from "./core/format.js";
+import { parseDate, formatDate, addDays, dayOfWeek } from "./core/date.js";
 import { D } from "./render/deps.js";
 
 export function exportPNG() {
@@ -49,26 +50,32 @@ export function exportPNG() {
     ctx.fillText(t, x, HDR + THDR/2);
   });
   // Gantt header: month labels
-  let dm = new Date(CHART_START.getFullYear(), CHART_START.getMonth(), 1);
-  while (dm <= CHART_END) {
-    const mx = PANEL + dateToX(dm.toISOString().slice(0,10));
+  let mnDn = parseDate(CHART_START.toISOString().slice(0,10));
+  const endDn = parseDate(CHART_END.toISOString().slice(0,10));
+  while (mnDn <= endDn) {
+    const md = new Date(mnDn * 86400000);
+    const y = md.getUTCFullYear(), m = md.getUTCMonth();
+    const mx = PANEL + dateToX(formatDate(mnDn));
     if (mx >= PANEL) {
       ctx.fillStyle = '#374151';
       ctx.font = '10px -apple-system,system-ui,sans-serif';
-      ctx.fillText(`${dm.getFullYear()} ${dm.getMonth()+1}月`, mx+3, HDR + THDR/2);
+      ctx.fillText(`${y} ${m+1}月`, mx+3, HDR + THDR/2);
     }
-    dm.setMonth(dm.getMonth()+1);
+    mnDn = Math.floor(Date.UTC(y, m + 1, 1) / 86400000);
   }
 
   // ─── 垂直格線（月） ───
   ctx.strokeStyle = '#E5E7EB'; ctx.lineWidth = 0.5;
-  let dg = new Date(CHART_START.getFullYear(), CHART_START.getMonth(), 1);
-  while (dg <= CHART_END) {
-    const gx = PANEL + dateToX(dg.toISOString().slice(0,10));
+  let gridDn = parseDate(CHART_START.toISOString().slice(0,10));
+  const csD = new Date(gridDn * 86400000);
+  gridDn = Math.floor(Date.UTC(csD.getUTCFullYear(), csD.getUTCMonth(), 1) / 86400000);
+  while (gridDn <= endDn) {
+    const gx = PANEL + dateToX(formatDate(gridDn));
     if (gx >= PANEL) {
       ctx.beginPath(); ctx.moveTo(gx, HDR); ctx.lineTo(gx, totalH); ctx.stroke();
     }
-    dg.setMonth(dg.getMonth()+1);
+    const gd = new Date(gridDn * 86400000);
+    gridDn = Math.floor(Date.UTC(gd.getUTCFullYear(), gd.getUTCMonth() + 1, 1) / 86400000);
   }
 
   // ─── 今日線 ───
@@ -133,7 +140,7 @@ export function exportPNG() {
     // ─── 甘特 Bar ───
     if (task.type === 'task' && task.start && task.end) {
       const bx = PANEL + dateToX(task.start);
-      const bw = Math.max(PANEL + dateToX((() => { const d = new Date(task.end); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })()) - bx, 3);
+      const bw = Math.max(PANEL + dateToX(addDays(task.end, 1)) - bx, 3);
       const by = y + (ROW_H - 20) / 2;
       ctx.globalAlpha = task.done ? 0.32 : 1;
       ctx.fillStyle = task.color || '#5E6AD2';
@@ -146,7 +153,7 @@ export function exportPNG() {
       const _bl = showBaseline && (proj.baseline?.dates || {})[task.id];
       if (_bl && _bl.s && _bl.e && (_bl.s !== task.start || _bl.e !== task.end)) {
         const blx = PANEL + dateToX(_bl.s);
-        const blw = Math.max(PANEL + dateToX((() => { const d = new Date(_bl.e); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })()) - blx, 3);
+        const blw = Math.max(PANEL + dateToX(addDays(_bl.e, 1)) - blx, 3);
         ctx.fillStyle = '#9CA3AF'; ctx.globalAlpha = 0.55;
         ctx.beginPath(); ctx.roundRect(blx, y + 30, blw, 4, 2); ctx.fill();
         ctx.globalAlpha = 1;
@@ -280,7 +287,7 @@ export function exportCSV() {
 export function exportPDF() {
   const { curProj, tasks } = D;
   const proj = curProj();
-  const now = new Date().toLocaleDateString('zh-TW');
+  const now = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
   document.getElementById('printProjName').textContent = proj.name;
   document.getElementById('printMeta').textContent =
     `列印日期：${now}　｜　期間：${proj.startDate} ~ ${proj.endDate}　｜　共 ${tasks.length} 項任務`;

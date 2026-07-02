@@ -1,6 +1,7 @@
 /* Project CRUD: switch, create, edit, delete, menu rendering. */
 import { D } from '../render/deps.js';
 import { esc } from '../core/format.js';
+import { parseDate, formatDate } from '../core/date.js';
 
 let _editingProjId = null;
 
@@ -193,7 +194,7 @@ export function onTemplateChange() {
   const nameEl = document.getElementById('pName');
   if (!nameEl.value.trim()) {
     const today = new Date();
-    const ym = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
+    const ym = today.toLocaleDateString('sv', { timeZone: 'Asia/Taipei' }).slice(0, 7);
     nameEl.value = (tpl.defaultName || tpl.name.split('（')[0]) + ' ' + ym;
     setTimeout(() => { nameEl.select(); }, 60);
   }
@@ -260,9 +261,9 @@ export function submitProject() {
   }
 
   // Default end = start + 12 months for template, 3 months for blank
-  const d = new Date(start);
-  d.setMonth(d.getMonth() + (tpl ? 12 : 3));
-  const end = d.toISOString().slice(0, 10);
+  const startD = new Date(start + 'T00:00:00Z');
+  startD.setUTCMonth(startD.getUTCMonth() + (tpl ? 12 : 3));
+  const end = startD.toISOString().slice(0, 10);
 
   const newProj = {
     id: nextProjId,

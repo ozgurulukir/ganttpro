@@ -1,6 +1,5 @@
 /* calendar.test.js — characterization tests for the working-day calendar.
-   These pin CURRENT behavior (UTC+3 machine, UTC-midnight date parsing).
-   Timezone robustness is deferred to Phase 9.3 (review #10). */
+   Timezone-safe: uses integer day numbers from date.js (no Date object). */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import {

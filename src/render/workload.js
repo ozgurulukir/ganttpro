@@ -2,6 +2,7 @@
 import { D } from './deps.js';
 import { isNonWorkday } from '../core/calendar.js';
 import { initials } from '../core/format.js';
+import { parseDate, formatDate } from '../core/date.js';
 
 export function computeWorkload() {
   const { tasks } = D;
@@ -11,14 +12,14 @@ export function computeWorkload() {
     if (!byName.has(name)) byName.set(name, { days: new Map(), count: 0 });
     const rec = byName.get(name);
     rec.count++;
-    let d = new Date(t.start);
-    const end = new Date(t.end);
-    while (d <= end) {
-      if (!isNonWorkday(d)) {
-        const k = d.toISOString().slice(0, 10);
-        rec.days.set(k, (rec.days.get(k) || 0) + 1);
+    let dn = parseDate(t.start);
+    const endDn = parseDate(t.end);
+    while (dn <= endDn) {
+      const ds = formatDate(dn);
+      if (!isNonWorkday(ds)) {
+        rec.days.set(ds, (rec.days.get(ds) || 0) + 1);
       }
-      d.setDate(d.getDate() + 1);
+      dn++;
     }
   });
   const names = [...byName.keys()].sort((a, b) =>

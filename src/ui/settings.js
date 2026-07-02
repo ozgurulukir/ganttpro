@@ -71,8 +71,7 @@ export function applyZoom(factor) {
   requestAnimationFrame(() => {
     cs.scrollLeft = Math.max(0, (leftMs - D.CHART_START.getTime()) / 86400000 * D.PPD);
   });
-}
-export function zoomIn()  { applyZoom(1.4); }
+}export function zoomIn()  { applyZoom(1.4); }
 export function zoomOut() { applyZoom(1 / 1.4); }
 
 export function fitToFrame() {
@@ -183,7 +182,7 @@ export function renderVersionList() {
   el.innerHTML = '';
   vs.forEach(v => {
     const d = new Date(v.createdAt);
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const dateStr = d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     const item = document.createElement('div');
     item.className = 'ver-item';
     item.innerHTML = `

@@ -1,6 +1,7 @@
 /* Milestone rendering: timeline spine + individual milestone diamonds. */
 import { D } from './deps.js';
 import { isNonWorkday } from '../core/calendar.js';
+import { parseDate, formatDate, addDays } from '../core/date.js';
 import { showTT, moveTT, hideTT } from './tooltip.js';
 
 /* Single horizontal milestone timeline — all milestones on one spine */
@@ -116,10 +117,9 @@ export function renderMilestone(row, task) {
         document.body.style.userSelect = '';
         if (!moved || !delta) { render(); return; }
         pushHistory();
-        const nd = new Date(task.date);
-        nd.setDate(nd.getDate() + delta);
-        while (isNonWorkday(nd)) nd.setDate(nd.getDate() + (delta > 0 ? 1 : -1));
-        task.date = nd.toISOString().slice(0, 10);
+        let dn = parseDate(task.date) + delta;
+        while (isNonWorkday(formatDate(dn))) dn += (delta > 0 ? 1 : -1);
+        task.date = formatDate(dn);
         task.pinStart = true;
         scheduleTasks();
         recalcProjEnd();

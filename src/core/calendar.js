@@ -1,10 +1,15 @@
 /* ─────────────────────────────────────────────────────────────
-   calendar.js — Taiwan working-day calendar
-   PURE: no DOM, no global state. Extracted in Phase 1.1.
-   (timezone behavior preserved as-is; see review #10 / Phase 9.3)
-   ───────────────────────────────────────────────────────────── */
+    calendar.js — Taiwan working-day calendar
+    PURE: no DOM, no global state. Extracted in Phase 1.1.
+    Timezone-safe: uses integer day numbers from date.js (no Date object).
+    ───────────────────────────────────────────────────────────── */
+import { parseDate, formatDate, dayOfWeek } from './date.js';
 
-export function isWeekend(d) { const w = new Date(d).getDay(); return w === 0 || w === 6; }
+export function isWeekend(s) {
+  if (s instanceof Date) s = s.toISOString().slice(0, 10);
+  const w = dayOfWeek(s);
+  return w === 0 || w === 6;
+}
 
 /* ─── 台灣國定假日（政府行政機關辦公日曆表，民國114–116年）─── */
 export const TW_HOLIDAYS = {
@@ -51,40 +56,39 @@ export const TW_MAKEUP_WORKDAYS = new Set(['2025-02-08']);
 
 export function dateKey(d) { return d instanceof Date ? d.toISOString().slice(0, 10) : String(d); }
 export function getHoliday(d) { return TW_HOLIDAYS[dateKey(d)] || null; }
-export function isNonWorkday(d) {
-  const s = dateKey(d);
+export function isNonWorkday(s) {
+  if (s instanceof Date) s = s.toISOString().slice(0, 10);
   if (TW_HOLIDAYS[s]) return true;
   if (TW_MAKEUP_WORKDAYS.has(s)) return false;
-  return isWeekend(d);
+  return isWeekend(s);
 }
 
 export function subtractWorkingDays(endStr, days) {
-  let d = new Date(endStr);
-  while (isNonWorkday(d)) d.setDate(d.getDate() - 1);
+  let dn = parseDate(endStr);
+  while (isNonWorkday(formatDate(dn))) dn--;
   let count = 0;
   while (count < days) {
-    d.setDate(d.getDate() - 1);
-    if (!isNonWorkday(d)) count++;
+    dn--;
+    if (!isNonWorkday(formatDate(dn))) count++;
   }
-  return d.toISOString().slice(0, 10);
+  return formatDate(dn);
 }
 
 export function addWorkingDays(startStr, days) {
-  let d = new Date(startStr);
-  while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
+  let dn = parseDate(startStr);
+  while (isNonWorkday(formatDate(dn))) dn++;
   let count = 1; // inclusive: start is day 1
   while (count < days) {
-    d.setDate(d.getDate() + 1);
-    if (!isNonWorkday(d)) count++;
+    dn++;
+    if (!isNonWorkday(formatDate(dn))) count++;
   }
-  return d.toISOString().slice(0, 10);
+  return formatDate(dn);
 }
 
 export function nextWorkingDay(dateStr) {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + 1);
-  while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
+  let dn = parseDate(dateStr) + 1;
+  while (isNonWorkday(formatDate(dn))) dn++;
+  return formatDate(dn);
 }
 
 // 將日期前後平移 N 個工作日（正數向後、負數向前；0 不變）
@@ -94,12 +98,12 @@ export function shiftWorkingDays(dateStr, days) {
 }
 
 export function countWorkingDays(startStr, endStr) {
-  let d = new Date(startStr);
-  const end = new Date(endStr);
+  let dn = parseDate(startStr);
+  const endDn = parseDate(endStr);
   let count = 0;
-  while (d <= end) { // inclusive: both start and end counted
-    if (!isNonWorkday(d)) count++;
-    d.setDate(d.getDate() + 1);
+  while (dn <= endDn) {
+    if (!isNonWorkday(formatDate(dn))) count++;
+    dn++;
   }
   return Math.max(count, 1);
 }

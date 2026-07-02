@@ -20,7 +20,7 @@ async function loadAdminUsers() {
     document.getElementById('adminUserCount').textContent = `（${data.length} 人）`;
     tbody.innerHTML = data.map(u => {
       const delBtn = u.is_admin ? '' : `<button class="btn" style="font-size:11px;padding:3px 8px;color:#E53;border-color:#E53" data-action="delete-user" data-email="${esc(u.email)}">刪除</button>`;
-      const dateStr = u.added_at ? new Date(u.added_at).toLocaleDateString('zh-TW') : '—';
+      const dateStr = u.added_at ? new Date(u.added_at).toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' }) : '—';
       return `<tr>
         <td>${esc(u.name) || '—'}</td>
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(u.email)}">${esc(u.email)}</td>

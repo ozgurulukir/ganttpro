@@ -4,6 +4,7 @@ import * as Deps from "./core/deps.js";
 import * as CPM from "./core/critical-path.js";
 import * as Schedule from "./core/schedule.js";
 import * as Format from "./core/format.js";
+import * as DateUtils from "./core/date.js";
 import { D } from "./render/deps.js";
 import { highlightRow, getPredIds, getSuccIds, highlightDeps, showTT, moveTT, hideTT } from "./render/tooltip.js";
 import { computeWorkload, renderWorkloadPanel, renderWorkloadChart } from "./render/workload.js";
@@ -268,9 +269,10 @@ function undo() {
 function dateToX(str) { return Format.dateToX(str, CHART_START, PPD); }
 function avColor(name) { return Format.avColor(name, AV_COLORS); }
 const { toStr, initials, darkenColor, hexToRgba, esc } = Format;
+const { diffDays, addDays, parseDate, formatDate } = DateUtils;
 
 function totalW() {
-  return Math.round(((CHART_END - CHART_START) / 86400000 + 1) * PPD);
+  return Math.round((diffDays(toStr(CHART_END), toStr(CHART_START)) + 1) * PPD);
 }
 
 /* tree-query adapters: pure logic in core/tree.js; bind global state.
@@ -470,10 +472,8 @@ function updateChartStart() {
   });
   const baseStart = minDate || curProj()?.startDate;
   if (!baseStart) return;
-  const d = new Date(baseStart);
   const dayPad = Math.max(1, Math.ceil(30 / PPD));
-  d.setDate(d.getDate() - dayPad);
-  CHART_START = d;
+  CHART_START = new Date((parseDate(baseStart) - dayPad) * 86400000);
 }
 
 function recalcProjEnd() {
@@ -484,12 +484,12 @@ function recalcProjEnd() {
     if (e && (!maxDate || e > maxDate)) maxDate = e;
   });
   if (!maxDate) return;
-  // Pad at least 3 months beyond last task
-  const padded = new Date(maxDate);
-  padded.setMonth(padded.getMonth() + 3);
-  const endStr = padded.toISOString().slice(0, 10);
+  // Pad 3 months beyond last task end
+  const maxD = new Date(maxDate + 'T00:00:00Z');
+  maxD.setUTCMonth(maxD.getUTCMonth() + 3);
+  const endStr = maxD.toISOString().slice(0, 10);
   curProj().endDate = endStr;
-  CHART_END = padded;
+  CHART_END = maxD;
   document.getElementById('sPeriod').textContent = `${curProj().startDate} — ${endStr}`;
 }
 /* ═══════════════════════════════════════════

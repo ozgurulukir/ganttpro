@@ -21,6 +21,7 @@ import {
   addWorkingDays,
   isNonWorkday
 } from './calendar.js';
+import { parseDate, formatDate } from './date.js';
 import { taskById, groupBounds } from './tree.js';
 
 /** Are all (transitively, through sub-groups) children of `groupId` scheduled? */
@@ -121,20 +122,20 @@ export function scheduleTasks(tasks, projStart) {
           const sfStart = subtractWorkingDays(latestSfStart, (task.wday || 1) - 1);
           if (sfStart > rawStart) rawStart = sfStart;
         }
-        let s = new Date(rawStart);
-        while (isNonWorkday(s)) s.setDate(s.getDate() + 1);
-        task.start = s.toISOString().slice(0, 10);
+        let s = parseDate(rawStart);
+        while (isNonWorkday(formatDate(s))) s++;
+        task.start = formatDate(s);
         task.end   = addWorkingDays(task.start, task.wday || 1);
       } else { // milestone
         let best = latestFsEnd || latestSsStart || null;
         if (best) {
-          let d = new Date(best);
-          while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
-          task.date = d.toISOString().slice(0, 10);
+          let dn = parseDate(best);
+          while (isNonWorkday(formatDate(dn))) dn++;
+          task.date = formatDate(dn);
         } else if (!(task.pinStart && task.date)) {
-          let d = new Date(projStart);
-          while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
-          task.date = d.toISOString().slice(0, 10);
+          let dn = parseDate(projStart);
+          while (isNonWorkday(formatDate(dn))) dn++;
+          task.date = formatDate(dn);
         }
       }
       scheduled.add(task.id);

@@ -2,16 +2,18 @@
 import { D } from './deps.js';
 import { darkenColor } from '../core/format.js';
 import { isNonWorkday, countWorkingDays, addWorkingDays } from '../core/calendar.js';
+import { parseDate, formatDate, addDays } from '../core/date.js';
 import { showTT, moveTT, hideTT, highlightDeps } from './tooltip.js';
 
 export function getWorkingSegs(startStr, endStr) {
   const segs = [];
-  let d = new Date(startStr), end = new Date(endStr), segS = null;
-  while (d < end) {
-    const isOff = isNonWorkday(d);
-    if (!isOff && !segS) segS = d.toISOString().slice(0, 10);
-    else if (isOff && segS) { segs.push({s: segS, e: d.toISOString().slice(0, 10)}); segS = null; }
-    d.setDate(d.getDate() + 1);
+  let dn = parseDate(startStr), endDn = parseDate(endStr), segS = null;
+  while (dn < endDn) {
+    const ds = formatDate(dn);
+    const isOff = isNonWorkday(ds);
+    if (!isOff && !segS) segS = ds;
+    else if (isOff && segS) { segs.push({s: segS, e: ds}); segS = null; }
+    dn++;
   }
   if (segS) segs.push({s: segS, e: endStr});
   return segs;
@@ -21,7 +23,7 @@ export function renderBar(row, task) {
   const { dateToX, showCriticalPath, criticalTaskIds, showBarDates, showBaseline, isReadOnly, curProj, TODAY_STR, PPD } = D;
   if (!task.start || !task.end) return;
   const x1 = dateToX(task.start);
-  const visualEnd = (() => { const d = new Date(task.end); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+  const visualEnd = addDays(task.end, 1);
   const x2 = dateToX(visualEnd);
   const w = x2 - x1;
   if (!isFinite(w) || w <= 0) return;
@@ -90,7 +92,7 @@ export function renderBar(row, task) {
   const bl = showBaseline && (curProj()?.baseline?.dates || {})[task.id];
   if (bl && bl.s && bl.e && (bl.s !== task.start || bl.e !== task.end)) {
     const bx1 = dateToX(bl.s);
-    const bx2 = dateToX((() => { const d = new Date(bl.e); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })());
+    const bx2 = dateToX(addDays(bl.e, 1));
     const blb = document.createElement('div');
     blb.className = 'baseline-bar';
     blb.style.cssText = `left:${bx1}px;width:${Math.max(bx2 - bx1, 3)}px;top:30px`;
@@ -150,9 +152,9 @@ export function attachBarDrag(bar, task) {
       document.body.style.userSelect = '';
       if (!moved || !delta) { render(); return; }
       pushHistory();
-      const shiftCal = (str, days) => { const d = new Date(str); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); };
-      const snapFwd = str => { const d = new Date(str); while (isNonWorkday(d)) d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); };
-      const snapBack = str => { const d = new Date(str); while (isNonWorkday(d)) d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); };
+      const shiftCal = (str, days) => addDays(str, days);
+      const snapFwd = str => { let dn = parseDate(str); while (isNonWorkday(formatDate(dn))) dn++; return formatDate(dn); };
+      const snapBack = str => { let dn = parseDate(str); while (isNonWorkday(formatDate(dn))) dn--; return formatDate(dn); };
       const wd = task.wday || countWorkingDays(task.start, task.end);
       // 依拖動方向吸附到工作日（往右跳到下個工作日、往左跳回上個工作日）
       const snapDir = str => delta > 0 ? snapFwd(str) : snapBack(str);
@@ -188,7 +190,7 @@ export function attachBarDrag(bar, task) {
 export function renderGroupBar(row, task, bounds) {
   const { dateToX, groupProgress } = D;
   const x1 = dateToX(bounds.s);
-  const x2 = dateToX((() => { const d = new Date(bounds.e); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })());
+  const x2 = dateToX(addDays(bounds.e, 1));
   const w = Math.max(x2 - x1, 8);
 
   const bar = document.createElement('div');

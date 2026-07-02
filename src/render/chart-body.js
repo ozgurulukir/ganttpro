@@ -1,6 +1,7 @@
 /* Chart body: canvas with grid, bars, milestones, arrows, today line. */
 import { D } from './deps.js';
 import { isNonWorkday } from '../core/calendar.js';
+import { parseDate, formatDate } from '../core/date.js';
 import { highlightRow } from './tooltip.js';
 import { renderGrid } from './grid.js';
 import { renderBar, renderGroupBar } from './bar.js';
@@ -70,10 +71,9 @@ export function renderChartBody() {
       const canvasRect = canvas.getBoundingClientRect();
       const clickX = e.clientX - canvasRect.left + scrollX;
       const daysOffset = Math.floor(clickX / PPD);
-      const d = new Date(CHART_START);
-      d.setDate(d.getDate() + daysOffset);
-      while (isNonWorkday(d)) d.setDate(d.getDate() + 1);
-      const dateStr = d.toISOString().slice(0, 10);
+      let dn = parseDate(CHART_START.toISOString().slice(0, 10)) + daysOffset;
+      while (isNonWorkday(formatDate(dn))) dn++;
+      const dateStr = formatDate(dn);
       openModal(null, dateStr);
     });
     canvas.appendChild(row);
