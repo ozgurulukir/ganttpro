@@ -47,9 +47,15 @@ Cross-cutting architecture decisions for GanttPro. One ADR-style block per decis
 - **Consequences:** Unlocks bundler benefits, removes global soup, prerequisite for
   meaningful `npm run build` optimization. Decided 2026-07-01.
 
+## Resolved questions
+
+- **Firestore security rules** — Resolved. Rules written and tracked in
+  [Archives/ganttpro-security/done.md](../Archives/ganttpro-security/done.md).
+  Deploy is manual: `npx firebase deploy --only firestore:rules`.
+  Cross-doc collab relaxed with registered-user trust boundary; Cloud Function
+  is the long-term hardening path.
+
 ## Open questions (not yet ADRs)
 
-- Firestore security rules (review #1, #2) — must be verified in Firebase console;
-  out of code-split scope but tracked in Phase 9.1.
 - Firebase-removal tier (0/1/2/3) — decision deferred to `firebase-removal` project.
 - Elm vs Gleam vs stay-JS — decision deferred; split keeps all options open.
