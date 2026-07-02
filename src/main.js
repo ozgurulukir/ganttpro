@@ -3,6 +3,7 @@ import * as Tree from "./core/tree.js";
 import * as Deps from "./core/deps.js";
 import * as CPM from "./core/critical-path.js";
 import * as Schedule from "./core/schedule.js";
+import * as Format from "./core/format.js";
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
@@ -226,31 +227,13 @@ function undo() {
 /* ═══════════════════════════════════════════
    UTILS
 ═══════════════════════════════════════════ */
-function dateToX(str) {
-  const diff = (new Date(str) - CHART_START) / 86400000;
-  return Math.round(diff * PPD);
-}
+/* format adapters: pure logic in core/format.js; bind global config. */
+function dateToX(str) { return Format.dateToX(str, CHART_START, PPD); }
+function avColor(name) { return Format.avColor(name, AV_COLORS); }
+const { toStr, initials, darkenColor, hexToRgba } = Format;
 
 function totalW() {
   return Math.round(((CHART_END - CHART_START) / 86400000 + 1) * PPD);
-}
-
-function toStr(d) {
-  return d.toISOString().split('T')[0];
-}
-
-function initials(name) {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  return name.replace(/\s/g, '').slice(0, 2).toUpperCase();
-}
-
-const AV_PALETTE = ['#5E6AD2','#10B981','#F59E0B','#EF4444','#8B5CF6','#0EA5E9','#EC4899','#14B8A6'];
-function avColor(name) {
-  if (typeof AV_COLORS !== 'undefined' && AV_COLORS[name]) return AV_COLORS[name];
-  let h = 0;
-  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return AV_PALETTE[h % AV_PALETTE.length];
 }
 
 /* tree-query adapters: pure logic in core/tree.js; bind global state.
@@ -268,21 +251,6 @@ function getAllDescendants(id) { return Tree.getAllDescendants(tasks, id); }
 function isDescendant(ancestorId, checkId) { return Tree.isDescendant(tasks, ancestorId, checkId); }
 function getTaskDepth(id) { return Tree.getTaskDepth(tasks, id); }
 
-function darkenColor(hex, amount = 0.35) {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgb(${Math.round(r*(1-amount))},${Math.round(g*(1-amount))},${Math.round(b*(1-amount))})`;
-}
-
-function hexToRgba(hex, alpha) {
-  if (!hex || hex.length < 7) return `rgba(94,106,210,${alpha})`;
-  const r = parseInt(hex.slice(1,3), 16);
-  const g = parseInt(hex.slice(3,5), 16);
-  const b = parseInt(hex.slice(5,7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
 
 /* ═══════════════════════════════════════════
    RENDER TASK PANEL

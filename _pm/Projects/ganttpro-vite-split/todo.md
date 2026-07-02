@@ -58,9 +58,10 @@ so they're testable in Node. `main.js` passes current state at call sites.
 - [x] 1.5 `src/core/schedule.js` — scheduleTasks, autoScheduleFromDeps,
       allGroupMembersScheduled → **14 node:test tests, all pass** (FS/SS/FF
       forward pass, lag, group bounds, milestones); imports calendar.js + tree.js
-- [ ] 1.6 `src/core/format.js` — dateToX, toStr, initials, hexToRgba, darkenColor,
-      avColor (1572–1647) → tests
-- [ ] 1.7 Commit: `refactor: extract tested core (calendar/deps/cpm/schedule)`
+- [x] 1.6 `src/core/format.js` — dateToX, toStr, initials, hexToRgba, darkenColor,
+      avColor → **16 node:test tests, all pass**; AV_PALETTE moved into module
+- [x] 1.7 Commit — **superseded**: per-module commits (1.1–1.6) provide finer
+      rollback granularity than the planned single commit
 
 **Exit criteria:** all pure logic in `src/core/`, unit-tested, `main.js` imports it.
 

@@ -2,14 +2,14 @@
 
 ## Status
 
-**Phase 1.1–1.5 ✅.** Next: **Phase 1.6 — `format.js`.**
+**Phase 1 COMPLETE ✅ (1.1–1.6, 86 tests).** Next: **Phase 2 — `state.js` (SSOT).**
 
 ## Active
 
-- Phase 1.6 next: `src/core/format.js` — dateToX, toStr, initials, hexToRgba,
-  darkenColor, avColor. Pure formatting/color helpers (low risk, high coverage).
-- **Tooling**: Prettier-on-write confirmed DISABLED (subagent probe). Edit/Write
-  tools now used directly for all files including main.js.
+- Phase 2 next: `src/state.js` — single store killing the `tasks` ↔
+  `curProj().tasks` dual source of truth (review #9). Adapters in main.js
+  become state getters. Most coupled step so far — tread carefully.
+- **Tooling**: Prettier-on-write confirmed DISABLED. Edit/Write used directly.
 
 ## Decisions resolved
 

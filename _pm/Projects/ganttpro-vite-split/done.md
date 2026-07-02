@@ -4,6 +4,23 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 1.6: Extract `src/core/format.js` ✅ — PHASE 1 COMPLETE
+
+- Moved 6 formatting/color helpers to a pure module. `dateToX(str, chartStart,
+  ppd)` and `avColor(name, avColors)` parameterized; `toStr`, `initials`,
+  `darkenColor`, `hexToRgba` are fully pure. AV_PALETTE const moved into module.
+- `main.js` keeps thin bound wrappers (zero call-site changes; ~76 call sites).
+- `tests/format.test.js`: 16 node:test tests, **all pass** — dateToX pixel math,
+  toStr, initials (multi-word/CJK/whitespace), avColor (override/deterministic/
+  distinct), darkenColor (0/1/50%/default), hexToRgba (valid/fallback).
+- Verified: `node --check` clean, `npm test` 86/86 green, `npm run build` green.
+- **Phase 1 exit criteria met**: all pure logic is in `src/core/` (calendar,
+  tree, deps, critical-path, schedule, format), unit-tested, main.js imports it.
+  86 characterization tests total. 1.7 single-commit plan superseded by
+  per-module commits (1.1–1.6) for finer rollback granularity.
+
+---
+
 ## 2026-07-02 — Phase 1.5: Extract `src/core/schedule.js` ✅
 
 - Moved 3 scheduler functions (allGroupMembersScheduled, scheduleTasks,
