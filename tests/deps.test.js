@@ -95,23 +95,23 @@ test('parseDepInput — defaults type to FS, parses +lag', () => {
 
 test('parseDepInput — self-reference is an error', () => {
   const r = parseDepInput('1', 'A', TASKS, EMPTY, MS);
-  assert.equal(r[0].err, '不能設定自己為前置任務');
+  assert.equal(r[0].err, 'Cannot depend on itself');
 });
 
 test('parseDepInput — nonexistent row is an error', () => {
   const r = parseDepInput('99', 'A', TASKS, EMPTY, MS);
-  assert.equal(r[0].err, '找不到第 99 列任務');
+  assert.equal(r[0].err, 'Row 99 not found');
 });
 
 test('parseDepInput — bad format is an error', () => {
   const r = parseDepInput('xyz', 'A', TASKS, EMPTY, MS);
-  assert.equal(r[0].err, '格式錯誤（應為：2FS、3SS 或 2FS+3）');
+  assert.equal(r[0].err, 'Invalid format (expected: 2FS, 3SS, or 2FS+3)');
 });
 
 test('parseDepInput — cycle is detected and reported', () => {
   // A depending on B (row 2) would cycle since B already deps A
   const r = parseDepInput('2', 'A', TASKS, EMPTY, MS);
-  assert.equal(r[0].err, '循環依賴：對方已依賴此任務');
+  assert.equal(r[0].err, 'Circular dependency detected');
 });
 
 test('parseDepInput — multiple valid entries separated by comma', () => {
@@ -125,8 +125,8 @@ test('parseDepInput — mixed valid and errors in one input', () => {
   const r = parseDepInput('1FS, xyz, 99', 'D', TASKS, EMPTY, MS);
   assert.equal(r.length, 3);
   assert.ok(!r[0].err); // 1FS ok
-  assert.equal(r[1].err, '格式錯誤（應為：2FS、3SS 或 2FS+3）');
-  assert.equal(r[2].err, '找不到第 99 列任務');
+  assert.equal(r[1].err, 'Invalid format (expected: 2FS, 3SS, or 2FS+3)');
+  assert.equal(r[2].err, 'Row 99 not found');
 });
 
 test('buildDepsText — renders FS and SS with row numbers', () => {

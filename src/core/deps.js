@@ -68,15 +68,15 @@ export function parseDepInput(val, taskId, tasks, collapsed, milestoneView) {
       s = s.trim();
       if (!s) return null;
       const m = s.toUpperCase().match(/^(\d+)\s*(FS|SS|FF|SF)?\s*([+-]\d+)?$/);
-      if (!m) return { raw: s, err: '格式錯誤（應為：2FS、3SS 或 2FS+3）' };
+      if (!m) return { raw: s, err: 'Invalid format (expected: 2FS, 3SS, or 2FS+3)' };
       const rowNum = parseInt(m[1]);
       const type = m[2] || 'FS';
       const lag = m[3] ? parseInt(m[3]) : 0;
       const depTask = getTaskByRowNum(tasks, collapsed, milestoneView, rowNum);
-      if (!depTask) return { raw: s, err: `找不到第 ${rowNum} 列任務` };
-      if (depTask.id === taskId) return { raw: s, err: '不能設定自己為前置任務' };
+      if (!depTask) return { raw: s, err: `Row ${rowNum} not found` };
+      if (depTask.id === taskId) return { raw: s, err: 'Cannot depend on itself' };
       if (taskId != null && wouldCreateCycle(tasks, taskId, depTask.id))
-        return { raw: s, err: '循環依賴：對方已依賴此任務' };
+        return { raw: s, err: 'Circular dependency detected' };
       return { rowNum, type, lag, taskId: depTask.id, raw: s };
     })
     .filter(Boolean);
