@@ -479,6 +479,8 @@ function updateChartStart() {
 }
 
 function recalcProjEnd() {
+  const proj = curProj();
+  if (!proj) return;
   updateChartStart();
   let maxDate = null;
   tasks.forEach(t => {
@@ -490,9 +492,9 @@ function recalcProjEnd() {
   const maxD = new Date(maxDate + 'T00:00:00Z');
   maxD.setUTCMonth(maxD.getUTCMonth() + 3);
   const endStr = maxD.toISOString().slice(0, 10);
-  curProj().endDate = endStr;
+  proj.endDate = endStr;
   CHART_END = maxD;
-  document.getElementById('sPeriod').textContent = `${curProj().startDate} — ${endStr}`;
+  document.getElementById('sPeriod').textContent = `${proj.startDate} — ${endStr}`;
 }
 /* ═══════════════════════════════════════════
    OWNER & SHARE SYSTEM
