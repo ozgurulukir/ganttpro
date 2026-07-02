@@ -39,14 +39,14 @@ export function exportPNG() {
   ctx.fillText(proj.name || 'GanttPro', 10, HDR / 2 - 6);
   ctx.fillStyle = '#6B7280';
   ctx.font = '11px -apple-system,system-ui,sans-serif';
-  ctx.fillText(`匯出日期：${TODAY_STR}　任務數：${rows.filter(r=>r.task.type==='task').length}　里程碑：${rows.filter(r=>r.task.type==='milestone').length}`, 10, HDR / 2 + 10);
+  ctx.fillText(`Export date: ${TODAY_STR}  Tasks: ${rows.filter(r=>r.task.type==='task').length}  Milestones: ${rows.filter(r=>r.task.type==='milestone').length}`, 10, HDR / 2 + 10);
 
   // ─── 表頭列 ───
   ctx.fillStyle = '#F9FAFB';
   ctx.fillRect(0, HDR, totalWpx, THDR);
   ctx.fillStyle = '#6B7280';
   ctx.font = '600 10px -apple-system,system-ui,sans-serif';
-  [['#',8],['任務名稱',28],['開始日期',240],['結束日期',310],['工作日',380]].forEach(([t,x])=>{
+  [['#',8],['Task Name',28],['Start Date',240],['End Date',310],['Workdays',380]].forEach(([t,x])=>{
     ctx.fillText(t, x, HDR + THDR/2);
   });
   // Gantt header: month labels
@@ -59,7 +59,7 @@ export function exportPNG() {
     if (mx >= PANEL) {
       ctx.fillStyle = '#374151';
       ctx.font = '10px -apple-system,system-ui,sans-serif';
-      ctx.fillText(`${y} ${m+1}月`, mx+3, HDR + THDR/2);
+      ctx.fillText(`${y} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]}`, mx+3, HDR + THDR/2);
     }
     mnDn = Math.floor(Date.UTC(y, m + 1, 1) / 86400000);
   }
@@ -87,7 +87,7 @@ export function exportPNG() {
     ctx.globalAlpha = 1;
     ctx.fillStyle = '#EF4444';
     ctx.font = 'bold 9px sans-serif';
-    ctx.fillText('今日', todayX+2, HDR+6);
+    ctx.fillText('Today', todayX+2, HDR+6);
   }
 
   // ─── 任務列 ───
@@ -250,7 +250,7 @@ export function exportCSV() {
   const { curProj, tasks, groupBounds, buildDepsText, TODAY_STR } = D;
   const proj = curProj();
   if (!proj) return;
-  const lines = [['編號','任務名稱','類型','負責人','開始日期','結束日期','工作日','進度%','前置任務','已完成']];
+  const lines = [['#','Task Name','Type','Assignee','Start Date','End Date','Workdays','Progress%','Dependencies','Done']];
   let num = 0;
   const walk = (parentId, depth) => {
     tasks.filter(t => t.parent === parentId).forEach(t => {
@@ -259,15 +259,15 @@ export function exportCSV() {
       const gb = isGrp ? groupBounds(t.id) : null;
       lines.push([
         num,
-        '　'.repeat(depth) + t.name,
-        isGrp ? '群組' : t.type === 'milestone' ? '里程碑' : '任務',
+        '  '.repeat(depth) + t.name,
+        isGrp ? 'Group' : t.type === 'milestone' ? 'Milestone' : 'Task',
         t.assignee || '',
         isGrp ? (gb.s || '') : (t.start || t.date || ''),
         isGrp ? (gb.e || '') : (t.end || t.date || ''),
         t.type === 'task' && t.start && t.end ? countWorkingDays(t.start, t.end) : '',
         t.type === 'task' ? (t.done ? 100 : (t.progress || 0)) : '',
         buildDepsText(t),
-        t.done ? 'V' : ''
+        t.done ? 'Y' : ''
       ]);
       walk(t.id, depth + 1);
     });
@@ -287,10 +287,10 @@ export function exportCSV() {
 export function exportPDF() {
   const { curProj, tasks } = D;
   const proj = curProj();
-  const now = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
+  const now = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Taipei' });
   document.getElementById('printProjName').textContent = proj.name;
   document.getElementById('printMeta').textContent =
-    `列印日期：${now}　｜　期間：${proj.startDate} ~ ${proj.endDate}　｜　共 ${tasks.length} 項任務`;
+    `Printed: ${now}  |  Period: ${proj.startDate} ~ ${proj.endDate}  |  ${tasks.length} tasks`;
 
   // Temporarily remove dark mode for print (white background)
   const wasDark = document.body.classList.contains('dark');
