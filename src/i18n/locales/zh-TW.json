@@ -1,0 +1,12 @@
+{
+  "common": {
+    "save": "儲存",
+    "cancel": "取消",
+    "delete": "刪除",
+    "close": "關閉",
+    "undo": "復原",
+    "today": "今日",
+    "expandAll": "全部展開",
+    "collapseAll": "全部收合"
+  }
+}

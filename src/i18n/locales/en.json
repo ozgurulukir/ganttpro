@@ -1,0 +1,12 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "undo": "Undo",
+    "today": "Today",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All"
+  }
+}

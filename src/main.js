@@ -45,6 +45,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import * as Local from "./data/local.js";
 import * as Share from "./data/share.js";
 import * as Remote from "./data/remote.js";
+import { initI18n, translateDOM } from "./i18n/index.js";
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
@@ -1072,6 +1073,8 @@ function wireStaticEvents() {
    INIT
 ══════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
+  await initI18n();
+  translateDOM();
   wireStaticEvents();
   syncRenderDeps();
   const urlParams = new URLSearchParams(location.search);
