@@ -37,10 +37,8 @@ import {
   createVersion, restoreVersion, deleteVersion, renderVersionList,
 } from "./ui/settings.js";
 import { setupSync, applyColGrid, setupColResizers, setupResizer } from "./interactions.js";
-import { exportPNG, exportCSV, exportPDF } from "./export.js";
 import { signInWithGoogle, signInAsGuest, checkAuthorized, submitRegister, signOut, isAdmin } from "./auth.js";
 import { openShareModal, closeShareModal, copyShareLink, openCollabModal, closeCollabModal, onCollabProjChange, addShare, removeShare } from "./collab.js";
-import { openAdminPanel, closeAdminPanel, deleteUser } from "./admin.js";
 import { auth, googleProvider } from "./data/firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import * as Local from "./data/local.js";
@@ -269,7 +267,7 @@ function undo() {
 /* format adapters: pure logic in core/format.js; bind global config. */
 function dateToX(str) { return Format.dateToX(str, CHART_START, PPD); }
 function avColor(name) { return Format.avColor(name, AV_COLORS); }
-const { toStr, initials, darkenColor, hexToRgba } = Format;
+const { toStr, initials, darkenColor, hexToRgba, esc } = Format;
 
 function totalW() {
   return Math.round(((CHART_END - CHART_START) / 86400000 + 1) * PPD);
@@ -283,7 +281,6 @@ function hasMilestoneDescendant(id) { return Tree.hasMilestoneDescendant(tasks, 
 function getRowNum(taskId) { return Tree.getRowNum(tasks, collapsed, milestoneView, taskId); }
 function getTaskByRowNum(num) { return Tree.getTaskByRowNum(tasks, collapsed, milestoneView, num); }
 function getVisibleRows() { return Tree.getVisibleRows(tasks, collapsed, milestoneView); }
-function groupAllDone(id) { return Tree.groupAllDone(tasks, id); }
 function groupBounds(id) { return Tree.groupBounds(tasks, id); }
 function groupProgress(id) { return Tree.groupProgress(tasks, id); }
 function getAllDescendants(id) { return Tree.getAllDescendants(tasks, id); }
@@ -331,11 +328,6 @@ function setChartView(v) {
   render();
 }
 
-function toggleBarDates() {
-  showBarDates = !showBarDates;
-  render();
-}
-
 /* ── CRITICAL PATH ── */
 let showCriticalPath = false;
 let criticalTaskIds = new Set();
@@ -363,7 +355,6 @@ function parseDepInput(val, taskId) { return Deps.parseDepInput(val, taskId, tas
 /* schedule adapters: pure logic in core/schedule.js; bind global state. */
 function allGroupMembersScheduled(groupId, scheduled) { return Schedule.allGroupMembersScheduled(tasks, groupId, scheduled); }
 function scheduleTasks() { return Schedule.scheduleTasks(tasks, curProj().startDate); }
-function autoScheduleFromDeps(task) { return Schedule.autoScheduleFromDeps(tasks, task); }
 
 function reorderTask(srcId, targetId, insertBefore) {
   const src = taskById(srcId);
@@ -854,7 +845,7 @@ function saveToLS() {
     if (curProj()) curProj().nextId = nextId;
     const ownProjects = projects.filter(p => !p._isShared);
     Local.saveToLS({ projects: ownProjects, currentProjId, nextProjId });
-  } catch(e) {}
+  } catch(e) { console.error('saveToLS:', e); }
 }
 
 function loadFromLS() {
@@ -873,66 +864,6 @@ function loadFromLS() {
   } catch(e) { return false; }
 }
 
-function mergeDefaultProjects() {
-  // Add any built-in projects not yet in the loaded state (identified by name)
-  const DEFAULTS = [
-    { name: '硬體產品開發計畫', startDate: '2026-05-04' }
-  ];
-  DEFAULTS.forEach(def => {
-    if (!projects.find(p => p.name === def.name)) {
-      const maxId = Math.max(...projects.map(p => p.id), 0);
-      const template = [
-        { id:2, name:'硬體產品開發計畫', color:'#0EA5E9', startDate:'2026-05-04', endDate:'2027-03-31', nextId:38,
-          tasks: [
-            { id:1,  name:'硬體產品開發',      type:'group',     parent:null, color:'#0EA5E9' },
-            { id:2,  name:'需求定義',           type:'group',     parent:1,  color:'#818CF8' },
-            { id:3,  name:'市場需求調研',       type:'task',      parent:2,  color:'#818CF8', wday:10, deps:[],    done:false, start:'', end:'' },
-            { id:4,  name:'產品規格制定',       type:'task',      parent:2,  color:'#818CF8', wday:8,  deps:[3],   done:false, start:'', end:'' },
-            { id:5,  name:'競品分析',           type:'task',      parent:2,  color:'#818CF8', wday:5,  deps:[],    done:false, start:'', end:'' },
-            { id:6,  name:'規格凍結',           type:'milestone', parent:2,  color:'#5E6AD2',          deps:[4],   date:'' },
-            { id:7,  name:'概念設計',           type:'group',     parent:1,  color:'#60A5FA' },
-            { id:8,  name:'系統架構設計',       type:'task',      parent:7,  color:'#60A5FA', wday:10, deps:[6],   done:false, start:'', end:'' },
-            { id:9,  name:'硬體概念設計',       type:'task',      parent:7,  color:'#60A5FA', wday:8,  deps:[8],   done:false, start:'', end:'' },
-            { id:10, name:'外觀設計',           type:'task',      parent:7,  color:'#60A5FA', wday:8,  deps:[8],   done:false, start:'', end:'' },
-            { id:11, name:'CDR 概念設計審查',   type:'milestone', parent:7,  color:'#3B82F6',          deps:[9,10],date:'' },
-            { id:12, name:'詳細設計',           type:'group',     parent:1,  color:'#34D399' },
-            { id:13, name:'電路圖設計',         type:'task',      parent:12, color:'#34D399', wday:15, deps:[11],  done:false, start:'', end:'' },
-            { id:14, name:'PCB Layout',         type:'task',      parent:12, color:'#34D399', wday:12, deps:[13],  done:false, start:'', end:'' },
-            { id:15, name:'結構件設計',         type:'task',      parent:12, color:'#34D399', wday:12, deps:[11],  done:false, start:'', end:'' },
-            { id:16, name:'韌體開發',           type:'task',      parent:12, color:'#34D399', wday:20, deps:[13],  done:false, start:'', end:'' },
-            { id:17, name:'PDR 詳細設計審查',   type:'milestone', parent:12, color:'#10B981',          deps:[14,15],date:'' },
-            { id:18, name:'EVT 原型製作',       type:'group',     parent:1,  color:'#FBBF24' },
-            { id:19, name:'PCB 打樣',           type:'task',      parent:18, color:'#FBBF24', wday:10, deps:[17],  done:false, start:'', end:'' },
-            { id:20, name:'結構件打樣',         type:'task',      parent:18, color:'#FBBF24', wday:10, deps:[17],  done:false, start:'', end:'' },
-            { id:21, name:'原型組裝與調試',     type:'task',      parent:18, color:'#FBBF24', wday:5,  deps:[19,20],done:false,start:'', end:'' },
-            { id:22, name:'EVT 原型完成',       type:'milestone', parent:18, color:'#F59E0B',          deps:[21],  date:'' },
-            { id:23, name:'DVT 驗證測試',       type:'group',     parent:1,  color:'#F87171' },
-            { id:24, name:'功能測試',           type:'task',      parent:23, color:'#F87171', wday:10, deps:[22],  done:false, start:'', end:'' },
-            { id:25, name:'環境壓力測試',       type:'task',      parent:23, color:'#F87171', wday:10, deps:[22],  done:false, start:'', end:'' },
-            { id:26, name:'安規認證',           type:'task',      parent:23, color:'#F87171', wday:15, deps:[24],  done:false, start:'', end:'' },
-            { id:27, name:'問題修改改版',       type:'task',      parent:23, color:'#F87171', wday:10, deps:[24,25],done:false,start:'', end:'' },
-            { id:28, name:'DVT 驗證完成',       type:'milestone', parent:23, color:'#EF4444',          deps:[26,27],date:'' },
-            { id:29, name:'PVT 量產準備',       type:'group',     parent:1,  color:'#A78BFA' },
-            { id:30, name:'供應商確認',         type:'task',      parent:29, color:'#A78BFA', wday:10, deps:[28],  done:false, start:'', end:'' },
-            { id:31, name:'生產工程設計',       type:'task',      parent:29, color:'#A78BFA', wday:10, deps:[28],  done:false, start:'', end:'' },
-            { id:32, name:'試量產',             type:'task',      parent:29, color:'#A78BFA', wday:15, deps:[30,31],done:false,start:'', end:'' },
-            { id:33, name:'PVT 量產準備完成',   type:'milestone', parent:29, color:'#8B5CF6',          deps:[32],  date:'' },
-            { id:34, name:'MP 量產導入',        type:'group',     parent:1,  color:'#10B981' },
-            { id:35, name:'正式量產',           type:'task',      parent:34, color:'#10B981', wday:20, deps:[33],  done:false, start:'', end:'' },
-            { id:36, name:'品質監控',           type:'task',      parent:34, color:'#10B981', wday:15, deps:[35],  done:false, start:'', end:'' },
-            { id:37, name:'MP 正式出貨',        type:'milestone', parent:34, color:'#059669',          deps:[35],  date:'' },
-          ]
-        }
-      ].find(t => t.name === def.name);
-      if (template) {
-        template.id = maxId + 1;
-        nextProjId = Math.max(nextProjId, template.id + 1);
-        projects.push(template);
-      }
-    }
-  });
-}
-
 function showApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appToolbar').style.display = 'flex';
@@ -946,8 +877,8 @@ function updateUserDisplay() {
   const el = document.getElementById('userDisplay');
   if (!el) return;
   el.innerHTML = avatar
-    ? `<img src="${avatar}" title="${name}" style="width:26px;height:26px;border-radius:50%;object-fit:cover">`
-    : `<div title="${name}" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${(name[0]||'U').toUpperCase()}</div>`;
+    ? `<img src="${esc(avatar)}" title="${esc(name)}" style="width:26px;height:26px;border-radius:50%;object-fit:cover">`
+    : `<div title="${esc(name)}" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${esc((name[0]||'U')).toUpperCase()}</div>`;
   document.getElementById('signOutBtn').style.display = '';
 }
 
@@ -1022,7 +953,8 @@ function wireStaticEvents() {
   clk('fitBtn', fitToFrame);
   clk('cpBtn', toggleCriticalPath);
   clk('exportToggleBtn', toggleExportMenu);
-  document.querySelectorAll('[data-export]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-export]').forEach(b => b.addEventListener('click', async () => {
+    const { exportPNG, exportPDF, exportCSV } = await import('./export.js');
     const fmt = b.dataset.export;
     if (fmt === 'png') exportPNG();
     else if (fmt === 'pdf') exportPDF();
@@ -1036,7 +968,7 @@ function wireStaticEvents() {
   const bl = $('settingBaseline'); if (bl) bl.addEventListener('change', onSettingBaselineChange);
   clk('setBaselineBtn', () => { setBaseline(); closeSettings(); });
   clk('settingVersionBtn', () => { openVersionPanel(); closeSettings(); });
-  clk('adminBtn', openAdminPanel);
+  clk('adminBtn', () => import('./admin.js').then(m => m.openAdminPanel()));
   clk('signOutBtn', signOut);
 
   // ── Version panel ──
@@ -1059,8 +991,8 @@ function wireStaticEvents() {
   clk('closeCollabBtn', closeCollabModal);
 
   // ── Admin panel ──
-  overlayClose('adminOverlay', closeAdminPanel);
-  clk('closeAdminBtn', closeAdminPanel);
+  overlayClose('adminOverlay', () => import('./admin.js').then(m => m.closeAdminPanel()));
+  clk('closeAdminBtn', () => import('./admin.js').then(m => m.closeAdminPanel()));
 
   // ── Delete modal ──
   overlayClose('deleteOverlay', () => closeDeleteModal());
@@ -1131,7 +1063,7 @@ function wireStaticEvents() {
   if (aul) aul.addEventListener('click', e => {
     const btn = e.target.closest('[data-action="delete-user"]');
     if (!btn) return;
-    deleteUser(btn.dataset.email);
+    import('./admin.js').then(m => m.deleteUser(btn.dataset.email));
   });
 }
 

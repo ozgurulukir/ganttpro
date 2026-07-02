@@ -1,6 +1,7 @@
 /* Tooltip + row highlighting — pure DOM + dep lookups for state/functions. */
 import { D } from './deps.js';
 import { countWorkingDays } from '../core/calendar.js';
+import { esc } from '../core/format.js';
 
 export function highlightRow(id, on) {
   document.querySelectorAll(`[data-id="${id}"]`).forEach(el => {
@@ -41,7 +42,7 @@ export function highlightDeps(id, on) {
 export function showTT(e, task) {
   const { TODAY_STR, curProj, groupBounds, groupProgress, tasks } = D;
   const tt = document.getElementById('tooltip');
-  let h = `<div class="tt-h">${task.name}</div>`;
+  let h = `<div class="tt-h">${esc(task.name)}</div>`;
   if (task.type === 'task') {
     const wdays = task.wday || countWorkingDays(task.start, task.end);
     const tprog = task.done ? 100 : (task.progress || 0);
@@ -49,7 +50,7 @@ export function showTT(e, task) {
     h += `<div class="tt-r"><span>結束</span><span>${task.end}</span></div>`;
     h += `<div class="tt-r"><span>工作天</span><span>${wdays} 天</span></div>`;
     h += `<div class="tt-r"><span>進度</span><span>${tprog}%</span></div>`;
-    if (task.assignee) h += `<div class="tt-r"><span>負責人</span><span>${task.assignee}</span></div>`;
+    if (task.assignee) h += `<div class="tt-r"><span>負責人</span><span>${esc(task.assignee)}</span></div>`;
     const _bl = (curProj()?.baseline?.dates || {})[task.id];
     if (_bl && _bl.e && task.end && _bl.e !== task.end) {
       const late = task.end > _bl.e;
@@ -65,7 +66,7 @@ export function showTT(e, task) {
     if ((task.sfdeps||[]).length) h += `<div class="tt-r"><span>SF前置</span><span style="color:#8B5CF6">${task.sfdeps.length} 項</span></div>`;
   } else if (task.type === 'milestone') {
     h += `<div class="tt-r"><span>日期</span><span>${task.date}</span></div>`;
-    h += `<div class="tt-r"><span>負責人</span><span>${task.assignee || '—'}</span></div>`;
+    h += `<div class="tt-r"><span>負責人</span><span>${esc(task.assignee) || '—'}</span></div>`;
     h += `<div class="tt-r"><span>FS前置</span><span>${(task.deps||[]).length} 項</span></div>`;
   } else if (task.type === 'group') {
     const b = groupBounds(task.id);

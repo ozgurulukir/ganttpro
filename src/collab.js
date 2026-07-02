@@ -1,6 +1,7 @@
 import * as Remote from "./data/remote.js";
 import * as Share from "./data/share.js";
 import { D } from "./render/deps.js";
+import { esc } from "./core/format.js";
 
 let _collabShares = [];
 
@@ -48,7 +49,7 @@ export async function openCollabModal() {
   const sel = document.getElementById('collabProjSelect');
   const ownedProjects = projects.filter(p => !p._isShared);
   sel.innerHTML = ownedProjects.map(p =>
-    `<option value="${p.id}">${p.name}</option>`
+    `<option value="${p.id}">${esc(p.name)}</option>`
   ).join('');
   const cur = curProj();
   if (cur && !cur._isShared) sel.value = cur.id;
@@ -82,9 +83,9 @@ function renderCollabModal() {
   }
   list.innerHTML = _collabShares.map(s => `
     <div class="collab-share-item">
-      <span class="ci-email" title="${s.shared_with_email}">${s.shared_with_email}</span>
+      <span class="ci-email" title="${esc(s.shared_with_email)}">${esc(s.shared_with_email)}</span>
       <span class="ci-perm ${s.permission}">${s.permission === 'read' ? '唯讀' : '共同編輯'}</span>
-      <span class="ci-del" data-action="remove-share" data-share-id="${s.id}" data-email="${s.shared_with_email}" title="移除">✕</span>
+      <span class="ci-del" data-action="remove-share" data-share-id="${s.id}" data-email="${esc(s.shared_with_email)}" title="移除">✕</span>
     </div>
   `).join('');
 }

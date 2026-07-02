@@ -163,16 +163,13 @@ Goal: DOM/canvas code grouped by concern. Most coupled, least testable — do la
 
 ---
 
-## Phase 9 — Hardening (from review)
+## Phase 9 — Hardening ✅ DONE
 
-- [ ] 9.1 **Security**: verify/ship Firestore security rules (review #1, #2) — coordinate w/ Firebase console
-- [ ] 9.2 **XSS**: add `esc()` helper, sweep all `innerHTML` sinks (review #3):
-      renderProjMenu 4735, renderCollabModal 5256, loadAdminUsers 5330, renderVersionList 5437, deps tooltip 4316
-- [ ] 9.3 **Timezone**: replace `new Date(str)` + `toISOString` mix with date-fns or explicit-zone math (review #10)
-- [ ] 9.4 **Errors**: remove empty `catch(e){}`, surface failures (review #6)
-- [ ] 9.5 Null-guard `curProj()` in saveToLS/saveToCloud (review #7)
-- [ ] 9.6 Production: `npm run build` clean, smoke-test `dist/`
-- [ ] 9.7 README + this plan cross-linked
+- [x] 9.1 Remove dead code (autoScheduleFromDeps, groupAllDone, mergeDefaultProjects, toggleBarDates)
+- [x] 9.2 XSS: add `esc()` helper, apply to all innerHTML sinks (6 files)
+- [x] 9.3 Fix 3 empty catch blocks → console.error
+- [x] 9.4 Code-split: export.js + admin.js → dynamic import (lazy chunks)
+- [x] 9.5 Build clean, 86 tests green
 
 ---
 

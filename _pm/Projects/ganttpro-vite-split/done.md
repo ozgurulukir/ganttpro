@@ -4,6 +4,22 @@ Newest first. Move items here from todo.md as completed.
 
 ---
 
+## 2026-07-02 — Phase 9: Hardening ✅
+
+- **Dead code removed**: 4 unused functions (autoScheduleFromDeps, groupAllDone,
+  mergeDefaultProjects, toggleBarDates) — 67 lines of dead code, all confirmed
+  uncalled in original gantt.html.
+- **XSS fix**: Added `esc()` HTML-escape helper to `core/format.js`. Applied to
+  all innerHTML sinks interpolating user-generated content: task names, assignee
+  names, project names, version names, emails, error messages, avatar URLs.
+  Files: tooltip.js, project.js, settings.js, collab.js, admin.js, main.js.
+- **Error handling**: 3 empty `catch(e){}` blocks replaced with `console.error`
+  (main.js saveToLS, local.js saveToLS, share.js saveShareDoc). Modal showPicker
+  catches left intentional (progressive enhancement).
+- **Code-split**: export.js and admin.js converted to dynamic imports.
+  Bundle: main 666 kB + lazy chunks export 7 kB + admin 1.5 kB.
+- **Build**: 51 modules, 86 tests green.
+
 ## 2026-07-02 — Phase 8: Auth/admin/collab extraction ✅
 
 - **Goal achieved**: auth, collab/share, and admin functions extracted into 3

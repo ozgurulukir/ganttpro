@@ -37,7 +37,7 @@ export function saveShareDoc(token, uid, project) {
         token, owner_id: uid,
         project_data: JSON.parse(JSON.stringify(project))
       });
-    } catch(e) {}
+    } catch(e) { console.error('saveShareDoc:', e); }
   }
   return encoded;
 }

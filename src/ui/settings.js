@@ -1,5 +1,6 @@
 /* Settings panel, zoom, stats, dark mode, baseline, versions. */
 import { D } from '../render/deps.js';
+import { esc } from '../core/format.js';
 
 export function onSettingBarDatesChange() {
   const { setShowBarDates, render } = D;
@@ -186,7 +187,7 @@ export function renderVersionList() {
     const item = document.createElement('div');
     item.className = 'ver-item';
     item.innerHTML = `
-      <div class="ver-item-name">${v.name}</div>
+      <div class="ver-item-name">${esc(v.name)}</div>
       <div class="ver-item-meta">${dateStr} · ${v.taskCount} 個任務</div>
       <div class="ver-item-actions">
         <button class="ver-btn ver-btn-restore" data-action="restore-version" data-id="${v.id}">還原此版本</button>

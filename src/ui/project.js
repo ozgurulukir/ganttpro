@@ -1,5 +1,6 @@
 /* Project CRUD: switch, create, edit, delete, menu rendering. */
 import { D } from '../render/deps.js';
+import { esc } from '../core/format.js';
 
 let _editingProjId = null;
 
@@ -70,7 +71,7 @@ export function renderProjMenu() {
     item.className = 'proj-item' + (p.id === currentProjId ? ' active' : '');
     item.innerHTML = `
       <div class="proj-item-dot" style="background:${p.color}"></div>
-      <span class="proj-item-name">${p.name}${p._isShared ? ' <span class="collab-shared-badge">共享</span>' : ''}</span>
+      <span class="proj-item-name">${esc(p.name)}${p._isShared ? ' <span class="collab-shared-badge">共享</span>' : ''}</span>
       ${!p._isShared ? `<span class="proj-item-edit" data-action="edit-proj" data-pid="${p.id}" title="編輯此專案">✎</span>` : ''}
       ${!p._isShared ? `<span class="proj-item-del" data-action="delete-proj" data-pid="${p.id}" title="刪除此專案">✕</span>` : ''}
     `;

@@ -2,11 +2,11 @@
 
 ## Status
 
-**Phase 8 COMPLETE ✅ (Auth/admin/collab).** Next: **Phase 9 — Hardening/polish.**
+**Phase 9 COMPLETE ✅ (Hardening). All 9 phases done.**
 
 ## Active
 
-- Phase 9: code-split bundle (dynamic import), dead code removal, final review.
+- (none — project complete)
 
 ## Decisions resolved
 

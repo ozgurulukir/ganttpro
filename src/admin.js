@@ -1,5 +1,6 @@
 import * as Remote from "./data/remote.js";
 import { isAdmin } from "./auth.js";
+import { esc } from "./core/format.js";
 
 export async function openAdminPanel() {
   if (!isAdmin()) return;
@@ -18,18 +19,18 @@ async function loadAdminUsers() {
     const data = await Remote.getAllUsers();
     document.getElementById('adminUserCount').textContent = `（${data.length} 人）`;
     tbody.innerHTML = data.map(u => {
-      const delBtn = u.is_admin ? '' : `<button class="btn" style="font-size:11px;padding:3px 8px;color:#E53;border-color:#E53" data-action="delete-user" data-email="${u.email}">刪除</button>`;
+      const delBtn = u.is_admin ? '' : `<button class="btn" style="font-size:11px;padding:3px 8px;color:#E53;border-color:#E53" data-action="delete-user" data-email="${esc(u.email)}">刪除</button>`;
       const dateStr = u.added_at ? new Date(u.added_at).toLocaleDateString('zh-TW') : '—';
       return `<tr>
-        <td>${u.name || '—'}</td>
-        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${u.email}">${u.email}</td>
+        <td>${esc(u.name) || '—'}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(u.email)}">${esc(u.email)}</td>
         <td>${u.is_admin ? '管理員' : '用戶'}</td>
         <td style="color:var(--t3)">${dateStr}</td>
         <td>${delBtn}</td>
       </tr>`;
     }).join('');
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="5" style="color:#E53;text-align:center">載入失敗：${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="color:#E53;text-align:center">載入失敗：${esc(e.message)}</td></tr>`;
   }
 }
 
