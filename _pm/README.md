@@ -6,15 +6,20 @@ Finished projects move to `Archives/`. Always use full paths.
 
 ## Projects (active)
 
-- **[ganttpro-vite-split](Projects/ganttpro-vite-split/todo.md)** — Split the 5,930-line
-  `gantt.html` into a Vite + ES-module project. Phased, behavior-preserving extraction.
-  Status: plan ready, Phase 0 pending. → [wip](Projects/ganttpro-vite-split/wip.md)
+- **[ganttpro-security](Projects/ganttpro-security/todo.md)** — Firestore security
+  rules + `firebase.json`. Admin hardcoded by email, cross-doc collab rules.
+  Status: ready.
+- **[ganttpro-timezone](Projects/ganttpro-timezone/todo.md)** — Pure-arithmetic
+  day-number model to eliminate UTC/local Date frame-mix. 15-step refactor.
+  Status: ready.
+- **[ganttpro-docs](Projects/ganttpro-docs/todo.md)** — README.md with architecture
+  overview, module map, dev setup. Status: ready.
 
 ## Projects (planned, not started)
 
-- **firebase-removal** — depends on ganttpro-vite-split Phase 3 (data seam). Tier
-  decision pending (local-only vs backend vs Supabase). See
-  [ganttpro-vite-split/backlog.md](Projects/ganttpro-vite-split/backlog.md).
+- **firebase-removal** — depends on security rules landing. Tier decision pending
+  (local-only vs backend vs Supabase). See
+  [Archives/ganttpro-vite-split/backlog.md](Archives/ganttpro-vite-split/backlog.md).
 - **elm-rewrite** — frontend rewrite, pending decision. See backlog.
 - **gleam-logic-core** — alternative tested core in Gleam→JS. See backlog.
 
@@ -28,4 +33,5 @@ Finished projects move to `Archives/`. Always use full paths.
 
 ## Archives
 
-- (empty — move completed/stale projects here)
+- [ganttpro-vite-split](Archives/ganttpro-vite-split/done.md) — Split 5,930-line
+  `gantt.html` into 51-module Vite project. 9 phases complete, 86 tests green.
