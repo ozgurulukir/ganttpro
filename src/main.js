@@ -45,7 +45,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import * as Local from "./data/local.js";
 import * as Share from "./data/share.js";
 import * as Remote from "./data/remote.js";
-import { initI18n, translateDOM, t } from "./i18n/index.js";
+import { initI18n, translateDOM, t, setLocale, getLocale } from "./i18n/index.js";
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
@@ -1076,6 +1076,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initI18n();
   translateDOM();
   wireStaticEvents();
+
+  // Locale switcher: set initial value and wire change event
+  const langSelect = document.getElementById('langSelect');
+  if (langSelect) {
+    langSelect.value = getLocale();
+    langSelect.addEventListener('change', () => {
+      setLocale(langSelect.value);
+      render();
+    });
+  }
+
   syncRenderDeps();
   const urlParams = new URLSearchParams(location.search);
   const shareToken = urlParams.get('share');
