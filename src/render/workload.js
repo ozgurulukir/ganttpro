@@ -3,6 +3,7 @@ import { D } from './deps.js';
 import { isNonWorkday } from '../core/calendar.js';
 import { initials } from '../core/format.js';
 import { parseDate, formatDate } from '../core/date.js';
+import { renderGrid } from './grid.js';
 import { t } from '../i18n/index.js';
 
 export function computeWorkload() {
@@ -67,7 +68,7 @@ export function renderWorkloadPanel(body) {
 }
 
 export function renderWorkloadChart(canvas, tw) {
-  const { ROW_H, PPD, TODAY_STR, renderGrid, dateToX, updateStats } = D;
+  const { ROW_H, PPD, TODAY_STR, dateToX, updateStats } = D;
   const { names, byName } = computeWorkload();
   const th = Math.max(names.length, 1) * ROW_H;
   canvas.style.cssText = `width:${tw}px;height:${th}px`;
