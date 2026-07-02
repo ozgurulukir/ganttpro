@@ -6,9 +6,7 @@ Finished projects move to `Archives/`. Always use full paths.
 
 ## Projects (active)
 
-- **[ganttpro-i18next](Projects/ganttpro-i18next/todo.md)** — Replace hardcoded
-  English strings with i18next `t()` calls. Ship EN + zh-TW. 6 phases, ~300 keys,
-  16 JS files + index.html.
+- (none — all current projects completed)
 
 ## Projects (planned, not started)
 
@@ -28,6 +26,8 @@ Finished projects move to `Archives/`. Always use full paths.
 
 ## Archives
 
+- [ganttpro-i18next](Archives/ganttpro-i18next/done.md) — i18next multilanguage
+  support. 6 phases, 241 keys, 16 namespaces, EN + zh-TW. 93 tests green.
 - [ganttpro-i18n](Archives/ganttpro-i18n/done.md) — Translated all user-facing
   strings from zh-TW to English. 8 phases, 7 commits. 93 tests green.
 - [ganttpro-security](Archives/ganttpro-security/done.md) — Firestore security
