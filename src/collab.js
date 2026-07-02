@@ -12,14 +12,14 @@ export function openShareModal() {
   const token = Share.getOrCreateShareToken(proj);
   document.getElementById('shareModalProjName').textContent = proj.name;
   const note = document.querySelector('.share-owner-note');
-  if (note) note.innerHTML = '💡 此連結為唯讀連結。只有您（專案建立者）在一般模式下可以編輯。';
+  if (note) note.innerHTML = '💡 This is a read-only link. Only you (the project owner) can edit in normal mode.';
   render();
   const user = D.GetCurrentUser();
   const encoded = Share.saveShareDoc(token, user?.uid, proj);
   const hash = encoded ? '#d=' + encoded : '';
   const url = location.origin + location.pathname + '?share=' + token + hash;
   document.getElementById('shareLinkInput').value = url;
-  if (!encoded && note) note.innerHTML = '⚠️ 連結產生失敗，請稍後再試。';
+  if (!encoded && note) note.innerHTML = '⚠️ Failed to generate link. Please try again.';
   document.getElementById('shareOverlay').classList.add('open');
 }
 
@@ -31,11 +31,11 @@ export function copyShareLink() {
   const { showStatus } = D;
   const val = document.getElementById('shareLinkInput').value;
   navigator.clipboard.writeText(val)
-    .then(() => { showStatus('✓ 分享連結已複製到剪貼簿'); closeShareModal(); })
+    .then(() => { showStatus('✓ Share link copied to clipboard'); closeShareModal(); })
     .catch(() => {
       const inp = document.getElementById('shareLinkInput');
       inp.select(); document.execCommand('copy');
-      showStatus('✓ 分享連結已複製'); closeShareModal();
+      showStatus('✓ Share link copied'); closeShareModal();
     });
 }
 
@@ -78,14 +78,14 @@ async function refreshCollabList() {
 function renderCollabModal() {
   const list = document.getElementById('collabShareList');
   if (!_collabShares.length) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--t3);text-align:center;padding:12px 0">尚未分享給任何人</div>';
+    list.innerHTML = '<div style="font-size:12px;color:var(--t3);text-align:center;padding:12px 0">Not shared with anyone yet</div>';
     return;
   }
   list.innerHTML = _collabShares.map(s => `
     <div class="collab-share-item">
       <span class="ci-email" title="${esc(s.shared_with_email)}">${esc(s.shared_with_email)}</span>
-      <span class="ci-perm ${s.permission}">${s.permission === 'read' ? '唯讀' : '共同編輯'}</span>
-      <span class="ci-del" data-action="remove-share" data-share-id="${s.id}" data-email="${esc(s.shared_with_email)}" title="移除">✕</span>
+      <span class="ci-perm ${s.permission}">${s.permission === 'read' ? 'Read only' : 'Can edit'}</span>
+      <span class="ci-del" data-action="remove-share" data-share-id="${s.id}" data-email="${esc(s.shared_with_email)}" title="Remove">✕</span>
     </div>
   `).join('');
 }
@@ -105,13 +105,13 @@ export async function addShare() {
 
   msgEl.style.display = 'none';
 
-  if (!email || !email.includes('@')) { showMsg('請輸入有效的 Gmail 帳號'); return; }
-  if (user && email === user.email) { showMsg('不能分享給自己'); return; }
+  if (!email || !email.includes('@')) { showMsg('Please enter a valid Gmail address'); return; }
+  if (user && email === user.email) { showMsg('Cannot share with yourself'); return; }
 
   try {
     const sel = document.getElementById('collabProjSelect');
     const projId = sel?.value;
-    if (!projId) { showMsg('請先選擇專案'); return; }
+    if (!projId) { showMsg('Please select a project first'); return; }
 
     const docId = `${projId}_${email.replace(/[.@]/g,'_')}`;
     await Remote.addProjectShare(docId, {
@@ -120,16 +120,16 @@ export async function addShare() {
       shared_with_email: email,
       permission: perm
     });
-    showMsg('✓ 已成功加入', true);
+    showMsg('✓ Successfully added', true);
     emailInput.value = '';
     await refreshCollabList();
   } catch(e) {
-    showMsg('加入失敗：' + e.message);
+    showMsg('Failed to add: ' + e.message);
   }
 }
 
 export async function removeShare(shareId, email) {
-  if (!confirm(`確定要移除 ${email} 的存取權限嗎？`)) return;
+  if (!confirm(`Remove access for ${email}?`)) return;
   await Remote.removeProjectShare(shareId);
   await refreshCollabList();
 }

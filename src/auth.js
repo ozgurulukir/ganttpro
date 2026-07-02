@@ -14,7 +14,7 @@ export async function signInWithGoogle() {
   try {
     await auth.signInWithPopup(googleProvider);
   } catch(e) {
-    if (e.code !== 'auth/popup-closed-by-user') alert('登入失敗：' + e.message);
+    if (e.code !== 'auth/popup-closed-by-user') alert('Login failed: ' + e.message);
   }
 }
 
@@ -43,7 +43,7 @@ export async function submitRegister() {
   const nickname = document.getElementById('registerNickname').value.trim();
   const errEl = document.getElementById('registerError');
   if (!nickname) {
-    errEl.textContent = '請填寫暱稱';
+    errEl.textContent = 'Please enter a nickname';
     errEl.style.display = '';
     return;
   }
@@ -57,7 +57,7 @@ export async function submitRegister() {
     document.getElementById('loginPanel').style.display = 'flex';
     await D.initApp();
   } catch(e) {
-    errEl.textContent = '註冊失敗：' + e.message;
+    errEl.textContent = 'Registration failed: ' + e.message;
     errEl.style.display = '';
   }
 }

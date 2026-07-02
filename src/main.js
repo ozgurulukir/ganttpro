@@ -456,7 +456,7 @@ function indentTask(id) {
   }
   if (!prevSibling) return;
   if (getTaskDepth(prevSibling.id) + 1 >= 5) {
-    showStatus('已達最大層數 5 層'); return;
+    showStatus('Maximum depth reached (5 levels)'); return;
   }
   pushHistory();
   task.parent = prevSibling.id;
@@ -739,7 +739,7 @@ function setSyncDot(state) {
   const dot = document.getElementById('syncDot');
   if (!dot) return;
   dot.className = 'sync-dot' + (state ? ' ' + state : '');
-  dot.title = { saving:'儲存中...', ok:'已同步', err:'同步失敗', off:'唯讀模式', local:'本地模式（不同步雲端）' }[state] || '雲端同步';
+  dot.title = { saving:'Saving...', ok:'Synced', err:'Sync failed', off:'Read-only', local:'Local mode (no cloud sync)' }[state] || 'Cloud sync';
 }
 
 async function saveToCloud() {
@@ -833,7 +833,7 @@ function showSyncToast() {
     t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--t1);color:var(--surface);padding:8px 14px;border-radius:8px;font-size:12px;z-index:9999;opacity:0;transition:opacity .3s';
     document.body.appendChild(t);
   }
-  t.textContent = '📡 其他用戶已更新資料';
+  t.textContent = '📡 Another user has updated the data';
   t.style.opacity = '1';
   setTimeout(() => t.style.opacity = '0', 2500);
 }
@@ -914,7 +914,7 @@ async function initApp() {
   if (adminBtn) adminBtn.style.display = isAdmin() ? '' : 'none';
   if (_guestMode) {
     const el = document.getElementById('userDisplay');
-    if (el) el.innerHTML = `<div title="訪客模式（本地）" style="width:26px;height:26px;border-radius:50%;background:var(--t4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">訪</div>`;
+    if (el) el.innerHTML = `<div title="Guest mode (local)" style="width:26px;height:26px;border-radius:50%;background:var(--t4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">G</div>`;
     document.getElementById('signOutBtn').style.display = '';
   }
 }
@@ -1085,8 +1085,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!projData) {
       document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;flex-direction:column;gap:12px;color:#555">
         <div style="font-size:48px">🔗</div>
-        <div style="font-size:18px;font-weight:600">連結無效或已失效</div>
-        <div style="font-size:14px;color:#888">此分享連結不存在或已被移除</div>
+        <div style="font-size:18px;font-weight:600">Invalid or expired link</div>
+        <div style="font-size:14px;color:#888">This share link does not exist or has been removed.</div>
       </div>`;
       return;
     }
