@@ -1,63 +1,144 @@
-import { getHoliday, isNonWorkday, subtractWorkingDays, addWorkingDays, nextWorkingDay, shiftWorkingDays, countWorkingDays } from "./core/calendar.js";
-import * as Tree from "./core/tree.js";
-import * as Deps from "./core/deps.js";
-import * as CPM from "./core/critical-path.js";
-import * as Schedule from "./core/schedule.js";
-import * as Format from "./core/format.js";
-import * as DateUtils from "./core/date.js";
-import { validateProject, validateProjects } from "./core/validate.js";
-import { D } from "./render/deps.js";
-import { highlightRow, getPredIds, getSuccIds, highlightDeps, showTT, moveTT, hideTT } from "./render/tooltip.js";
-import { computeWorkload, renderWorkloadPanel, renderWorkloadChart } from "./render/workload.js";
-import { renderGrid } from "./render/grid.js";
-import { renderBar, renderGroupBar, attachBarDrag, getWorkingSegs } from "./render/bar.js";
-import { renderMilestone, renderMilestoneTimeline } from "./render/milestone.js";
-import { renderArrows } from "./render/arrows.js";
-import { renderChartHeader } from "./render/chart-header.js";
-import { renderChartBody } from "./render/chart-body.js";
-import { renderTaskPanel } from "./render/task-panel.js";
 import {
-  populateModal, syncWday, syncEndFromWday, updateModalForType,
-  setupDepsInputListener, renderDepsDropdown, addDepToInput,
-  openModal, openModalUnder, openEditModal, closeModal,
-  openNameEditor, openDateEditor, openStartEditor, openEndEditor, openWdayEditor,
-  addTaskInline, confirmDeleteTask, closeDeleteModal, executeDeleteTask,
-  submitTask, toggleDepsMenu, closeDepsOutside, toggleDepOpt, removeDepTag,
-  updateDepsTags, renderDepsMenu, openDepsEditor, openAllDepsEditor,
-  cancelInlineEditors,
-} from "./ui/modal.js";
+  getHoliday,
+  isNonWorkday,
+  subtractWorkingDays,
+  addWorkingDays,
+  nextWorkingDay,
+  shiftWorkingDays,
+  countWorkingDays
+} from './core/calendar.js';
+import * as Tree from './core/tree.js';
+import * as Deps from './core/deps.js';
+import * as CPM from './core/critical-path.js';
+import * as Schedule from './core/schedule.js';
+import * as Format from './core/format.js';
+import * as DateUtils from './core/date.js';
+import { validateProject, validateProjects } from './core/validate.js';
+import { D } from './render/deps.js';
 import {
-  switchProject, updateProjUI, toggleProjMenu, closeProjOnOutside,
-  closeProjMenuOnly, renderProjMenu, deleteProject, openEditProjModal,
-  openProjModal, onTemplateChange, closeProjModal, selectColor, submitProject,
-} from "./ui/project.js";
+  highlightRow,
+  getPredIds,
+  getSuccIds,
+  highlightDeps,
+  showTT,
+  moveTT,
+  hideTT
+} from './render/tooltip.js';
+import { computeWorkload, renderWorkloadPanel, renderWorkloadChart } from './render/workload.js';
+import { renderGrid } from './render/grid.js';
+import { renderBar, renderGroupBar, attachBarDrag, getWorkingSegs } from './render/bar.js';
+import { renderMilestone, renderMilestoneTimeline } from './render/milestone.js';
+import { renderArrows } from './render/arrows.js';
+import { renderChartHeader } from './render/chart-header.js';
+import { renderChartBody } from './render/chart-body.js';
+import { renderTaskPanel } from './render/task-panel.js';
 import {
-  onSettingBarDatesChange, onSettingBaselineChange, setBaseline,
-  toggleSettings, toggleExportMenu, closeExportMenu, closeSettings,
-  applyZoom, zoomIn, zoomOut, fitToFrame, scrollToToday,
-  updateStats, toggleDark,
-  curVersions, openVersionPanel, closeVersionPanel,
-  createVersion, restoreVersion, deleteVersion, renderVersionList,
-} from "./ui/settings.js";
-import { setupSync, applyColGrid, setupColResizers, setupResizer } from "./interactions.js";
-import { signInWithGoogle, signInAsGuest, checkAuthorized, submitRegister, signOut, isAdmin } from "./auth.js";
-import { openShareModal, closeShareModal, copyShareLink, openCollabModal, closeCollabModal, onCollabProjChange, addShare, removeShare } from "./collab.js";
-import { auth, googleProvider } from "./data/firebase.js";
-import { onAuthStateChanged } from "firebase/auth";
-import * as Local from "./data/local.js";
-import * as Share from "./data/share.js";
-import * as Remote from "./data/remote.js";
-import { initI18n, translateDOM, t, setLocale, getLocale } from "./i18n/index.js";
+  populateModal,
+  syncWday,
+  syncEndFromWday,
+  updateModalForType,
+  setupDepsInputListener,
+  renderDepsDropdown,
+  addDepToInput,
+  openModal,
+  openModalUnder,
+  openEditModal,
+  closeModal,
+  openNameEditor,
+  openDateEditor,
+  openStartEditor,
+  openEndEditor,
+  openWdayEditor,
+  addTaskInline,
+  confirmDeleteTask,
+  closeDeleteModal,
+  executeDeleteTask,
+  submitTask,
+  toggleDepsMenu,
+  closeDepsOutside,
+  toggleDepOpt,
+  removeDepTag,
+  updateDepsTags,
+  renderDepsMenu,
+  openDepsEditor,
+  openAllDepsEditor,
+  cancelInlineEditors
+} from './ui/modal.js';
+import {
+  switchProject,
+  updateProjUI,
+  toggleProjMenu,
+  closeProjOnOutside,
+  closeProjMenuOnly,
+  renderProjMenu,
+  deleteProject,
+  openEditProjModal,
+  openProjModal,
+  onTemplateChange,
+  closeProjModal,
+  selectColor,
+  submitProject
+} from './ui/project.js';
+import {
+  onSettingBarDatesChange,
+  onSettingBaselineChange,
+  setBaseline,
+  toggleSettings,
+  toggleExportMenu,
+  closeExportMenu,
+  closeSettings,
+  applyZoom,
+  zoomIn,
+  zoomOut,
+  fitToFrame,
+  scrollToToday,
+  updateStats,
+  toggleDark,
+  curVersions,
+  openVersionPanel,
+  closeVersionPanel,
+  createVersion,
+  restoreVersion,
+  deleteVersion,
+  renderVersionList
+} from './ui/settings.js';
+import { setupSync, applyColGrid, setupColResizers, setupResizer } from './interactions.js';
+import {
+  signInWithGoogle,
+  signInAsGuest,
+  checkAuthorized,
+  submitRegister,
+  signOut,
+  isAdmin
+} from './auth.js';
+import {
+  openShareModal,
+  closeShareModal,
+  copyShareLink,
+  openCollabModal,
+  closeCollabModal,
+  onCollabProjChange,
+  addShare,
+  removeShare
+} from './collab.js';
+import { auth, googleProvider } from './data/firebase.js';
+import { onAuthStateChanged } from 'firebase/auth';
+import * as Local from './data/local.js';
+import * as Share from './data/share.js';
+import * as Remote from './data/remote.js';
+import { initI18n, translateDOM, t, setLocale, getLocale } from './i18n/index.js';
+import { initContextMenu, showContextMenu } from './ui/context-menu.js';
+import { logAudit } from './data/audit.js';
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
 let CHART_START = new Date('2026-04-01');
-let CHART_END   = new Date('2026-07-31');
+let CHART_END = new Date('2026-07-31');
 const TODAY_STR = new Date().toLocaleDateString('sv', { timeZone: 'Asia/Taipei' });
-const TODAY     = new Date(TODAY_STR);
+const TODAY = new Date(TODAY_STR);
 document.getElementById('sTodayDisplay').textContent = TODAY_STR;
-const ROW_H       = 36;
-const BAR_H       = 20;
+const ROW_H = 36;
+const BAR_H = 20;
 
 const PPDS = { day: 36, week: 20, month: 8 };
 let PPD = PPDS.week;
@@ -66,18 +147,19 @@ let milestoneView = false;
 let workloadView = false;
 let showBarDates = true;
 let showBaseline = true;
+let showWBS = false;
 const MS_ROW_H = 160;
 
 const AV_COLORS = {
-  'Paul':       '#5E6AD2',
-  'Xiaoming':   '#10B981',
-  'Meihua':     '#F59E0B',
-  'Designer':   '#EC4899',
-  'Backend':    '#3B82F6',
-  'Frontend':   '#8B5CF6',
-  'AI-Eng':     '#EF4444',
-  'QA-Eng':     '#6B7280',
-  'DevOps':     '#D97706',
+  Paul: '#5E6AD2',
+  Xiaoming: '#10B981',
+  Meihua: '#F59E0B',
+  Designer: '#EC4899',
+  Backend: '#3B82F6',
+  Frontend: '#8B5CF6',
+  'AI-Eng': '#EF4444',
+  'QA-Eng': '#6B7280',
+  DevOps: '#D97706'
 };
 
 // 群組色盤：10 個視覺清晰的色彩，依序分配
@@ -91,7 +173,7 @@ const GROUP_PALETTE = [
   '#EC4899', // pink
   '#14B8A6', // teal
   '#F97316', // orange
-  '#84CC16', // lime
+  '#84CC16' // lime
 ];
 
 function getNextGroupColor() {
@@ -117,50 +199,348 @@ const TEMPLATES = [
     defaultName: 'Hardware Product Development Plan',
     color: '#0EA5E9',
     tasks: [
-      { id:1,  name:'{{PROJECT_NAME}}',      type:'group',     parent:null, color:'#0EA5E9' },
+      { id: 1, name: '{{PROJECT_NAME}}', type: 'group', parent: null, color: '#0EA5E9' },
 
-      { id:2,  name:'Requirements',           type:'group',     parent:1,  color:'#818CF8' },
-      { id:3,  name:'Market Research',        type:'task',      parent:2,  color:'#818CF8', wday:10, deps:[],    done:false, start:'', end:'' },
-      { id:4,  name:'Product Spec Definition',type:'task',      parent:2,  color:'#818CF8', wday:8,  deps:[3],   done:false, start:'', end:'' },
-      { id:5,  name:'Competitive Analysis',   type:'task',      parent:2,  color:'#818CF8', wday:5,  deps:[],    done:false, start:'', end:'' },
-      { id:6,  name:'Spec Freeze',            type:'milestone', parent:2,  color:'#5E6AD2',          deps:[4],   date:'' },
+      { id: 2, name: 'Requirements', type: 'group', parent: 1, color: '#818CF8' },
+      {
+        id: 3,
+        name: 'Market Research',
+        type: 'task',
+        parent: 2,
+        color: '#818CF8',
+        wday: 10,
+        deps: [],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 4,
+        name: 'Product Spec Definition',
+        type: 'task',
+        parent: 2,
+        color: '#818CF8',
+        wday: 8,
+        deps: [3],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 5,
+        name: 'Competitive Analysis',
+        type: 'task',
+        parent: 2,
+        color: '#818CF8',
+        wday: 5,
+        deps: [],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 6,
+        name: 'Spec Freeze',
+        type: 'milestone',
+        parent: 2,
+        color: '#5E6AD2',
+        deps: [4],
+        date: ''
+      },
 
-      { id:7,  name:'Concept Design',         type:'group',     parent:1,  color:'#60A5FA' },
-      { id:8,  name:'System Architecture',    type:'task',      parent:7,  color:'#60A5FA', wday:10, deps:[6],   done:false, start:'', end:'' },
-      { id:9,  name:'Hardware Concept Design',type:'task',      parent:7,  color:'#60A5FA', wday:8,  deps:[8],   done:false, start:'', end:'' },
-      { id:10, name:'Industrial Design',      type:'task',      parent:7,  color:'#60A5FA', wday:8,  deps:[8],   done:false, start:'', end:'' },
-      { id:11, name:'CDR Concept Design Review',type:'milestone',parent:7, color:'#3B82F6',          deps:[9,10],date:'' },
+      { id: 7, name: 'Concept Design', type: 'group', parent: 1, color: '#60A5FA' },
+      {
+        id: 8,
+        name: 'System Architecture',
+        type: 'task',
+        parent: 7,
+        color: '#60A5FA',
+        wday: 10,
+        deps: [6],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 9,
+        name: 'Hardware Concept Design',
+        type: 'task',
+        parent: 7,
+        color: '#60A5FA',
+        wday: 8,
+        deps: [8],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 10,
+        name: 'Industrial Design',
+        type: 'task',
+        parent: 7,
+        color: '#60A5FA',
+        wday: 8,
+        deps: [8],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 11,
+        name: 'CDR Concept Design Review',
+        type: 'milestone',
+        parent: 7,
+        color: '#3B82F6',
+        deps: [9, 10],
+        date: ''
+      },
 
-      { id:12, name:'Detailed Design',        type:'group',     parent:1,  color:'#34D399' },
-      { id:13, name:'Schematic Design',       type:'task',      parent:12, color:'#34D399', wday:15, deps:[11],  done:false, start:'', end:'' },
-      { id:14, name:'PCB Layout',             type:'task',      parent:12, color:'#34D399', wday:12, deps:[13],  done:false, start:'', end:'' },
-      { id:15, name:'Mechanical Design',      type:'task',      parent:12, color:'#34D399', wday:12, deps:[11],  done:false, start:'', end:'' },
-      { id:16, name:'Firmware Development',   type:'task',      parent:12, color:'#34D399', wday:20, deps:[13],  done:false, start:'', end:'' },
-      { id:17, name:'PDR Detailed Design Review',type:'milestone',parent:12,color:'#10B981',          deps:[14,15],date:'' },
+      { id: 12, name: 'Detailed Design', type: 'group', parent: 1, color: '#34D399' },
+      {
+        id: 13,
+        name: 'Schematic Design',
+        type: 'task',
+        parent: 12,
+        color: '#34D399',
+        wday: 15,
+        deps: [11],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 14,
+        name: 'PCB Layout',
+        type: 'task',
+        parent: 12,
+        color: '#34D399',
+        wday: 12,
+        deps: [13],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 15,
+        name: 'Mechanical Design',
+        type: 'task',
+        parent: 12,
+        color: '#34D399',
+        wday: 12,
+        deps: [11],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 16,
+        name: 'Firmware Development',
+        type: 'task',
+        parent: 12,
+        color: '#34D399',
+        wday: 20,
+        deps: [13],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 17,
+        name: 'PDR Detailed Design Review',
+        type: 'milestone',
+        parent: 12,
+        color: '#10B981',
+        deps: [14, 15],
+        date: ''
+      },
 
-      { id:18, name:'EVT Prototyping',        type:'group',     parent:1,  color:'#FBBF24' },
-      { id:19, name:'PCB Fabrication',        type:'task',      parent:18, color:'#FBBF24', wday:10, deps:[17],  done:false, start:'', end:'' },
-      { id:20, name:'Parts Prototyping',      type:'task',      parent:18, color:'#FBBF24', wday:10, deps:[17],  done:false, start:'', end:'' },
-      { id:21, name:'Assembly & Debug',       type:'task',      parent:18, color:'#FBBF24', wday:5,  deps:[19,20],done:false,start:'', end:'' },
-      { id:22, name:'EVT Prototype Complete', type:'milestone', parent:18, color:'#F59E0B',          deps:[21],  date:'' },
+      { id: 18, name: 'EVT Prototyping', type: 'group', parent: 1, color: '#FBBF24' },
+      {
+        id: 19,
+        name: 'PCB Fabrication',
+        type: 'task',
+        parent: 18,
+        color: '#FBBF24',
+        wday: 10,
+        deps: [17],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 20,
+        name: 'Parts Prototyping',
+        type: 'task',
+        parent: 18,
+        color: '#FBBF24',
+        wday: 10,
+        deps: [17],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 21,
+        name: 'Assembly & Debug',
+        type: 'task',
+        parent: 18,
+        color: '#FBBF24',
+        wday: 5,
+        deps: [19, 20],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 22,
+        name: 'EVT Prototype Complete',
+        type: 'milestone',
+        parent: 18,
+        color: '#F59E0B',
+        deps: [21],
+        date: ''
+      },
 
-      { id:23, name:'DVT Verification',       type:'group',     parent:1,  color:'#F87171' },
-      { id:24, name:'Functional Testing',     type:'task',      parent:23, color:'#F87171', wday:10, deps:[22],  done:false, start:'', end:'' },
-      { id:25, name:'Environmental Stress Testing',type:'task', parent:23, color:'#F87171', wday:10, deps:[22],  done:false, start:'', end:'' },
-      { id:26, name:'Safety Certification',   type:'task',      parent:23, color:'#F87171', wday:15, deps:[24],  done:false, start:'', end:'' },
-      { id:27, name:'Issue Fixing & Revision',type:'task',      parent:23, color:'#F87171', wday:10, deps:[24,25],done:false,start:'', end:'' },
-      { id:28, name:'DVT Verification Complete',type:'milestone',parent:23,color:'#EF4444',          deps:[26,27],date:'' },
+      { id: 23, name: 'DVT Verification', type: 'group', parent: 1, color: '#F87171' },
+      {
+        id: 24,
+        name: 'Functional Testing',
+        type: 'task',
+        parent: 23,
+        color: '#F87171',
+        wday: 10,
+        deps: [22],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 25,
+        name: 'Environmental Stress Testing',
+        type: 'task',
+        parent: 23,
+        color: '#F87171',
+        wday: 10,
+        deps: [22],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 26,
+        name: 'Safety Certification',
+        type: 'task',
+        parent: 23,
+        color: '#F87171',
+        wday: 15,
+        deps: [24],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 27,
+        name: 'Issue Fixing & Revision',
+        type: 'task',
+        parent: 23,
+        color: '#F87171',
+        wday: 10,
+        deps: [24, 25],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 28,
+        name: 'DVT Verification Complete',
+        type: 'milestone',
+        parent: 23,
+        color: '#EF4444',
+        deps: [26, 27],
+        date: ''
+      },
 
-      { id:29, name:'PVT Mass Production Prep',type:'group',    parent:1,  color:'#A78BFA' },
-      { id:30, name:'Supplier Confirmation',  type:'task',      parent:29, color:'#A78BFA', wday:10, deps:[28],  done:false, start:'', end:'' },
-      { id:31, name:'Manufacturing Engineering',type:'task',    parent:29, color:'#A78BFA', wday:10, deps:[28],  done:false, start:'', end:'' },
-      { id:32, name:'Pilot Run',              type:'task',      parent:29, color:'#A78BFA', wday:15, deps:[30,31],done:false,start:'', end:'' },
-      { id:33, name:'PVT Production Prep Complete',type:'milestone',parent:29,color:'#8B5CF6',       deps:[32],  date:'' },
+      { id: 29, name: 'PVT Mass Production Prep', type: 'group', parent: 1, color: '#A78BFA' },
+      {
+        id: 30,
+        name: 'Supplier Confirmation',
+        type: 'task',
+        parent: 29,
+        color: '#A78BFA',
+        wday: 10,
+        deps: [28],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 31,
+        name: 'Manufacturing Engineering',
+        type: 'task',
+        parent: 29,
+        color: '#A78BFA',
+        wday: 10,
+        deps: [28],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 32,
+        name: 'Pilot Run',
+        type: 'task',
+        parent: 29,
+        color: '#A78BFA',
+        wday: 15,
+        deps: [30, 31],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 33,
+        name: 'PVT Production Prep Complete',
+        type: 'milestone',
+        parent: 29,
+        color: '#8B5CF6',
+        deps: [32],
+        date: ''
+      },
 
-      { id:34, name:'MP Mass Production',     type:'group',     parent:1,  color:'#10B981' },
-      { id:35, name:'Mass Production',        type:'task',      parent:34, color:'#10B981', wday:20, deps:[33],  done:false, start:'', end:'' },
-      { id:36, name:'Quality Control',        type:'task',      parent:34, color:'#10B981', wday:15, deps:[35],  done:false, start:'', end:'' },
-      { id:37, name:'MP First Shipment',      type:'milestone', parent:34, color:'#059669',          deps:[35],  date:'' },
+      { id: 34, name: 'MP Mass Production', type: 'group', parent: 1, color: '#10B981' },
+      {
+        id: 35,
+        name: 'Mass Production',
+        type: 'task',
+        parent: 34,
+        color: '#10B981',
+        wday: 20,
+        deps: [33],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 36,
+        name: 'Quality Control',
+        type: 'task',
+        parent: 34,
+        color: '#10B981',
+        wday: 15,
+        deps: [35],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 37,
+        name: 'MP First Shipment',
+        type: 'milestone',
+        parent: 34,
+        color: '#059669',
+        deps: [35],
+        date: ''
+      }
     ]
   }
 ];
@@ -177,63 +557,369 @@ let projects = [
     endDate: '2027-03-31',
     nextId: 38,
     tasks: [
-      { id:1,  name:'Hardware Product Development & Mass Production', type:'group', parent:null, color:'#0EA5E9' },
+      {
+        id: 1,
+        name: 'Hardware Product Development & Mass Production',
+        type: 'group',
+        parent: null,
+        color: '#0EA5E9'
+      },
 
-      { id:2,  name:'Requirements',           type:'group',     parent:1,  color:'#818CF8' },
-      { id:3,  name:'Market Research',        type:'task',      parent:2,  color:'#818CF8', wday:10, deps:[],    done:false, start:'', end:'' },
-      { id:4,  name:'Product Spec Definition',type:'task',      parent:2,  color:'#818CF8', wday:8,  deps:[3],   done:false, start:'', end:'' },
-      { id:5,  name:'Competitive Analysis',   type:'task',      parent:2,  color:'#818CF8', wday:5,  deps:[],    done:false, start:'', end:'' },
-      { id:6,  name:'Spec Freeze',            type:'milestone', parent:2,  color:'#5E6AD2',          deps:[4],   date:'' },
+      { id: 2, name: 'Requirements', type: 'group', parent: 1, color: '#818CF8' },
+      {
+        id: 3,
+        name: 'Market Research',
+        type: 'task',
+        parent: 2,
+        color: '#818CF8',
+        wday: 10,
+        deps: [],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 4,
+        name: 'Product Spec Definition',
+        type: 'task',
+        parent: 2,
+        color: '#818CF8',
+        wday: 8,
+        deps: [3],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 5,
+        name: 'Competitive Analysis',
+        type: 'task',
+        parent: 2,
+        color: '#818CF8',
+        wday: 5,
+        deps: [],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 6,
+        name: 'Spec Freeze',
+        type: 'milestone',
+        parent: 2,
+        color: '#5E6AD2',
+        deps: [4],
+        date: ''
+      },
 
-      { id:7,  name:'Concept Design',         type:'group',     parent:1,  color:'#60A5FA' },
-      { id:8,  name:'System Architecture',    type:'task',      parent:7,  color:'#60A5FA', wday:10, deps:[6],   done:false, start:'', end:'' },
-      { id:9,  name:'Hardware Concept Design',type:'task',      parent:7,  color:'#60A5FA', wday:8,  deps:[8],   done:false, start:'', end:'' },
-      { id:10, name:'Industrial Design',      type:'task',      parent:7,  color:'#60A5FA', wday:8,  deps:[8],   done:false, start:'', end:'' },
-      { id:11, name:'CDR Concept Design Review',type:'milestone',parent:7, color:'#3B82F6',          deps:[9,10],date:'' },
+      { id: 7, name: 'Concept Design', type: 'group', parent: 1, color: '#60A5FA' },
+      {
+        id: 8,
+        name: 'System Architecture',
+        type: 'task',
+        parent: 7,
+        color: '#60A5FA',
+        wday: 10,
+        deps: [6],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 9,
+        name: 'Hardware Concept Design',
+        type: 'task',
+        parent: 7,
+        color: '#60A5FA',
+        wday: 8,
+        deps: [8],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 10,
+        name: 'Industrial Design',
+        type: 'task',
+        parent: 7,
+        color: '#60A5FA',
+        wday: 8,
+        deps: [8],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 11,
+        name: 'CDR Concept Design Review',
+        type: 'milestone',
+        parent: 7,
+        color: '#3B82F6',
+        deps: [9, 10],
+        date: ''
+      },
 
-      { id:12, name:'Detailed Design',        type:'group',     parent:1,  color:'#34D399' },
-      { id:13, name:'Schematic Design',       type:'task',      parent:12, color:'#34D399', wday:15, deps:[11],  done:false, start:'', end:'' },
-      { id:14, name:'PCB Layout',             type:'task',      parent:12, color:'#34D399', wday:12, deps:[13],  done:false, start:'', end:'' },
-      { id:15, name:'Mechanical Design',      type:'task',      parent:12, color:'#34D399', wday:12, deps:[11],  done:false, start:'', end:'' },
-      { id:16, name:'Firmware Development',   type:'task',      parent:12, color:'#34D399', wday:20, deps:[13],  done:false, start:'', end:'' },
-      { id:17, name:'PDR Detailed Design Review',type:'milestone',parent:12,color:'#10B981',          deps:[14,15],date:'' },
+      { id: 12, name: 'Detailed Design', type: 'group', parent: 1, color: '#34D399' },
+      {
+        id: 13,
+        name: 'Schematic Design',
+        type: 'task',
+        parent: 12,
+        color: '#34D399',
+        wday: 15,
+        deps: [11],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 14,
+        name: 'PCB Layout',
+        type: 'task',
+        parent: 12,
+        color: '#34D399',
+        wday: 12,
+        deps: [13],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 15,
+        name: 'Mechanical Design',
+        type: 'task',
+        parent: 12,
+        color: '#34D399',
+        wday: 12,
+        deps: [11],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 16,
+        name: 'Firmware Development',
+        type: 'task',
+        parent: 12,
+        color: '#34D399',
+        wday: 20,
+        deps: [13],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 17,
+        name: 'PDR Detailed Design Review',
+        type: 'milestone',
+        parent: 12,
+        color: '#10B981',
+        deps: [14, 15],
+        date: ''
+      },
 
-      { id:18, name:'EVT Prototyping',        type:'group',     parent:1,  color:'#FBBF24' },
-      { id:19, name:'PCB Fabrication',        type:'task',      parent:18, color:'#FBBF24', wday:10, deps:[17],  done:false, start:'', end:'' },
-      { id:20, name:'Parts Prototyping',      type:'task',      parent:18, color:'#FBBF24', wday:10, deps:[17],  done:false, start:'', end:'' },
-      { id:21, name:'Assembly & Debug',       type:'task',      parent:18, color:'#FBBF24', wday:5,  deps:[19,20],done:false,start:'', end:'' },
-      { id:22, name:'EVT Prototype Complete', type:'milestone', parent:18, color:'#F59E0B',          deps:[21],  date:'' },
+      { id: 18, name: 'EVT Prototyping', type: 'group', parent: 1, color: '#FBBF24' },
+      {
+        id: 19,
+        name: 'PCB Fabrication',
+        type: 'task',
+        parent: 18,
+        color: '#FBBF24',
+        wday: 10,
+        deps: [17],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 20,
+        name: 'Parts Prototyping',
+        type: 'task',
+        parent: 18,
+        color: '#FBBF24',
+        wday: 10,
+        deps: [17],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 21,
+        name: 'Assembly & Debug',
+        type: 'task',
+        parent: 18,
+        color: '#FBBF24',
+        wday: 5,
+        deps: [19, 20],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 22,
+        name: 'EVT Prototype Complete',
+        type: 'milestone',
+        parent: 18,
+        color: '#F59E0B',
+        deps: [21],
+        date: ''
+      },
 
-      { id:23, name:'DVT Verification',       type:'group',     parent:1,  color:'#F87171' },
-      { id:24, name:'Functional Testing',     type:'task',      parent:23, color:'#F87171', wday:10, deps:[22],  done:false, start:'', end:'' },
-      { id:25, name:'Environmental Stress Testing',type:'task', parent:23, color:'#F87171', wday:10, deps:[22],  done:false, start:'', end:'' },
-      { id:26, name:'Safety Certification',   type:'task',      parent:23, color:'#F87171', wday:15, deps:[24],  done:false, start:'', end:'' },
-      { id:27, name:'Issue Fixing & Revision',type:'task',      parent:23, color:'#F87171', wday:10, deps:[24,25],done:false,start:'', end:'' },
-      { id:28, name:'DVT Verification Complete',type:'milestone',parent:23,color:'#EF4444',          deps:[26,27],date:'' },
+      { id: 23, name: 'DVT Verification', type: 'group', parent: 1, color: '#F87171' },
+      {
+        id: 24,
+        name: 'Functional Testing',
+        type: 'task',
+        parent: 23,
+        color: '#F87171',
+        wday: 10,
+        deps: [22],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 25,
+        name: 'Environmental Stress Testing',
+        type: 'task',
+        parent: 23,
+        color: '#F87171',
+        wday: 10,
+        deps: [22],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 26,
+        name: 'Safety Certification',
+        type: 'task',
+        parent: 23,
+        color: '#F87171',
+        wday: 15,
+        deps: [24],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 27,
+        name: 'Issue Fixing & Revision',
+        type: 'task',
+        parent: 23,
+        color: '#F87171',
+        wday: 10,
+        deps: [24, 25],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 28,
+        name: 'DVT Verification Complete',
+        type: 'milestone',
+        parent: 23,
+        color: '#EF4444',
+        deps: [26, 27],
+        date: ''
+      },
 
-      { id:29, name:'PVT Mass Production Prep',type:'group',    parent:1,  color:'#A78BFA' },
-      { id:30, name:'Supplier Confirmation',  type:'task',      parent:29, color:'#A78BFA', wday:10, deps:[28],  done:false, start:'', end:'' },
-      { id:31, name:'Manufacturing Engineering',type:'task',    parent:29, color:'#A78BFA', wday:10, deps:[28],  done:false, start:'', end:'' },
-      { id:32, name:'Pilot Run',              type:'task',      parent:29, color:'#A78BFA', wday:15, deps:[30,31],done:false,start:'', end:'' },
-      { id:33, name:'PVT Production Prep Complete',type:'milestone',parent:29,color:'#8B5CF6',       deps:[32],  date:'' },
+      { id: 29, name: 'PVT Mass Production Prep', type: 'group', parent: 1, color: '#A78BFA' },
+      {
+        id: 30,
+        name: 'Supplier Confirmation',
+        type: 'task',
+        parent: 29,
+        color: '#A78BFA',
+        wday: 10,
+        deps: [28],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 31,
+        name: 'Manufacturing Engineering',
+        type: 'task',
+        parent: 29,
+        color: '#A78BFA',
+        wday: 10,
+        deps: [28],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 32,
+        name: 'Pilot Run',
+        type: 'task',
+        parent: 29,
+        color: '#A78BFA',
+        wday: 15,
+        deps: [30, 31],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 33,
+        name: 'PVT Production Prep Complete',
+        type: 'milestone',
+        parent: 29,
+        color: '#8B5CF6',
+        deps: [32],
+        date: ''
+      },
 
-      { id:34, name:'MP Mass Production',     type:'group',     parent:1,  color:'#10B981' },
-      { id:35, name:'Mass Production',        type:'task',      parent:34, color:'#10B981', wday:20, deps:[33],  done:false, start:'', end:'' },
-      { id:36, name:'Quality Control',        type:'task',      parent:34, color:'#10B981', wday:15, deps:[35],  done:false, start:'', end:'' },
-      { id:37, name:'MP First Shipment',      type:'milestone', parent:34, color:'#059669',          deps:[35],  date:'' },
+      { id: 34, name: 'MP Mass Production', type: 'group', parent: 1, color: '#10B981' },
+      {
+        id: 35,
+        name: 'Mass Production',
+        type: 'task',
+        parent: 34,
+        color: '#10B981',
+        wday: 20,
+        deps: [33],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 36,
+        name: 'Quality Control',
+        type: 'task',
+        parent: 34,
+        color: '#10B981',
+        wday: 15,
+        deps: [35],
+        done: false,
+        start: '',
+        end: ''
+      },
+      {
+        id: 37,
+        name: 'MP First Shipment',
+        type: 'milestone',
+        parent: 34,
+        color: '#059669',
+        deps: [35],
+        date: ''
+      }
     ]
   }
 ];
 let currentProjId = 2;
-let nextProjId    = 3;
+let nextProjId = 3;
 
 // SSOT INVARIANT: tasks must always reference the same array as curProj().tasks.
 // Mutate in-place (push/splice/length=0); NEVER reassign (tasks = newArray breaks the link).
 // On project switch/load: tasks = curProj().tasks (sync FROM project).
-let tasks  = projects[0].tasks;
+let tasks = projects[0].tasks;
 let nextId = projects[0].nextId;
 
-function curProj() { return projects.find(p => p.id === currentProjId); }
+function curProj() {
+  return projects.find(p => p.id === currentProjId);
+}
 
 /* ═══════════════════════════════════════════
    STATE
@@ -270,8 +956,12 @@ function undo() {
    UTILS
 ═══════════════════════════════════════════ */
 /* format adapters: pure logic in core/format.js; bind global config. */
-function dateToX(str) { return Format.dateToX(str, CHART_START, PPD); }
-function avColor(name) { return Format.avColor(name, AV_COLORS); }
+function dateToX(str) {
+  return Format.dateToX(str, CHART_START, PPD);
+}
+function avColor(name) {
+  return Format.avColor(name, AV_COLORS);
+}
 const { toStr, initials, darkenColor, hexToRgba, esc } = Format;
 const { diffDays, addDays, parseDate, formatDate } = DateUtils;
 
@@ -282,16 +972,36 @@ function totalW() {
 /* tree-query adapters: pure logic in core/tree.js; bind global state.
    Removed when state.js lands (Phase 2.x). */
 const { getTreeLines } = Tree;
-function taskById(id) { return Tree.taskById(tasks, id); }
-function hasMilestoneDescendant(id) { return Tree.hasMilestoneDescendant(tasks, id); }
-function getRowNum(taskId) { return Tree.getRowNum(tasks, collapsed, milestoneView, taskId); }
-function getTaskByRowNum(num) { return Tree.getTaskByRowNum(tasks, collapsed, milestoneView, num); }
-function getVisibleRows() { return Tree.getVisibleRows(tasks, collapsed, milestoneView); }
-function groupBounds(id) { return Tree.groupBounds(tasks, id); }
-function groupProgress(id) { return Tree.groupProgress(tasks, id); }
-function getAllDescendants(id) { return Tree.getAllDescendants(tasks, id); }
-function isDescendant(ancestorId, checkId) { return Tree.isDescendant(tasks, ancestorId, checkId); }
-function getTaskDepth(id) { return Tree.getTaskDepth(tasks, id); }
+function taskById(id) {
+  return Tree.taskById(tasks, id);
+}
+function hasMilestoneDescendant(id) {
+  return Tree.hasMilestoneDescendant(tasks, id);
+}
+function getRowNum(taskId) {
+  return Tree.getRowNum(tasks, collapsed, milestoneView, taskId);
+}
+function getTaskByRowNum(num) {
+  return Tree.getTaskByRowNum(tasks, collapsed, milestoneView, num);
+}
+function getVisibleRows() {
+  return Tree.getVisibleRows(tasks, collapsed, milestoneView);
+}
+function groupBounds(id) {
+  return Tree.groupBounds(tasks, id);
+}
+function groupProgress(id) {
+  return Tree.groupProgress(tasks, id);
+}
+function getAllDescendants(id) {
+  return Tree.getAllDescendants(tasks, id);
+}
+function isDescendant(ancestorId, checkId) {
+  return Tree.isDescendant(tasks, ancestorId, checkId);
+}
+function getTaskDepth(id) {
+  return Tree.getTaskDepth(tasks, id);
+}
 
 function toggleCollapse(id) {
   if (collapsed.has(id)) collapsed.delete(id);
@@ -340,8 +1050,12 @@ let criticalTaskIds = new Set();
 
 /* critical-path adapters: pure logic in core/critical-path.js; bind global state. */
 const { prevWorkingDay } = CPM;
-function computeCriticalPath() { return CPM.computeCriticalPath(tasks); }
-function getCriticalPredTaskIds(task) { return CPM.getCriticalPredTaskIds(tasks, criticalTaskIds, task); }
+function computeCriticalPath() {
+  return CPM.computeCriticalPath(tasks);
+}
+function getCriticalPredTaskIds(task) {
+  return CPM.getCriticalPredTaskIds(tasks, criticalTaskIds, task);
+}
 
 function toggleCriticalPath() {
   showCriticalPath = !showCriticalPath;
@@ -351,16 +1065,35 @@ function toggleCriticalPath() {
   render();
 }
 
+function toggleWBS() {
+  showWBS = !showWBS;
+  document.body.classList.toggle('show-wbs', showWBS);
+  localStorage.setItem('gp_showWBS', showWBS ? '1' : '0');
+  document.getElementById('wbsBtn')?.classList.toggle('active', showWBS);
+  render();
+}
+
 /* deps adapters: pure logic in core/deps.js; bind global state. */
-function buildDepsText(task) { return Deps.buildDepsText(tasks, collapsed, milestoneView, task); }
-function wouldCreateCycle(taskId, newDepId) { return Deps.wouldCreateCycle(tasks, taskId, newDepId); }
+function buildDepsText(task) {
+  return Deps.buildDepsText(tasks, collapsed, milestoneView, task);
+}
+function wouldCreateCycle(taskId, newDepId) {
+  return Deps.wouldCreateCycle(tasks, taskId, newDepId);
+}
 
 const { lagsFromParsed } = Deps;
-function parseDepInput(val, taskId) { return Deps.parseDepInput(val, taskId, tasks, collapsed, milestoneView); }
+function parseDepInput(val, taskId) {
+  return Deps.parseDepInput(val, taskId, tasks, collapsed, milestoneView);
+}
 
 /* schedule adapters: pure logic in core/schedule.js; bind global state. */
-function allGroupMembersScheduled(groupId, scheduled) { return Schedule.allGroupMembersScheduled(tasks, groupId, scheduled); }
-function scheduleTasks() { const p = curProj(); return p ? Schedule.scheduleTasks(tasks, p.startDate) : []; }
+function allGroupMembersScheduled(groupId, scheduled) {
+  return Schedule.allGroupMembersScheduled(tasks, groupId, scheduled);
+}
+function scheduleTasks() {
+  const p = curProj();
+  return p ? Schedule.scheduleTasks(tasks, p.startDate) : [];
+}
 
 function reorderTask(srcId, targetId, insertBefore) {
   const src = taskById(srcId);
@@ -372,9 +1105,7 @@ function reorderTask(srcId, targetId, insertBefore) {
 
   // New parent: dropping on a group row → child of that group
   //             dropping on task/milestone → sibling of target
-  src.parent = (target.type === 'group' && !insertBefore)
-    ? target.id
-    : target.parent;
+  src.parent = target.type === 'group' && !insertBefore ? target.id : target.parent;
 
   // Reorder in tasks array
   const srcIdx = tasks.indexOf(src);
@@ -388,9 +1119,19 @@ function reorderTask(srcId, targetId, insertBefore) {
 
 function outdentTask(id) {
   const task = taskById(id);
-  if (!task || task.parent === null) return;
+  if (!task) {
+    showStatus(t('modal.outdentLimit'));
+    return;
+  }
+  if (task.parent === null) {
+    showStatus(t('modal.outdentLimit'));
+    return;
+  }
   const parent = taskById(task.parent);
-  if (!parent || parent.parent === null) return;
+  if (!parent || parent.parent === null) {
+    showStatus(t('modal.outdentLimit'));
+    return;
+  }
 
   pushHistory();
 
@@ -408,22 +1149,23 @@ function outdentTask(id) {
   tasks.length = 0;
   tasks.push(..._remaining);
 
-  // Find insertion point: after last descendant of parent in remaining tasks
-  function isDescOf(checkId, ancestorId) {
-    let cur = taskById(checkId);
-    const seen = new Set();
-    while (cur && cur.parent !== null) {
-      if (seen.has(cur.id)) break;
-      seen.add(cur.id);
-      if (cur.parent === ancestorId) return true;
-      cur = taskById(cur.parent);
+  // Find insertion point: after last descendant of parent in remaining tasks.
+  // Build a Set of all descendants of `parent` first, then a single linear scan.
+  const parentDescendants = new Set();
+  const stack = [parent.id];
+  while (stack.length) {
+    const pid = stack.pop();
+    for (const c of tasks) {
+      if (c.parent === pid) {
+        parentDescendants.add(c.id);
+        stack.push(c.id);
+      }
     }
-    return false;
   }
   const parentIdx = tasks.findIndex(t => t.id === parent.id);
   let insertIdx = parentIdx;
   for (let i = parentIdx + 1; i < tasks.length; i++) {
-    if (isDescOf(tasks[i].id, parent.id)) insertIdx = i;
+    if (parentDescendants.has(tasks[i].id)) insertIdx = i;
   }
 
   // Update parent and reinsert after parent's subtree
@@ -440,26 +1182,37 @@ function showStatus(msg) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'statusToast';
-    el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--t1);color:var(--surface);padding:6px 16px;border-radius:8px;font-size:12px;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none';
+    el.style.cssText =
+      'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--t1);color:var(--surface);padding:6px 16px;border-radius:8px;font-size:12px;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none';
     document.body.appendChild(el);
   }
   el.textContent = msg;
   el.style.opacity = '1';
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.style.opacity = '0', 2000);
+  el._t = setTimeout(() => (el.style.opacity = '0'), 2000);
 }
 
 function indentTask(id) {
   const task = tasks.find(t => t.id === id);
-  if (!task) return;
+  if (!task) {
+    showStatus(t('modal.indentNoPrev'));
+    return;
+  }
   const myIdx = tasks.findIndex(t => t.id === id);
   let prevSibling = null;
   for (let i = myIdx - 1; i >= 0; i--) {
-    if (tasks[i].parent === task.parent) { prevSibling = tasks[i]; break; }
+    if (tasks[i].parent === task.parent) {
+      prevSibling = tasks[i];
+      break;
+    }
   }
-  if (!prevSibling) return;
+  if (!prevSibling) {
+    showStatus(t('modal.indentNoPrev'));
+    return;
+  }
   if (getTaskDepth(prevSibling.id) + 1 >= 5) {
-    showStatus(t('modal.indentLimit')); return;
+    showStatus(t('modal.indentLimit'));
+    return;
   }
   pushHistory();
   task.parent = prevSibling.id;
@@ -513,13 +1266,15 @@ function updateReadOnly() {
   if (badge) badge.style.display = isReadOnly ? 'flex' : 'none';
   // shareBtn and collabBtn only for own projects
   const isOwnProj = !_isShareLinkMode && !isSharedProject(cp);
-  ['shareBtn','collabBtn'].forEach(id => {
+  ['shareBtn', 'collabBtn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = isOwnProj ? '' : 'none';
   });
 }
 
-function getOwnerId() { return Local.getOwnerId(); }
+function getOwnerId() {
+  return Local.getOwnerId();
+}
 
 /* ═══════════════════════════════════════════
    COLLABORATION — SHARED PROJECTS
@@ -527,7 +1282,9 @@ function getOwnerId() { return Local.getOwnerId(); }
 let _sharedChannels = [];
 const _shareMap = new Map();
 
-function shareKey(ownerId, projectId) { return `${ownerId}:${projectId}`; }
+function shareKey(ownerId, projectId) {
+  return `${ownerId}:${projectId}`;
+}
 function recordShare(ownerId, projectId, permission) {
   _shareMap.set(shareKey(ownerId, projectId), permission);
 }
@@ -535,8 +1292,13 @@ function getSharePermission(ownerId, projectId) {
   return _shareMap.get(shareKey(ownerId, projectId));
 }
 function isSharedProject(proj) {
-  return proj && proj.ownerId && currentUser && proj.ownerId !== currentUser.uid &&
-    _shareMap.has(shareKey(proj.ownerId, proj.id));
+  return (
+    proj &&
+    proj.ownerId &&
+    currentUser &&
+    proj.ownerId !== currentUser.uid &&
+    _shareMap.has(shareKey(proj.ownerId, proj.id))
+  );
 }
 function isReadOnlyShared(proj) {
   return isSharedProject(proj) && getSharePermission(proj.ownerId, proj.id) === 'read';
@@ -578,7 +1340,9 @@ async function loadSharedProjects() {
     }
 
     setupSharedRealtime(Object.keys(byOwner));
-  } catch(e) { console.error('loadSharedProjects:', e); }
+  } catch (e) {
+    console.error('loadSharedProjects:', e);
+  }
 }
 
 function setupSharedRealtime(ownerIds) {
@@ -588,34 +1352,37 @@ function setupSharedRealtime(ownerIds) {
   ownerIds.forEach(ownerId => {
     let skipFirst = true;
     const unsub = Remote.watchUserData(ownerId, async () => {
-        if (skipFirst) { skipFirst = false; return; }
-        if (_pendingCloudWrites.size > 0) return;
-        const ownerData = await Remote.readUserData(ownerId);
-        if (!ownerData?.projects) return;
-        projects = projects.map(p => {
-          if (p.ownerId === ownerId) {
-            const raw = ownerData.projects.find(op => op.id === p.id);
-            if (raw) {
-              const fresh = validateProject(raw);
-              if (fresh) {
-                fresh.ownerId = ownerId;
-                return fresh;
-              }
+      if (skipFirst) {
+        skipFirst = false;
+        return;
+      }
+      if (_pendingCloudWrites.size > 0) return;
+      const ownerData = await Remote.readUserData(ownerId);
+      if (!ownerData?.projects) return;
+      projects = projects.map(p => {
+        if (p.ownerId === ownerId) {
+          const raw = ownerData.projects.find(op => op.id === p.id);
+          if (raw) {
+            const fresh = validateProject(raw);
+            if (fresh) {
+              fresh.ownerId = ownerId;
+              return fresh;
             }
           }
-          return p;
-        });
-        if (curProj()?.ownerId === ownerId) {
-          tasks = curProj().tasks;
-          nextId = curProj().nextId;
-          scheduleTasks();
-          recalcProjEnd();
         }
-        saveToLS();
-        updateProjUI();
-        render();
-        showSyncToast();
+        return p;
       });
+      if (curProj()?.ownerId === ownerId) {
+        tasks = curProj().tasks;
+        nextId = curProj().nextId;
+        scheduleTasks();
+        recalcProjEnd();
+      }
+      saveToLS();
+      updateProjUI();
+      render();
+      showSyncToast();
+    });
     _sharedChannels.push(unsub);
   });
 }
@@ -623,16 +1390,41 @@ function setupSharedRealtime(ownerIds) {
 /* ═══════════════════════════════════════════
    KEYBOARD SHORTCUTS
 ═══════════════════════════════════════════ */
+function toggleShortcutsOverlay() {
+  let el = document.getElementById('shortcutsOverlay');
+  if (!el) return;
+  el.classList.toggle('open');
+}
+
 document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    e.preventDefault();
+    undo();
+    return;
+  }
   if (document.querySelector('.overlay.open, .panel.open')) return;
   if (e.key !== 'Escape' && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
+  if (e.key === 'e') expandAll();
+  if (e.key === 'c') collapseAll();
+  if (e.key === 'f') fitToFrame();
+  if (e.key === 'r') setChartView('workload');
+  if (e.key === 'g') setChartView('gantt');
+  if (e.key === '?') toggleShortcutsOverlay();
   if (e.key === 't' || e.key === 'T') scrollToToday();
   if (e.key === 'd') setView('day');
   if (e.key === 'w') setView('week');
   if (e.key === 'm') setView('month');
   if (e.key === 'n') openModal();
-  if (e.key === 'Escape') { closeModal(); closeProjModal(); closeProjMenuOnly(); closeDeleteModal(); }
+  if (e.altKey && (e.key === 'w' || e.key === 'W')) {
+    e.preventDefault();
+    toggleWBS();
+  }
+  if (e.key === 'Escape') {
+    closeModal();
+    closeProjModal();
+    closeProjMenuOnly();
+    closeDeleteModal();
+  }
 });
 
 /* ═══════════════════════════════════════════
@@ -652,6 +1444,7 @@ function syncRenderDeps() {
   D.criticalTaskIds = criticalTaskIds;
   D.showBarDates = showBarDates;
   D.showBaseline = showBaseline;
+  D.showWBS = showWBS;
   D.isDark = isDark;
   D.PPD = PPD;
   D.PPDS = PPDS;
@@ -694,6 +1487,7 @@ function syncRenderDeps() {
   D.openEndEditor = openEndEditor;
   D.openWdayEditor = openWdayEditor;
   D.openAllDepsEditor = openAllDepsEditor;
+  D.openEditModal = openEditModal;
   D.addTaskInline = addTaskInline;
   D.indentTask = indentTask;
   D.outdentTask = outdentTask;
@@ -723,7 +1517,7 @@ function syncRenderDeps() {
     D.nextId = nextId;
     return id;
   };
-  D.loadProject = (proj) => {
+  D.loadProject = proj => {
     cancelInlineEditors();
     if (curProj()) curProj().nextId = nextId;
     currentProjId = proj.id;
@@ -747,11 +1541,23 @@ function syncRenderDeps() {
     D.tasks = [];
     D.nextId = 1;
   };
-  D.setProjects = (arr) => { projects = arr; D.projects = arr; };
-  D.setCurrentProjId = (id) => { currentProjId = id; D.currentProjId = id; };
-  D.setChartStart = (d) => { CHART_START = d; D.CHART_START = d; };
-  D.setChartEnd = (d) => { CHART_END = d; D.CHART_END = d; };
-  D.loadTasksFromSnapshot = (snap) => {
+  D.setProjects = arr => {
+    projects = arr;
+    D.projects = arr;
+  };
+  D.setCurrentProjId = id => {
+    currentProjId = id;
+    D.currentProjId = id;
+  };
+  D.setChartStart = d => {
+    CHART_START = d;
+    D.CHART_START = d;
+  };
+  D.setChartEnd = d => {
+    CHART_END = d;
+    D.CHART_END = d;
+  };
+  D.loadTasksFromSnapshot = snap => {
     const p = curProj();
     if (!p) return;
     p.tasks = JSON.parse(JSON.stringify(snap));
@@ -759,16 +1565,38 @@ function syncRenderDeps() {
     collapsed.clear();
     D.tasks = tasks;
   };
-  D.setShowBarDates = (v) => { showBarDates = v; D.showBarDates = v; };
-  D.setShowBaseline = (v) => { showBaseline = v; D.showBaseline = v; };
-  D.setIsDark = (v) => { isDark = v; D.isDark = v; };
-  D.setPPD = (v) => { PPD = v; D.PPD = v; };
+  D.setShowBarDates = v => {
+    showBarDates = v;
+    D.showBarDates = v;
+  };
+  D.setShowBaseline = v => {
+    showBaseline = v;
+    D.showBaseline = v;
+  };
+  D.setIsDark = v => {
+    isDark = v;
+    D.isDark = v;
+  };
+  D.setPPD = v => {
+    PPD = v;
+    D.PPD = v;
+  };
+  D.arrowStyle = localStorage.getItem('gp_arrowStyle') || 'bezier';
 
   // Auth/callback refs for auth/collab/admin modules
   D.GetCurrentUser = () => currentUser;
-  D.SetCurrentUser = (u) => { currentUser = u; D.currentUser = u; };
-  D.SetGuestMode = (v) => { _guestMode = v; D._guestMode = v; };
-  D.SetAppInitialized = (v) => { _appInitialized = v; D._appInitialized = v; };
+  D.SetCurrentUser = u => {
+    currentUser = u;
+    D.currentUser = u;
+  };
+  D.SetGuestMode = v => {
+    _guestMode = v;
+    D._guestMode = v;
+  };
+  D.SetAppInitialized = v => {
+    _appInitialized = v;
+    D._appInitialized = v;
+  };
   D.IsGuestMode = () => _guestMode;
   D.initApp = initApp;
   D.cleanupRealtime = cleanupRealtime;
@@ -809,7 +1637,14 @@ function setSyncDot(state) {
   const dot = document.getElementById('syncDot');
   if (!dot) return;
   dot.className = 'sync-dot' + (state ? ' ' + state : '');
-  dot.title = { saving:t('status.syncSaving'), ok:t('status.syncOk'), err:t('status.syncErr'), off:t('status.syncOff'), local:t('status.syncLocal') }[state] || t('status.syncDefault');
+  dot.title =
+    {
+      saving: t('status.syncSaving'),
+      ok: t('status.syncOk'),
+      err: t('status.syncErr'),
+      off: t('status.syncOff'),
+      local: t('status.syncLocal')
+    }[state] || t('status.syncDefault');
 }
 
 async function saveToCloud() {
@@ -822,11 +1657,18 @@ async function saveToCloud() {
     const cp = curProj();
 
     if (!cp) {
-      await Remote.writeUserData(currentUser.uid, { projects: [], currentProjId: null, nextProjId });
+      await Remote.writeUserData(currentUser.uid, {
+        projects: [],
+        currentProjId: null,
+        nextProjId
+      });
       setSyncDot('ok');
     } else if (isSharedProject(cp) && getSharePermission(cp.ownerId, cp.id) === 'edit') {
       const ownerData = await Remote.readUserData(cp.ownerId);
-      if (!ownerData?.projects) { setSyncDot('err'); return; }
+      if (!ownerData?.projects) {
+        setSyncDot('err');
+        return;
+      }
       const ownerProjects = ownerData.projects.map(p =>
         p.id === cp.id ? stripSharedFlags(cp) : p
       );
@@ -834,10 +1676,14 @@ async function saveToCloud() {
       setSyncDot('ok');
     } else if (!isSharedProject(cp)) {
       const ownProjects = projects.filter(p => !isSharedProject(p)).map(stripSharedFlags);
-      await Remote.writeUserData(currentUser.uid, { projects: ownProjects, currentProjId, nextProjId });
+      await Remote.writeUserData(currentUser.uid, {
+        projects: ownProjects,
+        currentProjId,
+        nextProjId
+      });
       setSyncDot('ok');
     }
-  } catch(e) {
+  } catch (e) {
     console.error('saveToCloud failed', e);
     setSyncDot('err');
   } finally {
@@ -850,7 +1696,7 @@ async function loadFromCloud() {
   try {
     const s = await Remote.readUserData(currentUser.uid);
     if (!s) return false;
-    projects   = validateProjects(s.projects || []);
+    projects = validateProjects(s.projects || []);
     nextProjId = s.nextProjId ?? 1;
     if (!projects.length) {
       // User intentionally cleared all projects
@@ -859,14 +1705,18 @@ async function loadFromCloud() {
       nextId = 1;
       return true;
     }
-    currentProjId = (s.currentProjId && projects.find(p => p.id === Number(s.currentProjId)))
-      ? Number(s.currentProjId) : projects[0].id;
-    tasks  = curProj().tasks;
+    currentProjId =
+      s.currentProjId && projects.find(p => p.id === Number(s.currentProjId))
+        ? Number(s.currentProjId)
+        : projects[0].id;
+    tasks = curProj().tasks;
     nextId = curProj().nextId;
     CHART_START = new Date(curProj().startDate);
-    CHART_END   = new Date(curProj().endDate);
+    CHART_END = new Date(curProj().endDate);
     return true;
-  } catch(e) { return false; }
+  } catch (e) {
+    return false;
+  }
 }
 
 async function loadShareFromCloud(token) {
@@ -878,13 +1728,18 @@ async function loadShareFromCloud(token) {
   }
   try {
     return await Share.loadShareDoc(token);
-  } catch(e) { return null; }
+  } catch (e) {
+    return null;
+  }
 }
 
 let _realtimeUnsub = null;
 
 function cleanupRealtime() {
-  if (_realtimeUnsub) { _realtimeUnsub(); _realtimeUnsub = null; }
+  if (_realtimeUnsub) {
+    _realtimeUnsub();
+    _realtimeUnsub = null;
+  }
   _sharedChannels.forEach(unsub => unsub());
   _sharedChannels = [];
   _shareMap.clear();
@@ -897,14 +1752,23 @@ function setupRealtime() {
   if (_realtimeUnsub) _realtimeUnsub();
   let skipFirst = true;
   _realtimeUnsub = Remote.watchUserData(currentUser.uid, async () => {
-      if (skipFirst) { skipFirst = false; return; }
-      if (_pendingCloudWrites.size > 0) return;
-      const ok = await loadFromCloud();
-      if (ok) {
-        if (projects.length) { scheduleTasks(); recalcProjEnd(); }
-        saveToLS(); updateProjUI(); render(); showSyncToast();
+    if (skipFirst) {
+      skipFirst = false;
+      return;
+    }
+    if (_pendingCloudWrites.size > 0) return;
+    const ok = await loadFromCloud();
+    if (ok) {
+      if (projects.length) {
+        scheduleTasks();
+        recalcProjEnd();
       }
-    });
+      saveToLS();
+      updateProjUI();
+      render();
+      showSyncToast();
+    }
+  });
 }
 
 function showSyncToast() {
@@ -912,12 +1776,13 @@ function showSyncToast() {
   if (!el) {
     el = document.createElement('div');
     el.id = 'syncToast';
-    el.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--t1);color:var(--surface);padding:8px 14px;border-radius:8px;font-size:12px;z-index:9999;opacity:0;transition:opacity .3s';
+    el.style.cssText =
+      'position:fixed;bottom:20px;right:20px;background:var(--t1);color:var(--surface);padding:8px 14px;border-radius:8px;font-size:12px;z-index:9999;opacity:0;transition:opacity .3s';
     document.body.appendChild(el);
   }
   el.textContent = '📡 ' + t('status.dataUpdated');
   el.style.opacity = '1';
-  setTimeout(() => el.style.opacity = '0', 2500);
+  setTimeout(() => (el.style.opacity = '0'), 2500);
 }
 
 /* ═══════════════════════════════════════════
@@ -928,23 +1793,29 @@ function saveToLS() {
     if (curProj()) curProj().nextId = nextId;
     const ownProjects = projects.filter(p => !isSharedProject(p)).map(stripSharedFlags);
     Local.saveToLS({ projects: ownProjects, currentProjId, nextProjId });
-  } catch(e) { console.error('saveToLS:', e); }
+  } catch (e) {
+    console.error('saveToLS:', e);
+  }
 }
 
 function loadFromLS() {
   try {
     const d = Local.loadFromLS();
     if (!d?.projects?.length) return false;
-    projects   = validateProjects(d.projects);
+    projects = validateProjects(d.projects);
     nextProjId = d.nextProjId ?? projects.length + 1;
-    currentProjId = (d.currentProjId && projects.find(p => p.id === Number(d.currentProjId)))
-      ? Number(d.currentProjId) : projects[0].id;
-    tasks  = curProj().tasks;
+    currentProjId =
+      d.currentProjId && projects.find(p => p.id === Number(d.currentProjId))
+        ? Number(d.currentProjId)
+        : projects[0].id;
+    tasks = curProj().tasks;
     nextId = curProj().nextId;
     CHART_START = new Date(curProj().startDate);
-    CHART_END   = new Date(curProj().endDate);
+    CHART_END = new Date(curProj().endDate);
     return true;
-  } catch(e) { return false; }
+  } catch (e) {
+    return false;
+  }
 }
 
 function showApp() {
@@ -957,7 +1828,9 @@ function isSafeAvatarUrl(url) {
   try {
     const u = new URL(url);
     return u.protocol === 'https:';
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 function updateUserDisplay() {
@@ -968,7 +1841,7 @@ function updateUserDisplay() {
   if (!el) return;
   el.innerHTML = avatar
     ? `<img src="${esc(avatar)}" title="${esc(name)}" style="width:26px;height:26px;border-radius:50%;object-fit:cover">`
-    : `<div title="${esc(name)}" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${esc((name[0]||'U')).toUpperCase()}</div>`;
+    : `<div title="${esc(name)}" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${esc(name[0] || 'U').toUpperCase()}</div>`;
   document.getElementById('signOutBtn').style.display = '';
 }
 
@@ -994,13 +1867,14 @@ async function initApp() {
     recalcProjEnd();
   }
   render();
-  setSyncDot(cloudOk ? 'ok' : (_guestMode ? 'off' : 'err'));
+  setSyncDot(cloudOk ? 'ok' : _guestMode ? 'off' : 'err');
   setTimeout(scrollToToday, 120);
   const adminBtn = document.getElementById('adminBtn');
   if (adminBtn) adminBtn.style.display = isAdmin() ? '' : 'none';
   if (_guestMode) {
     const el = document.getElementById('userDisplay');
-    if (el) el.innerHTML = `<div title="Guest mode (local)" style="width:26px;height:26px;border-radius:50%;background:var(--t4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">G</div>`;
+    if (el)
+      el.innerHTML = `<div title="Guest mode (local)" style="width:26px;height:26px;border-radius:50%;background:var(--t4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">G</div>`;
     document.getElementById('signOutBtn').style.display = '';
   }
 }
@@ -1010,51 +1884,93 @@ async function initApp() {
 ═══════════════════════════════════════════ */
 function wireStaticEvents() {
   const $ = id => document.getElementById(id);
-  const clk = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
-  const overlayClose = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', e => { if (e.target === el) fn(); }); };
+  const clk = (id, fn) => {
+    const el = $(id);
+    if (el) el.addEventListener('click', fn);
+  };
+  const overlayClose = (id, fn) => {
+    const el = $(id);
+    if (el)
+      el.addEventListener('click', e => {
+        if (e.target === el) fn();
+      });
+  };
 
   // ── Login ──
   clk('loginGoogleBtn', signInWithGoogle);
   const guestBtn = $('loginGuestBtn');
   if (guestBtn) {
     guestBtn.addEventListener('click', signInAsGuest);
-    guestBtn.addEventListener('mouseover', () => guestBtn.style.background = 'var(--s-hover)');
-    guestBtn.addEventListener('mouseout', () => guestBtn.style.background = 'transparent');
+    guestBtn.addEventListener('mouseover', () => (guestBtn.style.background = 'var(--s-hover)'));
+    guestBtn.addEventListener('mouseout', () => (guestBtn.style.background = 'transparent'));
   }
   const regNick = $('registerNickname');
-  if (regNick) regNick.addEventListener('keydown', e => { if (e.key === 'Enter') submitRegister(); });
+  if (regNick)
+    regNick.addEventListener('keydown', e => {
+      if (e.key === 'Enter') submitRegister();
+    });
   clk('registerSubmitBtn', submitRegister);
 
   // ── Toolbar ──
   const projSel = $('projSelector');
-  if (projSel) projSel.addEventListener('click', e => { if (!e.target.closest('#projMenu')) toggleProjMenu(e); });
+  if (projSel)
+    projSel.addEventListener('click', e => {
+      if (!e.target.closest('#projMenu')) toggleProjMenu(e);
+    });
   clk('shareBtn', openCollabModal);
   clk('addTaskBtn', openModal);
   clk('undoBtn', undo);
   clk('todayBtn', scrollToToday);
   clk('expandAllBtn', expandAll);
   clk('collapseAllBtn', collapseAll);
-  document.querySelectorAll('[data-cv]').forEach(b => b.addEventListener('click', () => setChartView(b.dataset.cv)));
-  document.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => setView(b.dataset.v)));
-  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => b.dataset.zoom === 'in' ? zoomIn() : zoomOut()));
+  document
+    .querySelectorAll('[data-cv]')
+    .forEach(b => b.addEventListener('click', () => setChartView(b.dataset.cv)));
+  document
+    .querySelectorAll('[data-v]')
+    .forEach(b => b.addEventListener('click', () => setView(b.dataset.v)));
+  document
+    .querySelectorAll('[data-zoom]')
+    .forEach(b =>
+      b.addEventListener('click', () => (b.dataset.zoom === 'in' ? zoomIn() : zoomOut()))
+    );
   clk('fitBtn', fitToFrame);
   clk('cpBtn', toggleCriticalPath);
+  clk('wbsBtn', toggleWBS);
   clk('exportToggleBtn', toggleExportMenu);
-  document.querySelectorAll('[data-export]').forEach(b => b.addEventListener('click', async () => {
-    const { exportPNG, exportPDF, exportCSV } = await import('./export.js');
-    const fmt = b.dataset.export;
-    if (fmt === 'png') exportPNG();
-    else if (fmt === 'pdf') exportPDF();
-    else if (fmt === 'csv') exportCSV();
-    closeExportMenu();
-  }));
+  document.querySelectorAll('[data-export]').forEach(b =>
+    b.addEventListener('click', async () => {
+      const { exportPNG, exportPDF, exportCSV, exportICalendar, openPrintSettings } =
+        await import('./export.js');
+      const fmt = b.dataset.export;
+      if (fmt === 'png') exportPNG();
+      else if (fmt === 'pdf') exportPDF();
+      else if (fmt === 'csv') exportCSV();
+      else if (fmt === 'ical') exportICalendar();
+      else if (fmt === 'print') openPrintSettings();
+      closeExportMenu();
+    })
+  );
   clk('collabBtn', openCollabModal);
   clk('darkBtn', toggleDark);
   clk('settingsBtn', toggleSettings);
-  const bd = $('settingBarDates'); if (bd) bd.addEventListener('change', onSettingBarDatesChange);
-  const bl = $('settingBaseline'); if (bl) bl.addEventListener('change', onSettingBaselineChange);
-  clk('setBaselineBtn', () => { setBaseline(); closeSettings(); });
-  clk('settingVersionBtn', () => { openVersionPanel(); closeSettings(); });
+  const bd = $('settingBarDates');
+  if (bd) bd.addEventListener('change', onSettingBarDatesChange);
+  const bl = $('settingBaseline');
+  if (bl) bl.addEventListener('change', onSettingBaselineChange);
+  clk('setBaselineBtn', () => {
+    setBaseline();
+    closeSettings();
+  });
+  clk('settingVersionBtn', () => {
+    openVersionPanel();
+    closeSettings();
+  });
+  clk('worktimeBtn', async () => {
+    const m = await import('./ui/worktime.js');
+    m.openWorkTimeModal();
+    closeSettings();
+  });
   clk('adminBtn', () => import('./admin.js').then(m => m.openAdminPanel()));
   clk('signOutBtn', signOut);
 
@@ -1062,7 +1978,10 @@ function wireStaticEvents() {
   clk('verBackdrop', closeVersionPanel);
   clk('verCloseBtn', closeVersionPanel);
   const verName = $('verNameInput');
-  if (verName) verName.addEventListener('keydown', e => { if (e.key === 'Enter') createVersion(); });
+  if (verName)
+    verName.addEventListener('keydown', e => {
+      if (e.key === 'Enter') createVersion();
+    });
   clk('createVersionBtn', createVersion);
 
   // ── Share modal ──
@@ -1072,8 +1991,13 @@ function wireStaticEvents() {
 
   // ── Collab modal ──
   overlayClose('collabOverlay', closeCollabModal);
-  const cProj = $('collabProjSelect'); if (cProj) cProj.addEventListener('change', onCollabProjChange);
-  const cEmail = $('collabEmailInput'); if (cEmail) cEmail.addEventListener('keydown', e => { if (e.key === 'Enter') addShare(); });
+  const cProj = $('collabProjSelect');
+  if (cProj) cProj.addEventListener('change', onCollabProjChange);
+  const cEmail = $('collabEmailInput');
+  if (cEmail)
+    cEmail.addEventListener('keydown', e => {
+      if (e.key === 'Enter') addShare();
+    });
   clk('addShareBtn', addShare);
   clk('closeCollabBtn', closeCollabModal);
 
@@ -1088,7 +2012,8 @@ function wireStaticEvents() {
   // ── Task modal ──
   overlayClose('overlay', () => closeModal());
   clk('taskModalCloseBtn', () => closeModal());
-  const fType = $('fType'); if (fType) fType.addEventListener('change', updateModalForType);
+  const fType = $('fType');
+  if (fType) fType.addEventListener('change', updateModalForType);
   const fDepsList = $('fDepsList');
   if (fDepsList) {
     fDepsList.addEventListener('mousedown', e => e.preventDefault());
@@ -1100,58 +2025,82 @@ function wireStaticEvents() {
     });
   }
   const fDone = $('fDone');
-  if (fDone) fDone.addEventListener('click', () => {
-    fDone.classList.toggle('done');
-    fDone.textContent = fDone.classList.contains('done') ? '✓' : '';
-    if (fDone.classList.contains('done')) $('fProgress').value = 100;
-  });
+  if (fDone)
+    fDone.addEventListener('click', () => {
+      fDone.classList.toggle('done');
+      fDone.textContent = fDone.classList.contains('done') ? '✓' : '';
+      if (fDone.classList.contains('done')) $('fProgress').value = 100;
+    });
   clk('taskCancelBtn', () => closeModal());
   clk('modal-submit', submitTask);
+
+  // ── Advanced options toggle ──
+  const advToggle = document.getElementById('modalAdvancedToggle');
+  if (advToggle)
+    advToggle.addEventListener('click', () =>
+      document.getElementById('modalAdvanced')?.classList.toggle('collapsed')
+    );
+
+  // ── Arrow style selector ──
+  const arrowSel = document.getElementById('settingArrowStyle');
+  if (arrowSel) {
+    arrowSel.value = D.arrowStyle;
+    arrowSel.addEventListener('change', () => {
+      D.arrowStyle = arrowSel.value;
+      localStorage.setItem('gp_arrowStyle', arrowSel.value);
+      render();
+    });
+  }
 
   // ── Project modal ──
   overlayClose('projOverlay', () => closeProjModal());
   clk('projModalCloseBtn', () => closeProjModal());
-  const pTpl = $('pTemplate'); if (pTpl) pTpl.addEventListener('change', onTemplateChange);
+  const pTpl = $('pTemplate');
+  if (pTpl) pTpl.addEventListener('change', onTemplateChange);
   clk('projCancelBtn', () => closeProjModal());
   clk('projSubmitBtn', submitProject);
 
   // ── Dynamic delegation ──
   const verList = $('verList');
-  if (verList) verList.addEventListener('click', e => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    const id = Number(btn.dataset.id);
-    if (btn.dataset.action === 'restore-version') restoreVersion(id);
-    else if (btn.dataset.action === 'delete-version') deleteVersion(id);
-  });
+  if (verList)
+    verList.addEventListener('click', e => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      if (btn.dataset.action === 'restore-version') restoreVersion(id);
+      else if (btn.dataset.action === 'delete-version') deleteVersion(id);
+    });
 
   const projMenu = $('projMenu');
-  if (projMenu) projMenu.addEventListener('click', e => {
-    e.stopPropagation();
-    const actEl = e.target.closest('[data-action]');
-    if (actEl) {
-      const pid = Number(actEl.dataset.pid);
-      if (actEl.dataset.action === 'edit-proj') openEditProjModal(pid, e);
-      else if (actEl.dataset.action === 'delete-proj') deleteProject(pid, e);
-      return;
-    }
-    const item = e.target.closest('.proj-item');
-    if (item && item.dataset.pid) switchProject(Number(item.dataset.pid));
-  });
+  if (projMenu)
+    projMenu.addEventListener('click', e => {
+      e.stopPropagation();
+      const actEl = e.target.closest('[data-action]');
+      if (actEl) {
+        const pid = Number(actEl.dataset.pid);
+        if (actEl.dataset.action === 'edit-proj') openEditProjModal(pid, e);
+        else if (actEl.dataset.action === 'delete-proj') deleteProject(pid, e);
+        return;
+      }
+      const item = e.target.closest('.proj-item');
+      if (item && item.dataset.pid) switchProject(Number(item.dataset.pid));
+    });
 
   const csl = $('collabShareList');
-  if (csl) csl.addEventListener('click', e => {
-    const btn = e.target.closest('[data-action="remove-share"]');
-    if (!btn) return;
-    removeShare(btn.dataset.shareId, btn.dataset.email);
-  });
+  if (csl)
+    csl.addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="remove-share"]');
+      if (!btn) return;
+      removeShare(btn.dataset.shareId, btn.dataset.email);
+    });
 
   const aul = $('adminUserList');
-  if (aul) aul.addEventListener('click', e => {
-    const btn = e.target.closest('[data-action="delete-user"]');
-    if (!btn) return;
-    import('./admin.js').then(m => m.deleteUser(btn.dataset.email));
-  });
+  if (aul)
+    aul.addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="delete-user"]');
+      if (!btn) return;
+      import('./admin.js').then(m => m.deleteUser(btn.dataset.email));
+    });
 }
 
 /* ═══════════════════════════════════════════
@@ -1174,6 +2123,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       render();
     });
   }
+
+  // Restore WBS toggle state
+  showWBS = localStorage.getItem('gp_showWBS') === '1';
+  if (showWBS) document.body.classList.add('show-wbs');
+
+  initContextMenu();
 
   syncRenderDeps();
   const urlParams = new URLSearchParams(location.search);
@@ -1203,10 +2158,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     projects = [validated];
     currentProjId = validated.id;
-    tasks  = curProj().tasks;
+    tasks = curProj().tasks;
     nextId = curProj().nextId || 100;
     CHART_START = new Date(curProj().startDate);
-    CHART_END   = new Date(curProj().endDate);
+    CHART_END = new Date(curProj().endDate);
     isReadOnly = true;
     document.body.classList.add('readonly');
     setupColResizers();
@@ -1225,12 +2180,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const chk = document.getElementById('authChecking');
     const panel = document.getElementById('loginPanel');
     if (chk) chk.style.display = 'none';
-    if (panel && document.getElementById('registerPanel').style.display === 'none') panel.style.display = 'flex';
+    if (panel && document.getElementById('registerPanel').style.display === 'none')
+      panel.style.display = 'flex';
   };
   // 保險：Firebase 無回應（離線、被擋）時 4 秒後仍顯示登入按鈕
-  const authFallback = setTimeout(() => { if (!_appInitialized) revealLogin(); }, 4000);
+  const authFallback = setTimeout(() => {
+    if (!_appInitialized) revealLogin();
+  }, 4000);
 
-  onAuthStateChanged(auth, async (user) => {
+  onAuthStateChanged(auth, async user => {
     if (_appInitialized) return;
     clearTimeout(authFallback);
     if (user) {
@@ -1248,4 +2206,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
-

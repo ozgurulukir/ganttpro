@@ -14,7 +14,9 @@ import {
   groupProgress,
   getAllDescendants,
   isDescendant,
-  getTaskDepth
+  getTaskDepth,
+  getWBSCode,
+  getWBSMap
 } from '../src/core/tree.js';
 
 /* Fixture: a two-level tree with a group, tasks, and milestones.
@@ -197,4 +199,33 @@ test('getTreeLines — guide-line types per ancestor column', () => {
   assert.deepEqual(getTreeLines(rows, 1), ['fork']); // B: D follows at same depth
   assert.deepEqual(getTreeLines(rows, 2), ['pipe', 'last']); // C: pipe col0, last in branch
   assert.deepEqual(getTreeLines(rows, 3), ['last']); // D: final sibling
+});
+
+test('getWBSCode — dot-separated 1-based sibling indices from root', () => {
+  // Sibling order: root1 (idx 1 at root), m2 (idx 2 at root)
+  // root1 children: t1(1), t2(2), g2(3)
+  // g2 children: t3(1), m1(2)
+  assert.equal(getWBSCode(TASKS, 'root1'), '1');
+  assert.equal(getWBSCode(TASKS, 'm2'), '2');
+  assert.equal(getWBSCode(TASKS, 't1'), '1.1');
+  assert.equal(getWBSCode(TASKS, 't2'), '1.2');
+  assert.equal(getWBSCode(TASKS, 'g2'), '1.3');
+  assert.equal(getWBSCode(TASKS, 't3'), '1.3.1');
+  assert.equal(getWBSCode(TASKS, 'm1'), '1.3.2');
+});
+
+test('getWBSMap — bulk result matches per-task getWBSCode for every task', () => {
+  const map = getWBSMap(TASKS);
+  assert.equal(map.size, TASKS.length);
+  for (const t of TASKS) {
+    assert.equal(map.get(t.id), getWBSCode(TASKS, t.id));
+  }
+});
+
+test('getWBSMap — empty task list returns empty map', () => {
+  assert.equal(getWBSMap([]).size, 0);
+});
+
+test('getWBSCode — missing task returns empty string', () => {
+  assert.equal(getWBSCode(TASKS, 'nonexistent'), '');
 });

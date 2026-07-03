@@ -4,6 +4,7 @@ import { countWorkingDays, addWorkingDays } from '../core/calendar.js';
 import { lagsFromParsed } from '../core/deps.js';
 import { esc } from '../core/format.js';
 import { t } from '../i18n/index.js';
+import { logAudit } from '../data/audit.js';
 
 /* Modal-local state (moved from main.js — only used here). */
 let editingTaskId = null;
@@ -20,7 +21,12 @@ export function cancelInlineEditors() {
   _blockInlineCommit = false;
 }
 
-export function populateModal(excludeId = null, checkedDeps = [], presetParent = null, isDone = false) {
+export function populateModal(
+  excludeId = null,
+  checkedDeps = [],
+  presetParent = null,
+  isDone = false
+) {
   const { tasks, projects, getAllDescendants } = D;
   // Parent groups（含「無」選項；編輯時排除自己與後代避免循環）
   const sel = document.getElementById('fParent');
@@ -29,19 +35,29 @@ export function populateModal(excludeId = null, checkedDeps = [], presetParent =
   noneOpt.value = '';
   noneOpt.textContent = t('modal.noneTopLevel');
   sel.appendChild(noneOpt);
-  const excludeSet = excludeId !== null ? new Set([excludeId, ...getAllDescendants(excludeId)]) : new Set();
-  tasks.filter(t => t.type === 'group' && !excludeSet.has(t.id)).forEach(t => {
-    const o = document.createElement('option');
-    o.value = t.id;
-    o.textContent = t.name;
-    if (presetParent && t.id === presetParent) o.selected = true;
-    sel.appendChild(o);
-  });
+  const excludeSet =
+    excludeId !== null ? new Set([excludeId, ...getAllDescendants(excludeId)]) : new Set();
+  tasks
+    .filter(t => t.type === 'group' && !excludeSet.has(t.id))
+    .forEach(t => {
+      const o = document.createElement('option');
+      o.value = t.id;
+      o.textContent = t.name;
+      if (presetParent && t.id === presetParent) o.selected = true;
+      sel.appendChild(o);
+    });
 
   // Assignee suggestions（現有專案中出現過的負責人）
   const dl = document.getElementById('assigneeList');
   dl.innerHTML = '';
-  [...new Set(projects.flatMap(p => p.tasks || []).map(t => t.assignee).filter(Boolean))].forEach(n => {
+  [
+    ...new Set(
+      projects
+        .flatMap(p => p.tasks || [])
+        .map(t => t.assignee)
+        .filter(Boolean)
+    )
+  ].forEach(n => {
     const o = document.createElement('option');
     o.value = n;
     dl.appendChild(o);
@@ -70,7 +86,7 @@ export function syncEndFromWday() {
 }
 
 // Wire up modal date ↔ workday sync once on page load
-(function() {
+(function () {
   document.getElementById('fStart').addEventListener('change', syncWday);
   document.getElementById('fEnd').addEventListener('change', syncWday);
   document.getElementById('fWday').addEventListener('change', syncEndFromWday);
@@ -79,13 +95,14 @@ export function syncEndFromWday() {
 
 export function updateModalForType() {
   const typeVal = document.getElementById('fType').value;
-  const isMs = typeVal === 'milestone', isGrp = typeVal === 'group';
+  const isMs = typeVal === 'milestone',
+    isGrp = typeVal === 'group';
   document.getElementById('rowDates').style.display = isGrp ? 'none' : '';
-  document.getElementById('colEnd').style.display   = isMs ? 'none' : '';
-  document.getElementById('colWday').style.display  = isMs ? 'none' : '';
-  document.getElementById('lblStart').textContent   = isMs ? t('modal.date') : t('modal.startDate');
-  document.getElementById('rowDone').style.display  = (isMs || isGrp) ? 'none' : 'flex';
-  document.getElementById('rowDeps').style.display  = isGrp ? 'none' : '';
+  document.getElementById('colEnd').style.display = isMs ? 'none' : '';
+  document.getElementById('colWday').style.display = isMs ? 'none' : '';
+  document.getElementById('lblStart').textContent = isMs ? t('modal.date') : t('modal.startDate');
+  document.getElementById('rowDone').style.display = isMs || isGrp ? 'none' : 'flex';
+  document.getElementById('rowDeps').style.display = isGrp ? 'none' : '';
   document.getElementById('rowAssignee').style.display = isGrp ? 'none' : '';
 }
 
@@ -98,50 +115,77 @@ export function setupDepsInputListener(excludeId) {
 
   function updateTip() {
     const val = inp.value;
-    if (!val.trim()) { tip.innerHTML = ''; return; }
+    if (!val.trim()) {
+      tip.innerHTML = '';
+      return;
+    }
     const parsed = parseDepInput(val, excludeId);
-    tip.innerHTML = parsed.map(p => {
-      if (p.err) return `<span style="color:var(--red)">✕ ${p.raw}: ${p.err}</span>`;
-      const dt = taskById(p.taskId);
-      return `<span style="color:#10B981">✓ ${p.rowNum}${p.type} - ${esc(dt ? dt.name : '')}</span>`;
-    }).join('&nbsp;&nbsp;');
+    tip.innerHTML = parsed
+      .map(p => {
+        if (p.err) return `<span style="color:var(--red)">✕ ${p.raw}: ${p.err}</span>`;
+        const dt = taskById(p.taskId);
+        return `<span style="color:#10B981">✓ ${p.rowNum}${p.type} - ${esc(dt ? dt.name : '')}</span>`;
+      })
+      .join('&nbsp;&nbsp;');
   }
 
-  inp.oninput = () => { updateTip(); renderDepsDropdown(excludeId); };
-  inp.onfocus = () => { renderDepsDropdown(excludeId); if (list) list.style.display = 'block'; };
-  inp.onblur  = () => { setTimeout(() => { if (list) list.style.display = 'none'; }, 150); };
+  inp.oninput = () => {
+    updateTip();
+    renderDepsDropdown(excludeId);
+  };
+  inp.onfocus = () => {
+    renderDepsDropdown(excludeId);
+    if (list) list.style.display = 'block';
+  };
+  inp.onblur = () => {
+    setTimeout(() => {
+      if (list) list.style.display = 'none';
+    }, 150);
+  };
   updateTip();
 }
 
 export function renderDepsDropdown(excludeId) {
   const { parseDepInput, getVisibleRows } = D;
   const list = document.getElementById('fDepsList');
-  const inp  = document.getElementById('fDeps');
+  const inp = document.getElementById('fDeps');
   if (!list || !inp) return;
 
   const parsed = parseDepInput(inp.value, excludeId);
   const selMap = {};
-  parsed.filter(p => !p.err).forEach(p => { selMap[p.rowNum] = p.type; });
+  parsed
+    .filter(p => !p.err)
+    .forEach(p => {
+      selMap[p.rowNum] = p.type;
+    });
 
-  const rows = getVisibleRows().filter(({task}) =>
-    task.type !== 'group' && task.id !== excludeId
+  const rows = getVisibleRows().filter(
+    ({ task }) => task.type !== 'group' && task.id !== excludeId
   );
 
-  if (!rows.length) { list.innerHTML = `<div style="padding:10px;font-size:12px;color:var(--t4);text-align:center">${t('common.none')}</div>`; return; }
+  if (!rows.length) {
+    list.innerHTML = `<div style="padding:10px;font-size:12px;color:var(--t4);text-align:center">${t('common.none')}</div>`;
+    return;
+  }
 
-  list.innerHTML = rows.map(({task}, i) => {
-    const rowNum = i + 1;
-    const selType = selMap[rowNum] || '';
-    const isSel = !!selType;
-    const typeBtns = ['FS','SS','FF','SF'].map(t =>
-      `<button class="dep-type-btn${selType===t?' active':''}" data-action="add-dep" data-row="${rowNum}" data-type="${t}" data-exclude="${excludeId}">${t}</button>`
-    ).join('');
-    return `<div class="dep-li${isSel?' dep-sel':''}">
+  list.innerHTML = rows
+    .map(({ task }, i) => {
+      const rowNum = i + 1;
+      const selType = selMap[rowNum] || '';
+      const isSel = !!selType;
+      const typeBtns = ['FS', 'SS', 'FF', 'SF']
+        .map(
+          t =>
+            `<button class="dep-type-btn${selType === t ? ' active' : ''}" data-action="add-dep" data-row="${rowNum}" data-type="${t}" data-exclude="${excludeId}">${t}</button>`
+        )
+        .join('');
+      return `<div class="dep-li${isSel ? ' dep-sel' : ''}">
       <span class="dep-li-num">#${rowNum}</span>
       <span class="dep-li-name" title="${esc(task.name)}">${esc(task.name)}</span>
       <div class="dep-type-btns">${typeBtns}</div>
     </div>`;
-  }).join('');
+    })
+    .join('');
 }
 
 export function addDepToInput(rowNum, type, excludeId) {
@@ -171,7 +215,10 @@ export function addDepToInput(rowNum, type, excludeId) {
 export function openModal(unused, prefillDate) {
   const { isReadOnly, curProj, openProjModal, TODAY_STR } = D;
   if (isReadOnly) return;
-  if (!curProj()) { openProjModal(); return; }
+  if (!curProj()) {
+    openProjModal();
+    return;
+  }
   editingTaskId = null;
   document.getElementById('modal-title').textContent = t('modal.newTask');
   document.getElementById('modal-submit').textContent = t('modal.addTask');
@@ -185,6 +232,11 @@ export function openModal(unused, prefillDate) {
   document.getElementById('fDepsTip').textContent = '';
   document.getElementById('fProgress').value = 0;
   document.getElementById('fAssignee').value = '';
+  document.getElementById('fHyperlink').value = '';
+  document.getElementById('fApproval').value = '';
+  document.getElementById('fEvidence').value = '';
+  const adv = document.getElementById('modalAdvanced');
+  if (adv) adv.classList.add('collapsed');
   populateModal();
   updateModalForType();
   document.getElementById('overlay').classList.add('open');
@@ -203,22 +255,33 @@ export function openNameEditor(task, cell, isNew = false) {
   cell.innerHTML = '';
   cell.style.overflow = 'visible';
   cell.appendChild(inp);
-  inp.focus(); inp.select();
+  inp.focus();
+  inp.select();
   let committed = false;
   function commit() {
     if (_blockInlineCommit) return;
-    if (committed) return; committed = true;
+    if (committed) return;
+    committed = true;
     const name = inp.value.trim();
     if (!isNew) pushHistory();
     task.name = name || 'New Task';
-    recalcProjEnd(); render(); D.persist();
+    recalcProjEnd();
+    render();
+    D.persist();
   }
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      inp.blur();
+    }
     if (e.key === 'Escape') {
       committed = true;
-      if (isNew) { const _f = tasks.filter(t => t.id !== task.id); tasks.length = 0; tasks.push(..._f); }
+      if (isNew) {
+        const _f = tasks.filter(t => t.id !== task.id);
+        tasks.length = 0;
+        tasks.push(..._f);
+      }
       render();
     }
   });
@@ -252,7 +315,10 @@ export function addTaskInline(refTaskId) {
       const anc = tasks[i];
       let p = anc.parent;
       while (p !== null && p !== undefined) {
-        if (p === ref.id) { insertIdx = i; break; }
+        if (p === ref.id) {
+          insertIdx = i;
+          break;
+        }
         p = taskById(p)?.parent;
       }
     }
@@ -280,6 +346,11 @@ export function openModalUnder(taskId) {
   document.getElementById('fStart').value = TODAY_STR;
   document.getElementById('fEnd').value = TODAY_STR;
   document.getElementById('fType').value = 'task';
+  document.getElementById('fHyperlink').value = '';
+  document.getElementById('fApproval').value = '';
+  document.getElementById('fEvidence').value = '';
+  const adv = document.getElementById('modalAdvanced');
+  if (adv) adv.classList.add('collapsed');
   populateModal(null, [], parentId);
   updateModalForType();
   document.getElementById('overlay').classList.add('open');
@@ -298,13 +369,21 @@ export function openEditModal(taskId) {
   document.getElementById('fType').value = task.type;
   document.getElementById('fStart').value = task.start || task.date || TODAY_STR;
   document.getElementById('fEnd').value = task.end || task.date || TODAY_STR;
-  document.getElementById('fWday').value = (task.start && task.end) ? countWorkingDays(task.start, task.end) : 1;
-  document.getElementById('fProgress').value = task.done ? 100 : (task.progress || 0);
+  document.getElementById('fWday').value =
+    task.start && task.end ? countWorkingDays(task.start, task.end) : 1;
+  document.getElementById('fProgress').value = task.done ? 100 : task.progress || 0;
   document.getElementById('fAssignee').value = task.assignee || '';
   populateModal(taskId, task.deps || [], task.parent, task.done || false);
   selectedSdeps = new Set(task.sdeps || []);
   document.getElementById('fDeps').value = buildDepsText(task);
   document.getElementById('fDepsTip').textContent = '';
+  document.getElementById('fHyperlink').value = task.link || '';
+  document.getElementById('fApproval').value = task.approval || '';
+  document.getElementById('fEvidence').value = task.evidence || '';
+  if (task.link || task.approval || task.evidence) {
+    const adv = document.getElementById('modalAdvanced');
+    if (adv) adv.classList.remove('collapsed');
+  }
   updateModalForType();
   document.getElementById('overlay').classList.add('open');
   setupDepsInputListener(taskId);
@@ -331,7 +410,9 @@ export function confirmDeleteTask(id) {
     msg.textContent = t('modal.deleteMsg');
   }
 
-  document.getElementById('deleteConfirmBtn').onclick = () => { executeDeleteTask(_deleteTargetId); };
+  document.getElementById('deleteConfirmBtn').onclick = () => {
+    executeDeleteTask(_deleteTargetId);
+  };
   document.getElementById('deleteOverlay').classList.add('open');
 }
 
@@ -343,15 +424,26 @@ export function closeDeleteModal(e) {
 }
 
 export function executeDeleteTask(id) {
-  const { tasks, getAllDescendants, pushHistory, render, saveToLS, saveToCloud, currentUser } = D;
+  const {
+    tasks,
+    taskById,
+    getAllDescendants,
+    pushHistory,
+    render,
+    saveToLS,
+    saveToCloud,
+    currentUser
+  } = D;
   document.getElementById('deleteOverlay').classList.remove('open');
   _deleteTargetId = null;
+  const deletedTask = taskById(id);
   pushHistory();
   const toDelete = new Set([id, ...getAllDescendants(id)]);
+  logAudit('taskDeleted', deletedTask ? deletedTask.name : id);
   // 清除其他任務對被刪除任務的依賴
   tasks.forEach(t => {
-    if (t.deps)   t.deps   = t.deps.filter(d => !toDelete.has(d));
-    if (t.sdeps)  t.sdeps  = t.sdeps.filter(d => !toDelete.has(d));
+    if (t.deps) t.deps = t.deps.filter(d => !toDelete.has(d));
+    if (t.sdeps) t.sdeps = t.sdeps.filter(d => !toDelete.has(d));
     if (t.ffdeps) t.ffdeps = t.ffdeps.filter(d => !toDelete.has(d));
     if (t.sfdeps) t.sfdeps = t.sfdeps.filter(d => !toDelete.has(d));
   });
@@ -363,9 +455,23 @@ export function executeDeleteTask(id) {
 }
 
 export function submitTask() {
-  const { tasks, curProj, taskById, getNextGroupColor, parseDepInput, pushHistory, render, scheduleTasks, recalcProjEnd, consumeNextId } = D;
+  const {
+    tasks,
+    curProj,
+    taskById,
+    getNextGroupColor,
+    parseDepInput,
+    pushHistory,
+    render,
+    scheduleTasks,
+    recalcProjEnd,
+    consumeNextId
+  } = D;
   const name = document.getElementById('fName').value.trim();
-  if (!name) { document.getElementById('fName').focus(); return; }
+  if (!name) {
+    document.getElementById('fName').focus();
+    return;
+  }
 
   const parentRaw = parseInt(document.getElementById('fParent').value);
   const parentId = Number.isNaN(parentRaw) ? null : parentRaw;
@@ -379,10 +485,18 @@ export function submitTask() {
   const depsRaw = document.getElementById('fDeps').value;
   const parsedDeps = parseDepInput(depsRaw, editingTaskId);
   const hasDepErr = parsedDeps.some(p => p.err);
-  const newDeps   = hasDepErr ? null : [...new Set(parsedDeps.filter(p=>p.type==='FS').map(p=>p.taskId))];
-  const newSdeps  = hasDepErr ? null : [...new Set(parsedDeps.filter(p=>p.type==='SS').map(p=>p.taskId))];
-  const newFfdeps = hasDepErr ? null : [...new Set(parsedDeps.filter(p=>p.type==='FF').map(p=>p.taskId))];
-  const newSfdeps = hasDepErr ? null : [...new Set(parsedDeps.filter(p=>p.type==='SF').map(p=>p.taskId))];
+  const newDeps = hasDepErr
+    ? null
+    : [...new Set(parsedDeps.filter(p => p.type === 'FS').map(p => p.taskId))];
+  const newSdeps = hasDepErr
+    ? null
+    : [...new Set(parsedDeps.filter(p => p.type === 'SS').map(p => p.taskId))];
+  const newFfdeps = hasDepErr
+    ? null
+    : [...new Set(parsedDeps.filter(p => p.type === 'FF').map(p => p.taskId))];
+  const newSfdeps = hasDepErr
+    ? null
+    : [...new Set(parsedDeps.filter(p => p.type === 'SF').map(p => p.taskId))];
 
   pushHistory();
   if (editingTaskId !== null) {
@@ -391,29 +505,65 @@ export function submitTask() {
     if (t) {
       t.name = name;
       t.type = type;
+      logAudit('taskEdited', name);
       t.parent = parentId;
       t.color = parent ? parent.color : t.color;
       if (!hasDepErr) {
-        t.deps = newDeps; t.sdeps = newSdeps;
-        if (newFfdeps.length) t.ffdeps = newFfdeps; else delete t.ffdeps;
-        if (newSfdeps.length) t.sfdeps = newSfdeps; else delete t.sfdeps;
+        t.deps = newDeps;
+        t.sdeps = newSdeps;
+        if (newFfdeps.length) t.ffdeps = newFfdeps;
+        else delete t.ffdeps;
+        if (newSfdeps.length) t.sfdeps = newSfdeps;
+        else delete t.sfdeps;
         const newLags = lagsFromParsed(parsedDeps);
-        if (Object.keys(newLags).length) t.lags = newLags; else delete t.lags;
+        if (Object.keys(newLags).length) t.lags = newLags;
+        else delete t.lags;
       }
       if (type === 'task') {
-        t.start = start; t.end = end; t.done = done; t.pinStart = true; delete t.date;
-        t.progress = done ? 100 : Math.max(0, Math.min(100, parseInt(document.getElementById('fProgress').value) || 0));
+        t.start = start;
+        t.end = end;
+        t.done = done;
+        t.pinStart = true;
+        delete t.date;
+        t.progress = done
+          ? 100
+          : Math.max(0, Math.min(100, parseInt(document.getElementById('fProgress').value) || 0));
+      } else if (type === 'milestone') {
+        t.date = start;
+        t.pinStart = true;
+        delete t.start;
+        delete t.end;
+      } else {
+        delete t.date;
+        delete t.start;
+        delete t.end;
+        delete t.pinStart;
       }
-      else if (type === 'milestone') { t.date = start; t.pinStart = true; delete t.start; delete t.end; }
-      else { delete t.date; delete t.start; delete t.end; delete t.pinStart; }
       const asg = document.getElementById('fAssignee').value.trim();
-      if (type !== 'group' && asg) t.assignee = asg; else delete t.assignee;
+      if (type !== 'group' && asg) t.assignee = asg;
+      else delete t.assignee;
+      const linkVal = document.getElementById('fHyperlink').value.trim();
+      if (linkVal) t.link = linkVal;
+      else delete t.link;
+      const approvalVal = document.getElementById('fApproval').value;
+      if (approvalVal) t.approval = approvalVal;
+      else delete t.approval;
+      const evidenceVal = document.getElementById('fEvidence').value.trim();
+      if (evidenceVal) t.evidence = evidenceVal;
+      else delete t.evidence;
     }
   } else {
     // Add new task
-    const autoColor = type === 'group' ? getNextGroupColor() : (parent ? parent.color : '#5E6AD2');
-    const t = { id: consumeNextId(), name, type, parent: parentId, color: autoColor,
-                deps: newDeps||[], sdeps: newSdeps||[] };
+    const autoColor = type === 'group' ? getNextGroupColor() : parent ? parent.color : '#5E6AD2';
+    const t = {
+      id: consumeNextId(),
+      name,
+      type,
+      parent: parentId,
+      color: autoColor,
+      deps: newDeps || [],
+      sdeps: newSdeps || []
+    };
     if (newFfdeps?.length) t.ffdeps = newFfdeps;
     if (newSfdeps?.length) t.sfdeps = newSfdeps;
     if (!hasDepErr) {
@@ -421,13 +571,27 @@ export function submitTask() {
       if (Object.keys(newLags).length) t.lags = newLags;
     }
     if (type === 'task') {
-      t.start = start; t.end = end; t.done = done; t.pinStart = true;
-      t.progress = done ? 100 : Math.max(0, Math.min(100, parseInt(document.getElementById('fProgress').value) || 0));
+      t.start = start;
+      t.end = end;
+      t.done = done;
+      t.pinStart = true;
+      t.progress = done
+        ? 100
+        : Math.max(0, Math.min(100, parseInt(document.getElementById('fProgress').value) || 0));
+    } else if (type === 'milestone') {
+      t.date = start;
+      t.pinStart = true;
     }
-    else if (type === 'milestone') { t.date = start; t.pinStart = true; }
     const asg = document.getElementById('fAssignee').value.trim();
     if (type !== 'group' && asg) t.assignee = asg;
+    const linkVal = document.getElementById('fHyperlink').value.trim();
+    if (linkVal) t.link = linkVal;
+    const approvalVal = document.getElementById('fApproval').value;
+    if (approvalVal) t.approval = approvalVal;
+    const evidenceVal = document.getElementById('fEvidence').value.trim();
+    if (evidenceVal) t.evidence = evidenceVal;
     tasks.push(t);
+    logAudit('taskCreated', name);
   }
 
   editingTaskId = null;
@@ -443,13 +607,16 @@ export function openDateEditor(task, field, cell) {
   const inp = document.createElement('input');
   inp.type = 'date';
   inp.className = 'inline-input';
-  inp.value = field === 'start' ? (task.start || '') : (task.end || '');
+  inp.value = field === 'start' ? task.start || '' : task.end || '';
   cell.innerHTML = '';
   cell.appendChild(inp);
   inp.focus();
   function commit() {
     if (_blockInlineCommit) return;
-    if (!inp.value) { render(); return; }
+    if (!inp.value) {
+      render();
+      return;
+    }
     if (field === 'start') {
       task.start = inp.value;
       if (task.end && task.end < task.start) task.end = task.start;
@@ -457,15 +624,20 @@ export function openDateEditor(task, field, cell) {
       task.end = inp.value;
       if (task.start && task.start >= task.end) task.start = task.end; // keep start behind end
     }
-    recalcProjEnd(); render(); D.persist();
+    recalcProjEnd();
+    render();
+    D.persist();
   }
   inp.addEventListener('change', commit);
   inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => { if (e.key === 'Escape') render(); });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Escape') render();
+  });
 }
 
 export function openStartEditor(task, cell) {
-  const { pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser } = D;
+  const { pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser } =
+    D;
   const inp = document.createElement('input');
   inp.type = 'date';
   inp.className = 'inline-input';
@@ -473,7 +645,9 @@ export function openStartEditor(task, cell) {
   cell.innerHTML = '';
   cell.appendChild(inp);
   inp.focus();
-  try { inp.showPicker(); } catch(e) {}
+  try {
+    inp.showPicker();
+  } catch (e) {}
   function commit() {
     if (_blockInlineCommit) return;
     const val = inp.value;
@@ -490,11 +664,17 @@ export function openStartEditor(task, cell) {
     D.persist();
   }
   inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { render(); } });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') inp.blur();
+    if (e.key === 'Escape') {
+      render();
+    }
+  });
 }
 
 export function openEndEditor(task, cell) {
-  const { pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser } = D;
+  const { pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser } =
+    D;
   const inp = document.createElement('input');
   inp.type = 'date';
   inp.className = 'inline-input';
@@ -502,14 +682,20 @@ export function openEndEditor(task, cell) {
   cell.innerHTML = '';
   cell.appendChild(inp);
   inp.focus();
-  try { inp.showPicker(); } catch(e) {}
+  try {
+    inp.showPicker();
+  } catch (e) {}
   function commit() {
     if (_blockInlineCommit) return;
     const val = inp.value;
     if (val && val !== task.end) {
       pushHistory();
-      if (val < (task.start || '')) { task.start = val; task.wday = 1; }
-      else { task.wday = countWorkingDays(task.start, val); }
+      if (val < (task.start || '')) {
+        task.start = val;
+        task.wday = 1;
+      } else {
+        task.wday = countWorkingDays(task.start, val);
+      }
       task.end = val;
       task.pinStart = true;
     }
@@ -519,7 +705,10 @@ export function openEndEditor(task, cell) {
     D.persist();
   }
   inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') render(); });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') inp.blur();
+    if (e.key === 'Escape') render();
+  });
 }
 
 export function openWdayEditor(task, cell) {
@@ -532,7 +721,8 @@ export function openWdayEditor(task, cell) {
   inp.value = task.start && task.end ? countWorkingDays(task.start, task.end) : 1;
   cell.innerHTML = '';
   cell.appendChild(inp);
-  inp.focus(); inp.select();
+  inp.focus();
+  inp.select();
   function commit() {
     if (_blockInlineCommit) return;
     const days = parseInt(inp.value);
@@ -540,11 +730,18 @@ export function openWdayEditor(task, cell) {
       pushHistory();
       task.wday = days;
       scheduleTasks();
-      recalcProjEnd(); render(); D.persist();
-    } else { render(); }
+      recalcProjEnd();
+      render();
+      D.persist();
+    } else {
+      render();
+    }
   }
   inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') render(); });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') inp.blur();
+    if (e.key === 'Escape') render();
+  });
 }
 
 /* ── DEPS PICKER LOGIC ── */
@@ -580,7 +777,9 @@ export function removeDepTag(id) {
   selectedDeps.delete(id);
 }
 
-export function updateDepsTags() { /* 已由 fDeps 文字輸入取代 */ }
+export function updateDepsTags() {
+  /* 已由 fDeps 文字輸入取代 */
+}
 
 export function renderDepsMenu() {
   const { tasks, taskById } = D;
@@ -588,10 +787,8 @@ export function renderDepsMenu() {
   menu.innerHTML = '';
   const editingTask = taskById(depsExcludeId);
   const editingParent = editingTask ? editingTask.parent : null;
-  const list = tasks.filter(t =>
-    t.type !== 'milestone' &&
-    t.parent !== null &&
-    t.id !== depsExcludeId
+  const list = tasks.filter(
+    t => t.type !== 'milestone' && t.parent !== null && t.id !== depsExcludeId
   );
   if (list.length === 0) {
     menu.innerHTML = `<div style="padding:10px;text-align:center;font-size:12px;color:var(--t4)">${t('modal.noDepsAvailable')}</div>`;
@@ -611,10 +808,23 @@ export function renderDepsMenu() {
   });
 }
 
-export function openDepsEditor(task, cell) { openAllDepsEditor(task, cell); }
+export function openDepsEditor(task, cell) {
+  openAllDepsEditor(task, cell);
+}
 
 export function openAllDepsEditor(task, cell) {
-  const { parseDepInput, taskById, buildDepsText, pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser } = D;
+  const {
+    parseDepInput,
+    taskById,
+    buildDepsText,
+    pushHistory,
+    scheduleTasks,
+    recalcProjEnd,
+    render,
+    saveToLS,
+    saveToCloud,
+    currentUser
+  } = D;
   const wrap = document.createElement('div');
   wrap.className = 'deps-edit-wrap';
 
@@ -637,20 +847,29 @@ export function openAllDepsEditor(task, cell) {
   function positionTip() {
     const r = wrap.getBoundingClientRect();
     tip.style.left = r.left + 'px';
-    tip.style.top  = (r.bottom + 6) + 'px';
+    tip.style.top = r.bottom + 6 + 'px';
     tip.style.minWidth = Math.max(r.width, 200) + 'px';
   }
 
   function updateTip(v) {
-    if (!v.trim()) { tip.style.display = 'none'; return; }
+    if (!v.trim()) {
+      tip.style.display = 'none';
+      return;
+    }
     const parsed = parseDepInput(v, task.id);
-    if (!parsed.length) { tip.style.display = 'none'; return; }
+    if (!parsed.length) {
+      tip.style.display = 'none';
+      return;
+    }
     const rows = parsed.map(p => {
-      if (p.err) return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.raw}</span> <span style="color:#FCA5A5">✕ ${p.err}</span></div>`;
+      if (p.err)
+        return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.raw}</span> <span style="color:#FCA5A5">✕ ${p.err}</span></div>`;
       const dt = taskById(p.taskId);
       return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.rowNum}${p.type}</span> <span style="color:#6EE7B7">✓ ${esc(dt ? dt.name : '')} · ${p.type}</span></div>`;
     });
-    rows.push(`<div style="margin-top:4px;color:#9CA3AF;font-size:10px">${t('modal.enterConfirm')} &nbsp; ${t('modal.escCancel')}</div>`);
+    rows.push(
+      `<div style="margin-top:4px;color:#9CA3AF;font-size:10px">${t('modal.enterConfirm')} &nbsp; ${t('modal.escCancel')}</div>`
+    );
     tip.innerHTML = rows.join('');
     positionTip();
     tip.style.display = 'block';
@@ -662,17 +881,19 @@ export function openAllDepsEditor(task, cell) {
   let committed = false;
   function commit() {
     if (_blockInlineCommit) return;
-    if (committed) return; committed = true;
+    if (committed) return;
+    committed = true;
     const parsed = parseDepInput(inp.value, task.id);
     const hasErr = parsed.some(p => p.err);
     if (!hasErr) {
       pushHistory();
-      task.deps   = [...new Set(parsed.filter(p => p.type === 'FS').map(p => p.taskId))];
-      task.sdeps  = [...new Set(parsed.filter(p => p.type === 'SS').map(p => p.taskId))];
+      task.deps = [...new Set(parsed.filter(p => p.type === 'FS').map(p => p.taskId))];
+      task.sdeps = [...new Set(parsed.filter(p => p.type === 'SS').map(p => p.taskId))];
       task.ffdeps = [...new Set(parsed.filter(p => p.type === 'FF').map(p => p.taskId))];
       task.sfdeps = [...new Set(parsed.filter(p => p.type === 'SF').map(p => p.taskId))];
       const newLags = lagsFromParsed(parsed);
-      if (Object.keys(newLags).length) task.lags = newLags; else delete task.lags;
+      if (Object.keys(newLags).length) task.lags = newLags;
+      else delete task.lags;
       scheduleTasks();
       recalcProjEnd();
     }
@@ -683,9 +904,19 @@ export function openAllDepsEditor(task, cell) {
 
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
-    if (e.key === 'Escape') { committed = true; tip.remove(); render(); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      inp.blur();
+    }
+    if (e.key === 'Escape') {
+      committed = true;
+      tip.remove();
+      render();
+    }
   });
 
-  setTimeout(() => { inp.focus(); inp.select(); }, 30);
+  setTimeout(() => {
+    inp.focus();
+    inp.select();
+  }, 30);
 }

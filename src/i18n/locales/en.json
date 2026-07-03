@@ -145,12 +145,25 @@
     "deleteGroupMsg": "This group and its {{count}} sub-tasks will also be deleted. This action cannot be undone.",
     "deleteMsg": "This action cannot be undone.",
     "indentLimit": "Maximum depth reached (5 levels)",
+    "indentNoPrev": "No previous sibling to indent under",
+    "outdentLimit": "Cannot outdent: top level",
     "depSelfRef": "Cannot depend on itself",
     "depNotFound": "Row {{row}} not found",
     "depInvalidFormat": "Invalid format (expected: 2FS, 3SS, or 2FS+3)",
     "depCycle": "Circular dependency detected",
     "enterConfirm": "Enter to confirm",
-    "escCancel": "Esc to cancel"
+    "escCancel": "Esc to cancel",
+    "advanced": "Advanced Options",
+    "collapseAdvanced": "Collapse Options",
+    "hyperlink": "Hyperlink",
+    "hyperlinkPlaceholder": "Enter document link (copy only, won't open)",
+    "approvalStatus": "Approval Status",
+    "noApproval": "No Approval",
+    "pendingApproval": "Pending Approval",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "evidenceLink": "Evidence Link",
+    "evidencePlaceholder": "Enter evidence document link"
   },
   "project": {
     "noProjects": "— No projects —",
@@ -184,7 +197,11 @@
     "showBaseline": "Show baseline",
     "setBaseline": "📐 Set Baseline",
     "versionHistory": "🕐 Version History",
-    "versionNamePlaceholder": "Version name, e.g. v1.0 Requirements Review"
+    "versionNamePlaceholder": "Version name, e.g. v1.0 Requirements Review",
+    "arrowStyle": "Arrow Style",
+    "bezier": "Bezier",
+    "elbow": "Elbow",
+    "straight": "Straight"
   },
   "share": {
     "title": "🔗 Share Project: ",
@@ -269,5 +286,101 @@
     "newYearObserved": "New Year's Day (observed)",
     "laborDay": "Labor Day",
     "laborDayObserved": "Labor Day (observed)"
+  },
+  "contextMenu": {
+    "edit": "✏️ Edit Task",
+    "addSubtask": "＋ Add Subtask",
+    "indent": "→ Indent",
+    "outdent": "← Outdent",
+    "copyLink": "🔗 Copy Link",
+    "submitApproval": "📋 Submit for Approval",
+    "delete": "✕ Delete Task"
+  },
+  "audit": {
+    "tab": "📋 Audit Log",
+    "clear": "Clear Log",
+    "taskCreated": "Task created",
+    "taskEdited": "Task edited",
+    "taskDeleted": "Task deleted",
+    "versionCreated": "Version created",
+    "versionRestored": "Version restored",
+    "projectCreated": "Project created",
+    "projectDeleted": "Project deleted",
+    "noEntries": "No audit entries yet"
+  },
+  "wbs": {
+    "toggle": "WBS Numbering",
+    "toggleHint": "Toggle WBS hierarchical numbering"
+  },
+  "shortcuts": {
+    "title": "⌨ Keyboard Shortcuts",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "fitWindow": "Fit to Window",
+    "workloadView": "Workload View",
+    "ganttView": "Gantt View",
+    "today": "Jump to Today",
+    "newTask": "New Task",
+    "undo": "Undo",
+    "closeModal": "Close Modal",
+    "showHelp": "Show Shortcuts Help",
+    "wbs": "Toggle WBS Numbers",
+    "help": "Help"
+  },
+  "approval": {
+    "none": "No Approval",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "submitForApproval": "Submit for Approval"
+  },
+  "worktime": {
+    "title": "🗓 Work Time Settings",
+    "workdays": "Workdays",
+    "customHolidays": "Custom Non-Work Days",
+    "addHoliday": "Add Holiday",
+    "holidayDate": "Date",
+    "holidayLabel": "Label (optional)",
+    "noHolidays": "No custom holidays yet",
+    "save": "Save Settings",
+    "dayShort": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  },
+  "printSettings": {
+    "title": "🖨 Print / PDF Settings",
+    "paperSize": "Paper Size",
+    "orientation": "Orientation",
+    "landscape": "Landscape",
+    "portrait": "Portrait",
+    "showTaskList": "Show Task List",
+    "showLegend": "Show Legend",
+    "print": "Print"
+  },
+  "importExport": {
+    "importCSV": "Import from Excel / CSV",
+    "importJira": "Import from Jira CSV",
+    "importTitle": "Import Data",
+    "dragDrop": "Drag & drop a file here, or click to select",
+    "supportedFormats": "Supports .xlsx, .xls, .csv formats",
+    "preview": "Preview (first 50 rows)",
+    "import": "Import",
+    "cancel": "Cancel",
+    "noFile": "Please select a file",
+    "importSuccess": "✓ Imported {{count}} tasks",
+    "importFailed": "Import failed: "
+  },
+  "ical": {
+    "export": "Export iCalendar (.ics)"
+  },
+  "customFields": {
+    "title": "Custom Field Manager",
+    "addField": "Add Field",
+    "fieldName": "Field Name",
+    "fieldType": "Field Type",
+    "text": "Text",
+    "number": "Number",
+    "select": "Select",
+    "options": "Options (comma-separated)",
+    "delete": "Delete",
+    "save": "Save"
   }
 }
