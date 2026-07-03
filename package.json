@@ -8,11 +8,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "build:rules": "node scripts/generate-firestore-rules.js",
+    "deploy:rules": "firebase deploy --only firestore:rules",
+    "firebase": "firebase",
     "test": "node --test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "firebase-tools": "^15.22.4",
     "prettier": "^3.9.4",
     "vite": "^8.1.2"
   },

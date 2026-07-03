@@ -1,0 +1,83 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Admin authority ──
+    // ⚠️  This file is GENERATED from firestore.rules.template.
+    //    Do NOT edit directly — your changes will be overwritten.
+    //    Instead, set VITE_ADMIN_EMAIL in your .env file and run:
+    //      npm run build:rules
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == '{{VITE_ADMIN_EMAIL}}';
+    }
+
+    // ── Registered user check ──
+    // True if the authenticated user has a doc in gantt_allowed_users.
+    // This is the app's trust boundary — only registered users can collaborate.
+    function isRegistered() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/gantt_allowed_users/$(request.auth.token.email));
+    }
+
+    // ── gantt_user_data/{uid} ──
+    // One doc per user. Contains all projects as opaque data blob.
+    match /gantt_user_data/{uid} {
+      // Owner reads/writes own data.
+      // Registered collaborators may read and write (edit-permission collab
+      // writes directly to owner's doc — cross-doc permission check not
+      // possible in rules without schema change; trust boundary = registered
+      // users only).
+      allow read: if request.auth.uid == uid || isRegistered();
+      allow write: if request.auth.uid == uid || isRegistered();
+    }
+
+    // ── gantt_project_shares/{docId} ──
+    // Per-project collaboration grants (owner → invitee).
+    match /gantt_project_shares/{docId} {
+      // Owner or named invitee can read.
+      allow read: if isRegistered()
+        && (resource.data.owner_id == request.auth.uid
+            || resource.data.shared_with_email == request.auth.token.email);
+      // Only project owner can create/delete shares.
+      allow create, delete: if isRegistered()
+        && request.resource.data.owner_id == request.auth.uid;
+      allow update: if isAdmin(); // admin-only (no UI for update currently)
+    }
+
+    // ── gantt_allowed_users/{email} ──
+    // Registration allowlist. Self-service creation, admin manages otherwise.
+    match /gantt_allowed_users/{email} {
+      // Self can read own record; admin can read all.
+      allow read: if isRegistered() && request.auth.token.email == email
+        || isAdmin();
+
+      // Self-registration: must force is_admin = false.
+      allow create: if request.auth != null
+        && request.auth.token.email == email
+        && request.resource.data.is_admin == false;
+
+      // Admin-only: delete users.
+      allow delete: if isAdmin();
+
+      // No updates except by admin (prevents privilege escalation).
+      allow update: if isAdmin();
+    }
+
+    // ── gantt_shares/{token} ──
+    // Public read-only share links. World-readable for unauthenticated access.
+    match /gantt_shares/{token} {
+      // Anyone can read by token (share-link feature, no auth required).
+      allow read: if true;
+      // Only authenticated owner can create.
+      allow create: if request.auth != null
+        && request.resource.data.owner_id == request.auth.uid;
+      // Owner or admin can delete.
+      allow delete: if request.auth != null
+        && (resource.data.owner_id == request.auth.uid || isAdmin());
+      // No updates (shares are immutable snapshots).
+      allow update: if false;
+    }
+  }
+}

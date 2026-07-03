@@ -1,9 +1,12 @@
 import { auth, googleProvider } from "./data/firebase.js";
+import { signInWithPopup, signOut as firebaseSignOut } from "firebase/auth";
 import * as Remote from "./data/remote.js";
 import { D } from "./render/deps.js";
 import { t } from "./i18n/index.js";
 
-const ADMIN_EMAIL = 's19800430@gmail.com';
+// Read admin email from Vite env var, fall back to default for backward compat.
+// Copy .env.example to .env and set VITE_ADMIN_EMAIL to your email.
+export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 's19800430@gmail.com';
 
 export function isAdmin() {
   const user = D.GetCurrentUser();
@@ -13,7 +16,7 @@ export function isAdmin() {
 export async function signInWithGoogle() {
   document.getElementById('loginError').style.display = 'none';
   try {
-    await auth.signInWithPopup(googleProvider);
+    await signInWithPopup(auth, googleProvider);
   } catch(e) {
     if (e.code !== 'auth/popup-closed-by-user') alert(t('login.registerFailed') + e.message);
   }
@@ -64,7 +67,8 @@ export async function submitRegister() {
 }
 
 export async function signOut() {
-  if (!D.IsGuestMode()) await auth.signOut();
+  D.cleanupRealtime?.();
+  if (!D.IsGuestMode()) await firebaseSignOut(auth);
   D.SetCurrentUser(null);
   D.SetGuestMode(false);
   D.SetAppInitialized(false);

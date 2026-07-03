@@ -4,6 +4,8 @@ Gantt chart project management tool with task scheduling, critical path analysis
 milestones, collaboration, and export. Built as a vanilla ES-module SPA with
 Vite + Firebase.
 
+**[繁體中文](README.zh-TW.md)**
+
 ## Features
 
 - **Gantt chart** with task bars, group summaries, and milestone diamonds
@@ -35,8 +37,19 @@ Vite + Firebase.
 ## Quick Start
 
 ```bash
+# 1. Install dependencies
 npm install
-npm run dev      # dev server at http://localhost:5173
+
+# 2. Configure Firebase + admin email
+cp .env.example .env
+# Then edit .env — set VITE_FIREBASE_* to your Firebase project's values,
+# and set VITE_ADMIN_EMAIL to your email address.
+
+# 3. Generate Firestore rules (picks up your VITE_ADMIN_EMAIL)
+npm run build:rules
+
+# 4. Start the dev server
+npm run dev      # http://localhost:5173
 ```
 
 ### Production build
@@ -49,7 +62,7 @@ npm run preview  # preview built output
 ### Tests
 
 ```bash
-npm test                            # run all tests
+npm test                            # run all 105 tests
 TZ=America/Los_Angeles npm test     # verify timezone independence
 ```
 
@@ -113,7 +126,7 @@ src/
 
 ## Firebase Setup
 
-Firebase config is in `src/data/firebase.js` (hardcoded — no `.env` indirection).
+Firebase config is configured via environment variables in `.env` (see `.env.example`).
 The web API key is public by design (Firebase client-side SDK).
 
 ### Firestore collections
@@ -130,17 +143,20 @@ The web API key is public by design (Firebase client-side SDK).
 `firestore.rules` defines access control:
 
 ```bash
-npm install -g firebase-tools   # if not installed
-npx firebase login
-npx firebase deploy --only firestore:rules
+# One-time: authenticate with Firebase
+npm run firebase login
+
+# After changing .env (or anytime you regenerate firestore.rules):
+npm run build:rules
+npm run deploy:rules
 ```
 
-Admin authority is hardcoded by email (not the user-writable `is_admin` field).
+Admin authority is configured via `VITE_ADMIN_EMAIL` in `.env` and enforced by the generated `firestore.rules`. The user-writable `is_admin` field is **not** trusted.
 See `_pm/Projects/ganttpro-security/done.md` for design decisions.
 
 ## Testing
 
-Tests cover the `core/` pure-logic modules (93 tests):
+Tests cover the `core/` pure-logic modules (105 tests):
 
 ```
 tests/
@@ -155,7 +171,7 @@ tests/
 
 ## Known Limitations
 
-- **Firebase config hardcoded** in `src/data/firebase.js` (no `.env`)
+- **Firebase config** set via `VITE_FIREBASE_*` env vars (`.env`); defaults to the original demo project
 - **Share links have no expiry** (tokens persist indefinitely in Firestore)
 - **Cross-document collab** writes are relaxed (any registered user may write
   another user's data doc — see security notes in `_pm/`)

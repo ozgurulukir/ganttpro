@@ -274,8 +274,8 @@ export function exportCSV() {
      });
    };
   walk(null, 0);
-  const esc = v => { v = String(v ?? ''); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-  const csv = '\ufeff' + lines.map(r => r.map(esc).join(',')).join('\r\n');
+  const csvEsc = v => { v = String(v ?? ''); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const csv = '\ufeff' + lines.map(r => r.map(csvEsc).join(',')).join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

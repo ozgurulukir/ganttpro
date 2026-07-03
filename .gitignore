@@ -1,7 +1,11 @@
 # dependencies
 node_modules/
 
-# build output
+# environment variables (local config: admin email, etc.)
+.env
+# generated from firestore.rules.template — run "npm run build:rules" to rebuild
+firestore.rules
+
 dist/
 *.local
 
@@ -20,3 +24,6 @@ pnpm-debug.log*
 
 # keep the original single-file build during the split (remove in Phase 9)
 !gantt.html
+
+# project management notes
+_pm/
