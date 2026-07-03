@@ -166,3 +166,58 @@ export function getTaskDepth(tasks, id) {
   }
   return depth;
 }
+
+/** WBS code for a task: dot-separated path of 1-based sibling indices. */
+export function getWBSCode(tasks, taskId) {
+  const path = [];
+  let cur = taskById(tasks, taskId);
+  const seen = new Set();
+  while (cur) {
+    if (seen.has(cur.id)) break;
+    seen.add(cur.id);
+    const siblings = tasks.filter(t => t.parent === cur.parent);
+    const idx = siblings.indexOf(cur) + 1;
+    path.unshift(idx);
+    cur = cur.parent !== null ? taskById(tasks, cur.parent) : null;
+  }
+  return path.join('.');
+}
+
+/**
+ * Bulk WBS map for all tasks. O(n) instead of O(n² × depth) when calling
+ * getWBSCode per task. Returns Map<taskId, wbsCode>.
+ *
+ * Algorithm: pre-group tasks by parent for O(1) sibling lookups, then walk
+ * each task once using the parent chain. The sibling index for a task is its
+ * 1-based position among siblings in the original `tasks` order.
+ */
+export function getWBSMap(tasks) {
+  const byParent = new Map();
+  for (const t of tasks) {
+    const p = t.parent;
+    let arr = byParent.get(p);
+    if (!arr) {
+      arr = [];
+      byParent.set(p, arr);
+    }
+    arr.push(t);
+  }
+  const map = new Map();
+  function walk(id) {
+    if (map.has(id)) return map.get(id);
+    const t = taskById(tasks, id);
+    if (!t) return '';
+    const siblings = byParent.get(t.parent) || [];
+    const idx = siblings.indexOf(t) + 1;
+    let prefix = '';
+    if (t.parent !== null) {
+      prefix = walk(t.parent);
+      prefix = prefix ? prefix + '.' : '';
+    }
+    const code = prefix + idx;
+    map.set(id, code);
+    return code;
+  }
+  for (const t of tasks) walk(t.id);
+  return map;
+}

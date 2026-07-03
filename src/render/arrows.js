@@ -1,8 +1,30 @@
 /* Dependency arrows (SVG) — FS, SS, FF, SF + critical path. */
 import { D } from './deps.js';
 
+function arrowPath(sx, sy, tx, ty) {
+  const style = D.arrowStyle || 'bezier';
+  const dx = (tx - sx) / 2;
+  if (style === 'straight') {
+    return `M ${sx} ${sy} L ${tx} ${ty}`;
+  } else if (style === 'elbow') {
+    const mx = (sx + tx) / 2;
+    return `M ${sx} ${sy} L ${mx} ${sy} L ${mx} ${ty} L ${tx} ${ty}`;
+  } else {
+    return `M ${sx} ${sy} C ${sx + Math.max(dx, 20)} ${sy}, ${tx - Math.max(dx, 20)} ${ty}, ${tx} ${ty}`;
+  }
+}
+
 export function renderArrows(canvas, rows, tw, th) {
-  const { ROW_H, PPD, showCriticalPath, criticalTaskIds, dateToX, taskById, groupBounds, getCriticalPredTaskIds } = D;
+  const {
+    ROW_H,
+    PPD,
+    showCriticalPath,
+    criticalTaskIds,
+    dateToX,
+    taskById,
+    groupBounds,
+    getCriticalPredTaskIds
+  } = D;
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', tw);
   svg.setAttribute('height', th);
@@ -62,13 +84,11 @@ export function renderArrows(canvas, rows, tw, th) {
         if (sRow === undefined) return;
         const sY = sRow * ROW_H + ROW_H / 2;
         const depEnd = dep.type === 'group' ? groupBounds(dep.id).e : dep.end;
-        const sX = dep.type === 'milestone'
-          ? dateToX(dep.date) + PPD / 2 + 7
-          : dateToX(depEnd) + PPD;
+        const sX =
+          dep.type === 'milestone' ? dateToX(dep.date) + PPD / 2 + 7 : dateToX(depEnd) + PPD;
         if (isNaN(sX)) return;
-        const dx = (tX - sX) / 2;
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', `M ${sX} ${sY} C ${sX + Math.max(dx, 20)} ${sY}, ${tX - Math.max(dx, 20)} ${tY}, ${tX} ${tY}`);
+        path.setAttribute('d', arrowPath(sX, sY, tX, tY));
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke', '#C4C8D8');
         path.setAttribute('stroke-width', '1.5');
@@ -90,7 +110,7 @@ export function renderArrows(canvas, rows, tw, th) {
         const sX = dateToX(dep.end) + PPD;
         let pathD;
         if (Math.abs(sY - tY) < 2) {
-          pathD = `M ${sX} ${sY} H ${tX}`;  // 同行：水平
+          pathD = `M ${sX} ${sY} H ${tX}`; // 同行：水平
         } else {
           // 貝茲曲線：無論跨幾列都不會有垂直線
           const hdx = Math.max(Math.abs(tX - sX) / 2, 40);
@@ -120,9 +140,8 @@ export function renderArrows(canvas, rows, tw, th) {
       const sY = sRow * ROW_H + ROW_H / 2;
       const sX = dep.type === 'milestone' ? dateToX(dep.date) + PPD / 2 : dateToX(dep.start);
       if (isNaN(sX)) return;
-      const dx = (tX - sX) / 2;
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', `M ${sX} ${sY} C ${sX + Math.max(dx, 20)} ${sY}, ${tX - Math.max(dx, 20)} ${tY}, ${tX} ${tY}`);
+      path.setAttribute('d', arrowPath(sX, sY, tX, tY));
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', '#F59E0B');
       path.setAttribute('stroke-width', '1.5');
@@ -142,10 +161,10 @@ export function renderArrows(canvas, rows, tw, th) {
       if (sRow === undefined) return;
       const sY = sRow * ROW_H + ROW_H / 2;
       const sX = dep.type === 'milestone' ? dateToX(dep.date) + PPD / 2 : dateToX(dep.end) + PPD;
-      const ffTX = task.type === 'milestone' ? dateToX(task.date) + PPD / 2 : dateToX(task.end) + PPD;
-      const dx = (ffTX - sX) / 2;
+      const ffTX =
+        task.type === 'milestone' ? dateToX(task.date) + PPD / 2 : dateToX(task.end) + PPD;
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', `M ${sX} ${sY} C ${sX + Math.max(dx, 20)} ${sY}, ${ffTX - Math.max(dx, 20)} ${tY}, ${ffTX} ${tY}`);
+      path.setAttribute('d', arrowPath(sX, sY, ffTX, tY));
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', '#10B981');
       path.setAttribute('stroke-width', '1.5');
@@ -165,10 +184,10 @@ export function renderArrows(canvas, rows, tw, th) {
       if (sRow === undefined) return;
       const sY = sRow * ROW_H + ROW_H / 2;
       const sX = dep.type === 'milestone' ? dateToX(dep.date) + PPD / 2 : dateToX(dep.start);
-      const sfTX = task.type === 'milestone' ? dateToX(task.date) + PPD / 2 : dateToX(task.end) + PPD;
-      const dx = (sfTX - sX) / 2;
+      const sfTX =
+        task.type === 'milestone' ? dateToX(task.date) + PPD / 2 : dateToX(task.end) + PPD;
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', `M ${sX} ${sY} C ${sX + Math.max(dx, 20)} ${sY}, ${sfTX - Math.max(dx, 20)} ${tY}, ${sfTX} ${tY}`);
+      path.setAttribute('d', arrowPath(sX, sY, sfTX, tY));
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', '#8B5CF6');
       path.setAttribute('stroke-width', '1.5');

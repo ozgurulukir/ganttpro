@@ -2,6 +2,7 @@
 import { D } from '../render/deps.js';
 import { esc } from '../core/format.js';
 import { t } from '../i18n/index.js';
+import { logAudit, renderAuditLog, clearAuditLog } from '../data/audit.js';
 
 export function onSettingBarDatesChange() {
   const { setShowBarDates, render } = D;
@@ -17,7 +18,17 @@ export function onSettingBaselineChange() {
 
 // 設定基準線：快照所有任務目前的日期，之後排程變動時可比對偏差
 export function setBaseline() {
-  const { tasks, curProj, isReadOnly, TODAY_STR, showStatus, render, saveToLS, saveToCloud, currentUser } = D;
+  const {
+    tasks,
+    curProj,
+    isReadOnly,
+    TODAY_STR,
+    showStatus,
+    render,
+    saveToLS,
+    saveToCloud,
+    currentUser
+  } = D;
   const p = curProj();
   if (!p || isReadOnly) return;
   const dates = {};
@@ -61,7 +72,7 @@ export function applyZoom(factor) {
   const { CHART_START, PPD, PPDS, updateChartStart, render } = D;
   const cs = document.getElementById('chartScroll');
   // Anchor: keep the left-edge date fixed so content doesn't jump off-screen
-  const leftMs = CHART_START.getTime() + cs.scrollLeft / PPD * 86400000;
+  const leftMs = CHART_START.getTime() + (cs.scrollLeft / PPD) * 86400000;
   D.setPPD(Math.max(2, Math.min(80, Math.round(PPD * factor))));
   document.querySelectorAll('#viewBtns .btn').forEach(b => {
     b.classList.toggle('active', PPDS[b.dataset.v] === D.PPD);
@@ -69,10 +80,15 @@ export function applyZoom(factor) {
   updateChartStart(); // recompute CHART_START padding for new PPD
   render();
   requestAnimationFrame(() => {
-    cs.scrollLeft = Math.max(0, (leftMs - D.CHART_START.getTime()) / 86400000 * D.PPD);
+    cs.scrollLeft = Math.max(0, ((leftMs - D.CHART_START.getTime()) / 86400000) * D.PPD);
   });
-}export function zoomIn()  { applyZoom(1.4); }
-export function zoomOut() { applyZoom(1 / 1.4); }
+}
+export function zoomIn() {
+  applyZoom(1.4);
+}
+export function zoomOut() {
+  applyZoom(1 / 1.4);
+}
 
 export function fitToFrame() {
   const { CHART_END, CHART_START, PPDS, updateChartStart, render } = D;
@@ -85,7 +101,9 @@ export function fitToFrame() {
   });
   updateChartStart();
   render();
-  requestAnimationFrame(() => { cs.scrollLeft = 0; });
+  requestAnimationFrame(() => {
+    cs.scrollLeft = 0;
+  });
 }
 
 export function scrollToToday() {
@@ -99,7 +117,7 @@ export function updateStats() {
   const { tasks } = D;
   const t = tasks.filter(x => x.type === 'task');
   const m = tasks.filter(x => x.type === 'milestone');
-  document.getElementById('sDone').textContent    = t.filter(x => x.done).length;
+  document.getElementById('sDone').textContent = t.filter(x => x.done).length;
   document.getElementById('sPending').textContent = t.filter(x => !x.done).length;
   document.getElementById('sMilestone').textContent = m.length;
 }
@@ -123,7 +141,31 @@ export function openVersionPanel() {
   document.getElementById('verPanel').classList.add('open');
   document.getElementById('verBackdrop').classList.add('open');
   renderVersionList();
+  setupVerTabs();
   setTimeout(() => document.getElementById('verNameInput').focus(), 200);
+}
+
+function setupVerTabs() {
+  const tabs = document.querySelectorAll('#verTabs .ver-tab');
+  const verList = document.getElementById('verList');
+  const verCreate = document.querySelector('.ver-create');
+  const auditContent = document.getElementById('auditContent');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      if (tab.dataset.tab === 'audit') {
+        verList.style.display = 'none';
+        if (verCreate) verCreate.style.display = 'none';
+        auditContent.style.display = 'block';
+        renderAuditLog(auditContent);
+      } else {
+        verList.style.display = '';
+        if (verCreate) verCreate.style.display = '';
+        auditContent.style.display = 'none';
+      }
+    });
+  });
 }
 
 export function closeVersionPanel() {
@@ -135,7 +177,10 @@ export function createVersion() {
   const { tasks, render, showStatus } = D;
   const inp = document.getElementById('verNameInput');
   const name = inp.value.trim();
-  if (!name) { inp.focus(); return; }
+  if (!name) {
+    inp.focus();
+    return;
+  }
   const v = {
     id: Date.now(),
     name,
@@ -148,6 +193,7 @@ export function createVersion() {
   renderVersionList();
   render();
   D.persist();
+  logAudit('versionCreated', name);
   showStatus(t('settings.versionCreated', { name }));
 }
 
@@ -159,6 +205,7 @@ export function restoreVersion(vId) {
   loadTasksFromSnapshot(v.snapshot);
   render();
   D.persist();
+  logAudit('versionRestored', v.name);
   closeVersionPanel();
   showStatus(t('settings.restored', { name: v.name }));
 }
@@ -185,7 +232,14 @@ export function renderVersionList() {
   el.innerHTML = '';
   vs.forEach(v => {
     const d = new Date(v.createdAt);
-    const dateStr = d.toLocaleString('en-US', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const dateStr = d.toLocaleString('en-US', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
     const item = document.createElement('div');
     item.className = 'ver-item';
     item.innerHTML = `

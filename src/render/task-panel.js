@@ -5,24 +5,50 @@ import { countWorkingDays } from '../core/calendar.js';
 import { highlightRow } from './tooltip.js';
 import { renderWorkloadPanel } from './workload.js';
 import { t } from '../i18n/index.js';
+import * as Tree from '../core/tree.js';
+import { showContextMenu } from '../ui/context-menu.js';
 
 export function renderTaskPanel() {
   const {
-    tasks, collapsed, workloadView, isReadOnly, milestoneView,
-    curProj, openModal, openProjModal, reorderTask,
-    toggleCollapse, avColor, groupBounds,
-    openNameEditor, openStartEditor, openEndEditor, openWdayEditor, openAllDepsEditor,
-    buildDepsText, taskById, getTaskDepth, getVisibleRows,
-    outdentTask, indentTask, addTaskInline, confirmDeleteTask, pushHistory,
+    tasks,
+    collapsed,
+    workloadView,
+    isReadOnly,
+    milestoneView,
+    curProj,
+    openModal,
+    openProjModal,
+    reorderTask,
+    toggleCollapse,
+    avColor,
+    groupBounds,
+    openNameEditor,
+    openStartEditor,
+    openEndEditor,
+    openWdayEditor,
+    openAllDepsEditor,
+    buildDepsText,
+    taskById,
+    getTaskDepth,
+    getVisibleRows,
+    outdentTask,
+    indentTask,
+    addTaskInline,
+    confirmDeleteTask,
+    pushHistory
   } = D;
 
   const rows = getVisibleRows();
   const body = document.getElementById('taskBody');
   body.innerHTML = '';
+  const wbsMap = D.showWBS ? Tree.getWBSMap(tasks) : null;
   document.getElementById('taskCount').textContent = tasks.filter(t => t.type === 'task').length;
 
   // 工作量視圖：左側面板改列出負責人
-  if (workloadView) { renderWorkloadPanel(body); return; }
+  if (workloadView) {
+    renderWorkloadPanel(body);
+    return;
+  }
 
   // 空狀態：給予明確的下一步引導
   if (!rows.length) {
@@ -36,7 +62,7 @@ export function renderTaskPanel() {
       const cta = document.createElement('button');
       cta.className = 'btn btn-primary';
       cta.textContent = curProj() ? t('taskPanel.addTask') : t('taskPanel.createFirstProject');
-      cta.onclick = () => curProj() ? openModal() : openProjModal();
+      cta.onclick = () => (curProj() ? openModal() : openProjModal());
       empty.appendChild(cta);
     }
     body.appendChild(empty);
@@ -54,17 +80,21 @@ export function renderTaskPanel() {
     });
     row.addEventListener('dragend', () => {
       row.classList.remove('dragging');
-      document.querySelectorAll('.drop-above,.drop-below').forEach(r => r.classList.remove('drop-above','drop-below'));
+      document
+        .querySelectorAll('.drop-above,.drop-below')
+        .forEach(r => r.classList.remove('drop-above', 'drop-below'));
       D.dragSrcId = null;
     });
     row.addEventListener('dragover', e => {
       e.preventDefault();
       if (D.dragSrcId === task.id) return;
-      document.querySelectorAll('.drop-above,.drop-below').forEach(r => r.classList.remove('drop-above','drop-below'));
+      document
+        .querySelectorAll('.drop-above,.drop-below')
+        .forEach(r => r.classList.remove('drop-above', 'drop-below'));
       const rect = row.getBoundingClientRect();
       row.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drop-above' : 'drop-below');
     });
-    row.addEventListener('dragleave', () => row.classList.remove('drop-above','drop-below'));
+    row.addEventListener('dragleave', () => row.classList.remove('drop-above', 'drop-below'));
     row.addEventListener('drop', e => {
       e.preventDefault();
       if (!D.dragSrcId || D.dragSrcId === task.id) return;
@@ -87,7 +117,7 @@ export function renderTaskPanel() {
 
     const ind = document.createElement('span');
     ind.className = 'indent';
-    ind.style.width = (depth * 18) + 'px';
+    ind.style.width = depth * 18 + 'px';
     nc.appendChild(ind);
 
     const hasChildren = tasks.some(c => c.parent === task.id);
@@ -95,7 +125,10 @@ export function renderTaskPanel() {
       const tog = document.createElement('span');
       tog.className = 'toggle' + (collapsed.has(task.id) ? ' coll' : '');
       tog.innerHTML = '▼';
-      tog.onclick = e => { e.stopPropagation(); toggleCollapse(task.id); };
+      tog.onclick = e => {
+        e.stopPropagation();
+        toggleCollapse(task.id);
+      };
       nc.appendChild(tog);
     } else {
       const sp = document.createElement('span');
@@ -107,11 +140,20 @@ export function renderTaskPanel() {
     dot.className = 'cdot';
     if (task.type === 'milestone') {
       const parentTask = tasks.find(t => t.id === task.parent);
-      dot.style.background = parentTask ? darkenColor(safeColor(parentTask.color)) : darkenColor(safeColor(task.color));
+      dot.style.background = parentTask
+        ? darkenColor(safeColor(parentTask.color))
+        : darkenColor(safeColor(task.color));
     } else {
       dot.style.background = safeColor(task.color);
     }
     nc.appendChild(dot);
+
+    if (D.showWBS) {
+      const wbs = document.createElement('span');
+      wbs.className = 'wbs-code';
+      wbs.textContent = wbsMap.get(task.id) || '';
+      nc.appendChild(wbs);
+    }
 
     const numSpan = document.createElement('span');
     numSpan.className = 'row-num';
@@ -123,8 +165,19 @@ export function renderTaskPanel() {
     nm.textContent = task.name;
     nm.style.cursor = 'text';
     nm.title = task.name;
-    nm.addEventListener('click', e => { e.stopPropagation(); if (!isReadOnly) openNameEditor(task, nm); });
+    nm.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!isReadOnly) openNameEditor(task, nm);
+    });
     nc.appendChild(nm);
+
+    if (task.approval && task.approval !== '') {
+      const ab = document.createElement('span');
+      ab.className = 'approval-badge ' + task.approval;
+      const labels = { pending: '\u23F3', approved: '\u2713', rejected: '\u2717' };
+      ab.textContent = (labels[task.approval] || '') + ' ' + t('approval.' + task.approval);
+      nc.appendChild(ab);
+    }
 
     if (task.type === 'milestone') {
       const badge = document.createElement('span');
@@ -164,10 +217,17 @@ export function renderTaskPanel() {
       }
     }
     if (task.type === 'task') {
-      const hasDeps = (task.deps||[]).length || (task.sdeps||[]).length || (task.ffdeps||[]).length || (task.sfdeps||[]).length;
+      const hasDeps =
+        (task.deps || []).length ||
+        (task.sdeps || []).length ||
+        (task.ffdeps || []).length ||
+        (task.sfdeps || []).length;
       if (!hasDeps) {
         sc.style.cursor = 'text';
-        sc.addEventListener('click', e => { e.stopPropagation(); if (!isReadOnly) openStartEditor(task, sc); });
+        sc.addEventListener('click', e => {
+          e.stopPropagation();
+          if (!isReadOnly) openStartEditor(task, sc);
+        });
       }
     }
     row.appendChild(sc);
@@ -184,7 +244,10 @@ export function renderTaskPanel() {
     }
     if (task.type === 'task') {
       ec.style.cursor = 'text';
-      ec.addEventListener('click', e => { e.stopPropagation(); if (!isReadOnly) openEndEditor(task, ec); });
+      ec.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!isReadOnly) openEndEditor(task, ec);
+      });
     }
     row.appendChild(ec);
 
@@ -194,7 +257,10 @@ export function renderTaskPanel() {
     if (task.type === 'task' && task.start && task.end) {
       wc.textContent = countWorkingDays(task.start, task.end);
       wc.style.cursor = 'text';
-      wc.addEventListener('click', e => { e.stopPropagation(); if (!isReadOnly) openWdayEditor(task, wc); });
+      wc.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!isReadOnly) openWdayEditor(task, wc);
+      });
     } else if (task.type === 'group') {
       const gb = groupBounds(task.id);
       if (gb.s && gb.e) {
@@ -265,7 +331,10 @@ export function renderTaskPanel() {
     const _myIdx = tasks.indexOf(task);
     let _prevSib = null;
     for (let i = _myIdx - 1; i >= 0; i--) {
-      if (tasks[i].parent === task.parent) { _prevSib = tasks[i]; break; }
+      if (tasks[i].parent === task.parent) {
+        _prevSib = tasks[i];
+        break;
+      }
     }
     const canIndent = _prevSib !== null && getTaskDepth(_prevSib.id) + 1 < 5;
 
@@ -273,7 +342,11 @@ export function renderTaskPanel() {
     outBtn.className = 'row-action-btn';
     outBtn.textContent = '←';
     outBtn.title = t('taskPanel.outdent');
-    if (canOutdent) outBtn.onclick = e => { e.stopPropagation(); outdentTask(task.id); };
+    if (canOutdent)
+      outBtn.onclick = e => {
+        e.stopPropagation();
+        outdentTask(task.id);
+      };
     else outBtn.style.visibility = 'hidden';
     ac.appendChild(outBtn);
 
@@ -281,7 +354,11 @@ export function renderTaskPanel() {
     inBtn.className = 'row-action-btn';
     inBtn.textContent = '→';
     inBtn.title = t('taskPanel.indent');
-    if (canIndent) inBtn.onclick = e => { e.stopPropagation(); indentTask(task.id); };
+    if (canIndent)
+      inBtn.onclick = e => {
+        e.stopPropagation();
+        indentTask(task.id);
+      };
     else inBtn.style.visibility = 'hidden';
     ac.appendChild(inBtn);
 
@@ -289,14 +366,20 @@ export function renderTaskPanel() {
     addBtn.className = 'row-action-btn add';
     addBtn.textContent = '+';
     addBtn.title = t('taskPanel.addSubtask');
-    addBtn.onclick = e => { e.stopPropagation(); addTaskInline(task.id); };
+    addBtn.onclick = e => {
+      e.stopPropagation();
+      addTaskInline(task.id);
+    };
     ac.appendChild(addBtn);
 
     const delBtn = document.createElement('div');
     delBtn.className = 'row-action-btn del';
     delBtn.textContent = '✕';
     delBtn.title = t('taskPanel.deleteTask');
-    delBtn.onclick = e => { e.stopPropagation(); confirmDeleteTask(task.id); };
+    delBtn.onclick = e => {
+      e.stopPropagation();
+      confirmDeleteTask(task.id);
+    };
     ac.appendChild(delBtn);
 
     row.appendChild(ac);
@@ -310,7 +393,12 @@ export function renderTaskPanel() {
     row.addEventListener('mouseenter', () => highlightRow(task.id, true));
     row.addEventListener('mouseleave', () => highlightRow(task.id, false));
 
+    // Context menu
+    row.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showContextMenu(e.clientX, e.clientY, task.id);
+    });
+
     body.appendChild(row);
   });
-
 }

@@ -27,3 +27,4 @@ pnpm-debug.log*
 
 # project management notes
 _pm/
+.mimocode/
