@@ -49,9 +49,19 @@ export function darkenColor(hex, amount = 0.35) {
   return `rgb(${Math.round(r*(1-amount))},${Math.round(g*(1-amount))},${Math.round(b*(1-amount))})`;
 }
 
+/** Validate a #RRGGBB hex color string. */
+export function isValidHexColor(c) {
+  return typeof c === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c);
+}
+
+/** Return a valid hex color or a fallback. */
+export function safeColor(c, fallback = '#5E6AD2') {
+  return isValidHexColor(c) ? c : fallback;
+}
+
 /** #RRGGBB hex → 'rgba(r,g,b,alpha)'. Short/invalid hex falls back to indigo. */
 export function hexToRgba(hex, alpha) {
-  if (!hex || hex.length < 7) return `rgba(94,106,210,${alpha})`;
+  if (!isValidHexColor(hex)) return `rgba(94,106,210,${alpha})`;
   const r = parseInt(hex.slice(1,3), 16);
   const g = parseInt(hex.slice(3,5), 16);
   const b = parseInt(hex.slice(5,7), 16);

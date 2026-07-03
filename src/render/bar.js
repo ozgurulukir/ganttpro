@@ -1,6 +1,6 @@
 /* Bar rendering: regular bars, group bars, drag interactions. */
 import { D } from './deps.js';
-import { darkenColor } from '../core/format.js';
+import { darkenColor, safeColor } from '../core/format.js';
 import { isNonWorkday, countWorkingDays, addWorkingDays } from '../core/calendar.js';
 import { parseDate, formatDate, addDays } from '../core/date.js';
 import { showTT, moveTT, hideTT, highlightDeps } from './tooltip.js';
@@ -43,7 +43,7 @@ export function renderBar(row, task) {
   // Continuous bar (includes weekends)
   const bg = document.createElement('div');
   bg.className = 'bar-bg';
-  bg.style.background = task.color;
+  bg.style.background = safeColor(task.color);
   inner.appendChild(bg);
 
   // 進度填充（深色段）
@@ -51,7 +51,7 @@ export function renderBar(row, task) {
   if (prog > 0) {
     const pf = document.createElement('div');
     pf.className = 'bar-prog';
-    pf.style.cssText = `width:${prog}%;background:${darkenColor(task.color, 0.3)}`;
+    pf.style.cssText = `width:${prog}%;background:${darkenColor(safeColor(task.color), 0.3)}`;
     inner.appendChild(pf);
   }
 
@@ -102,7 +102,7 @@ export function renderBar(row, task) {
 
 /* ── BAR DRAG（拖移整條 / 拖拉左右緣調整起訖）── */
 export function attachBarDrag(bar, task) {
-  const { PPD, pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser } = D;
+  const { PPD, pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser, tasks } = D;
   const hasDeps = (task.deps||[]).length || (task.sdeps||[]).length || (task.ffdeps||[]).length || (task.sfdeps||[]).length;
 
   // 右緣：調整結束日（永遠可用）；左緣與整條拖移：僅無依賴任務（有依賴時開始日由排程決定）
@@ -151,6 +151,7 @@ export function attachBarDrag(bar, task) {
       document.removeEventListener('mouseup', onUp);
       document.body.style.userSelect = '';
       if (!moved || !delta) { render(); return; }
+      if (!tasks.includes(task)) { render(); return; }
       pushHistory();
       const shiftCal = (str, days) => addDays(str, days);
       const snapFwd = str => { let dn = parseDate(str); while (isNonWorkday(formatDate(dn))) dn++; return formatDate(dn); };
@@ -178,8 +179,7 @@ export function attachBarDrag(bar, task) {
       scheduleTasks();
       recalcProjEnd();
       render();
-      saveToLS();
-      if (currentUser) saveToCloud();
+      D.persist();
     };
 
     document.addEventListener('mousemove', onMove);
@@ -195,16 +195,17 @@ export function renderGroupBar(row, task, bounds) {
 
   const bar = document.createElement('div');
   bar.className = 'group-bar';
-  bar.style.cssText = `left:${x1}px;width:${w}px;background:${task.color}`;
-  bar.style.setProperty('--c', task.color);
+  const safeCol = safeColor(task.color);
+  bar.style.cssText = `left:${x1}px;width:${w}px;background:${safeCol}`;
+  bar.style.setProperty('--c', safeCol);
   // Triangles via pseudo-elements need color from CSS var; workaround: use box-shadow
-  bar.style.boxShadow = `inset 0 0 0 1px ${task.color}80`;
+  bar.style.boxShadow = `inset 0 0 0 1px ${safeCol}80`;
 
   // 群組整體進度填充
   const gprog = groupProgress(task.id);
   if (gprog > 0) {
     const pf = document.createElement('div');
-    pf.style.cssText = `position:absolute;top:0;left:0;bottom:0;width:${gprog}%;background:${darkenColor(task.color, 0.35)};border-radius:4px 0 0 4px;pointer-events:none`;
+    pf.style.cssText = `position:absolute;top:0;left:0;bottom:0;width:${gprog}%;background:${darkenColor(safeCol, 0.35)};border-radius:4px 0 0 4px;pointer-events:none`;
     bar.appendChild(pf);
   }
 

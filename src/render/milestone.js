@@ -2,6 +2,7 @@
 import { D } from './deps.js';
 import { isNonWorkday } from '../core/calendar.js';
 import { parseDate, formatDate, addDays } from '../core/date.js';
+import { safeColor } from '../core/format.js';
 import { showTT, moveTT, hideTT } from './tooltip.js';
 import { t } from '../i18n/index.js';
 
@@ -39,7 +40,7 @@ export function renderMilestoneTimeline(row, groupTask, msList) {
     const x = dateToX(ms.date) + PPD / 2;
     if (x < -60 || x > rowW + 60) return;
     const above   = idx % 2 === 0;
-    const msColor = ms.color || groupTask.color || '#5E6AD2';
+    const msColor = safeColor(ms.color || groupTask.color);
 
     // Connector line
     const conn = document.createElement('div');
@@ -86,7 +87,7 @@ export function renderMilestone(row, task) {
   const d = document.createElement('div');
   d.className = 'milestone-d';
   d.dataset.id = task.id;
-  const col = task.color || '#5E6AD2';
+  const col = safeColor(task.color);
   d.style.cssText = `left:${x}px;background:${col};box-shadow:0 2px 8px ${col}55`;
   d.addEventListener('mouseenter', e => showTT(e, task));
   d.addEventListener('mousemove', moveTT);
@@ -125,8 +126,7 @@ export function renderMilestone(row, task) {
         scheduleTasks();
         recalcProjEnd();
         render();
-        saveToLS();
-        if (currentUser) saveToCloud();
+        D.persist();
       };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);

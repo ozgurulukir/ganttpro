@@ -1,6 +1,6 @@
 /* Task panel: left-side table with name, dates, deps, actions. */
 import { D } from './deps.js';
-import { darkenColor, initials } from '../core/format.js';
+import { darkenColor, initials, safeColor } from '../core/format.js';
 import { countWorkingDays } from '../core/calendar.js';
 import { highlightRow } from './tooltip.js';
 import { renderWorkloadPanel } from './workload.js';
@@ -107,9 +107,9 @@ export function renderTaskPanel() {
     dot.className = 'cdot';
     if (task.type === 'milestone') {
       const parentTask = tasks.find(t => t.id === task.parent);
-      dot.style.background = parentTask ? darkenColor(parentTask.color) : darkenColor(task.color);
+      dot.style.background = parentTask ? darkenColor(safeColor(parentTask.color)) : darkenColor(safeColor(task.color));
     } else {
-      dot.style.background = task.color;
+      dot.style.background = safeColor(task.color);
     }
     nc.appendChild(dot);
 
@@ -237,18 +237,20 @@ export function renderTaskPanel() {
         task.done = !task.done;
         if (task.done) task.progress = 100;
         D.render();
+        D.persist();
       };
       cc.appendChild(cb);
     } else if (task.type === 'milestone') {
       const mb = document.createElement('span');
       mb.textContent = '◆';
-      mb.style.cssText = `font-size:13px;color:${task.color};cursor:pointer;opacity:${task.done ? 0.3 : 1};transition:opacity .12s`;
+      mb.style.cssText = `font-size:13px;color:${safeColor(task.color)};cursor:pointer;opacity:${task.done ? 0.3 : 1};transition:opacity .12s`;
       mb.title = task.done ? t('taskPanel.markIncomplete') : t('taskPanel.markDone');
       mb.onclick = e => {
         e.stopPropagation();
         pushHistory();
         task.done = !task.done;
         D.render();
+        D.persist();
       };
       cc.appendChild(mb);
     }

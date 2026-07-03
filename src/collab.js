@@ -6,7 +6,7 @@ import { t } from "./i18n/index.js";
 
 let _collabShares = [];
 
-export function openShareModal() {
+export async function openShareModal() {
   if (D.isReadOnly) return;
   const { curProj, render } = D;
   const proj = curProj();
@@ -15,8 +15,9 @@ export function openShareModal() {
   const note = document.querySelector('.share-owner-note');
   if (note) note.innerHTML = '💡 ' + t('share.ownerNote');
   render();
+  D.persist();
   const user = D.GetCurrentUser();
-  const encoded = Share.saveShareDoc(token, user?.uid, proj);
+  const encoded = await Share.saveShareDoc(token, user?.uid, proj);
   const hash = encoded ? '#d=' + encoded : '';
   const url = location.origin + location.pathname + '?share=' + token + hash;
   document.getElementById('shareLinkInput').value = url;
@@ -42,18 +43,18 @@ export function copyShareLink() {
 
 export async function openCollabModal() {
   if (D.isReadOnly) return;
-  const { projects, curProj } = D;
+  const { projects, curProj, isSharedProject } = D;
   const overlay = document.getElementById('collabOverlay');
   overlay.classList.add('open');
   document.getElementById('collabMsg').style.display = 'none';
   document.getElementById('collabEmailInput').value = '';
   const sel = document.getElementById('collabProjSelect');
-  const ownedProjects = projects.filter(p => !p._isShared);
+  const ownedProjects = projects.filter(p => !isSharedProject(p));
   sel.innerHTML = ownedProjects.map(p =>
     `<option value="${p.id}">${esc(p.name)}</option>`
   ).join('');
   const cur = curProj();
-  if (cur && !cur._isShared) sel.value = cur.id;
+  if (cur && !isSharedProject(cur)) sel.value = cur.id;
   await refreshCollabList();
 }
 

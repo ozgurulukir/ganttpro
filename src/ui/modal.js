@@ -2,6 +2,7 @@
 import { D } from '../render/deps.js';
 import { countWorkingDays, addWorkingDays } from '../core/calendar.js';
 import { lagsFromParsed } from '../core/deps.js';
+import { esc } from '../core/format.js';
 import { t } from '../i18n/index.js';
 
 /* Modal-local state (moved from main.js — only used here). */
@@ -10,6 +11,14 @@ let selectedDeps = new Set();
 let depsExcludeId = null;
 let selectedSdeps = new Set();
 let _deleteTargetId = null;
+let _blockInlineCommit = false;
+
+export function cancelInlineEditors() {
+  _blockInlineCommit = true;
+  document.querySelectorAll('.inline-input').forEach(el => el.remove());
+  document.querySelectorAll('.deps-tip').forEach(el => el.remove());
+  _blockInlineCommit = false;
+}
 
 export function populateModal(excludeId = null, checkedDeps = [], presetParent = null, isDone = false) {
   const { tasks, projects, getAllDescendants } = D;
@@ -94,7 +103,7 @@ export function setupDepsInputListener(excludeId) {
     tip.innerHTML = parsed.map(p => {
       if (p.err) return `<span style="color:var(--red)">✕ ${p.raw}: ${p.err}</span>`;
       const dt = taskById(p.taskId);
-      return `<span style="color:#10B981">✓ ${p.rowNum}${p.type} - ${dt ? dt.name : ''}</span>`;
+      return `<span style="color:#10B981">✓ ${p.rowNum}${p.type} - ${esc(dt ? dt.name : '')}</span>`;
     }).join('&nbsp;&nbsp;');
   }
 
@@ -129,7 +138,7 @@ export function renderDepsDropdown(excludeId) {
     ).join('');
     return `<div class="dep-li${isSel?' dep-sel':''}">
       <span class="dep-li-num">#${rowNum}</span>
-      <span class="dep-li-name" title="${task.name}">${task.name}</span>
+      <span class="dep-li-name" title="${esc(task.name)}">${esc(task.name)}</span>
       <div class="dep-type-btns">${typeBtns}</div>
     </div>`;
   }).join('');
@@ -189,7 +198,7 @@ export function openNameEditor(task, cell, isNew = false) {
   inp.type = 'text';
   inp.className = 'inline-input';
   inp.value = task.name;
-  inp.placeholder = 'Enter task name...';
+  inp.placeholder = t('modal.taskNamePlaceholder');
   inp.style.cssText = 'width:100%;min-width:80px';
   cell.innerHTML = '';
   cell.style.overflow = 'visible';
@@ -197,11 +206,12 @@ export function openNameEditor(task, cell, isNew = false) {
   inp.focus(); inp.select();
   let committed = false;
   function commit() {
+    if (_blockInlineCommit) return;
     if (committed) return; committed = true;
     const name = inp.value.trim();
     if (!isNew) pushHistory();
     task.name = name || 'New Task';
-    recalcProjEnd(); render();
+    recalcProjEnd(); render(); D.persist();
   }
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e => {
@@ -250,6 +260,7 @@ export function addTaskInline(refTaskId) {
   pushHistory();
   tasks.splice(insertIdx + 1, 0, newTask);
   render();
+  D.persist();
   requestAnimationFrame(() => {
     const row = document.querySelector(`.task-row[data-id="${newTask.id}"]`);
     if (row) openNameEditor(newTask, row.querySelector('.tname'), true);
@@ -348,8 +359,7 @@ export function executeDeleteTask(id) {
   tasks.length = 0;
   tasks.push(..._filtered);
   render();
-  saveToLS();
-  if (currentUser) saveToCloud();
+  D.persist();
 }
 
 export function submitTask() {
@@ -425,6 +435,7 @@ export function submitTask() {
   scheduleTasks();
   recalcProjEnd();
   render();
+  D.persist();
 }
 
 export function openDateEditor(task, field, cell) {
@@ -437,6 +448,7 @@ export function openDateEditor(task, field, cell) {
   cell.appendChild(inp);
   inp.focus();
   function commit() {
+    if (_blockInlineCommit) return;
     if (!inp.value) { render(); return; }
     if (field === 'start') {
       task.start = inp.value;
@@ -445,7 +457,7 @@ export function openDateEditor(task, field, cell) {
       task.end = inp.value;
       if (task.start && task.start >= task.end) task.start = task.end; // keep start behind end
     }
-    recalcProjEnd(); render();
+    recalcProjEnd(); render(); D.persist();
   }
   inp.addEventListener('change', commit);
   inp.addEventListener('blur', commit);
@@ -463,6 +475,7 @@ export function openStartEditor(task, cell) {
   inp.focus();
   try { inp.showPicker(); } catch(e) {}
   function commit() {
+    if (_blockInlineCommit) return;
     const val = inp.value;
     if (val && val !== task.start) {
       pushHistory();
@@ -474,8 +487,7 @@ export function openStartEditor(task, cell) {
     scheduleTasks();
     recalcProjEnd();
     render();
-    saveToLS();
-    if (currentUser) saveToCloud();
+    D.persist();
   }
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { render(); } });
@@ -492,6 +504,7 @@ export function openEndEditor(task, cell) {
   inp.focus();
   try { inp.showPicker(); } catch(e) {}
   function commit() {
+    if (_blockInlineCommit) return;
     const val = inp.value;
     if (val && val !== task.end) {
       pushHistory();
@@ -503,8 +516,7 @@ export function openEndEditor(task, cell) {
     scheduleTasks();
     recalcProjEnd();
     render();
-    saveToLS();
-    if (currentUser) saveToCloud();
+    D.persist();
   }
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') render(); });
@@ -522,12 +534,13 @@ export function openWdayEditor(task, cell) {
   cell.appendChild(inp);
   inp.focus(); inp.select();
   function commit() {
+    if (_blockInlineCommit) return;
     const days = parseInt(inp.value);
     if (!isNaN(days) && days >= 1) {
       pushHistory();
       task.wday = days;
       scheduleTasks();
-      recalcProjEnd(); render();
+      recalcProjEnd(); render(); D.persist();
     } else { render(); }
   }
   inp.addEventListener('blur', commit);
@@ -590,7 +603,7 @@ export function renderDepsMenu() {
     opt.innerHTML = `
       <span class="deps-opt-num">#${t.id}</span>
       <span class="cdot" style="background:${t.color}"></span>
-      <span>${t.name}</span>
+      <span>${esc(t.name)}</span>
       <span class="deps-opt-check">${selectedDeps.has(t.id) ? '✓' : ''}</span>
     `;
     opt.addEventListener('click', () => toggleDepOpt(t.id));
@@ -607,7 +620,7 @@ export function openAllDepsEditor(task, cell) {
 
   const inp = document.createElement('input');
   inp.className = 'deps-input';
-  inp.placeholder = 'e.g. 2FS, 3SS, 2FS+3';
+  inp.placeholder = t('modal.depsPlaceholder');
   inp.value = buildDepsText(task);
   wrap.appendChild(inp);
 
@@ -635,7 +648,7 @@ export function openAllDepsEditor(task, cell) {
     const rows = parsed.map(p => {
       if (p.err) return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.raw}</span> <span style="color:#FCA5A5">✕ ${p.err}</span></div>`;
       const dt = taskById(p.taskId);
-      return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.rowNum}${p.type}</span> <span style="color:#6EE7B7">✓ ${dt ? dt.name : ''} · ${p.type}</span></div>`;
+      return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.rowNum}${p.type}</span> <span style="color:#6EE7B7">✓ ${esc(dt ? dt.name : '')} · ${p.type}</span></div>`;
     });
     rows.push(`<div style="margin-top:4px;color:#9CA3AF;font-size:10px">${t('modal.enterConfirm')} &nbsp; ${t('modal.escCancel')}</div>`);
     tip.innerHTML = rows.join('');
@@ -648,6 +661,7 @@ export function openAllDepsEditor(task, cell) {
 
   let committed = false;
   function commit() {
+    if (_blockInlineCommit) return;
     if (committed) return; committed = true;
     const parsed = parseDepInput(inp.value, task.id);
     const hasErr = parsed.some(p => p.err);
@@ -664,8 +678,7 @@ export function openAllDepsEditor(task, cell) {
     }
     tip.remove();
     render();
-    saveToLS();
-    if (currentUser) saveToCloud();
+    D.persist();
   }
 
   inp.addEventListener('blur', commit);

@@ -4,10 +4,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── Admin authority ──
-    // Hardcoded by email, never trust the user-writable is_admin field.
+    // ⚠️  This file is GENERATED from firestore.rules.template.
+    //    Do NOT edit directly — your changes will be overwritten.
+    //    Instead, set VITE_ADMIN_EMAIL in your .env file and run:
+    //      npm run build:rules
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email == 's19800430@gmail.com';
+        && request.auth.token.email == 'ozgur.ulukir@gmail.com';
     }
 
     // ── Registered user check ──

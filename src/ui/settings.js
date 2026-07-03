@@ -28,8 +28,7 @@ export function setBaseline() {
   p.baseline = { setAt: TODAY_STR, dates };
   showStatus(t('settings.baselineSet', { date: TODAY_STR }));
   render();
-  saveToLS();
-  if (currentUser) saveToCloud();
+  D.persist();
 }
 
 export function toggleSettings() {
@@ -147,7 +146,8 @@ export function createVersion() {
   curVersions().unshift(v);
   inp.value = '';
   renderVersionList();
-  render(); // triggers save
+  render();
+  D.persist();
   showStatus(t('settings.versionCreated', { name }));
 }
 
@@ -158,6 +158,7 @@ export function restoreVersion(vId) {
   if (!confirm(t('settings.restoreConfirm', { name: v.name }))) return;
   loadTasksFromSnapshot(v.snapshot);
   render();
+  D.persist();
   closeVersionPanel();
   showStatus(t('settings.restored', { name: v.name }));
 }
@@ -171,6 +172,7 @@ export function deleteVersion(vId) {
   curProj().versions = vs.filter(v => v.id !== vId);
   renderVersionList();
   render();
+  D.persist();
 }
 
 export function renderVersionList() {

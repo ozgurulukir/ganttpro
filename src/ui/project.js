@@ -1,13 +1,13 @@
 /* Project CRUD: switch, create, edit, delete, menu rendering. */
 import { D } from '../render/deps.js';
-import { esc } from '../core/format.js';
+import { esc, safeColor } from '../core/format.js';
 import { parseDate, formatDate } from '../core/date.js';
 import { t } from '../i18n/index.js';
 
 let _editingProjId = null;
 
 export function switchProject(id) {
-  const { currentProjId, projects, closeProjMenuOnly, loadProject, updateReadOnly, updateProjUI, scheduleTasks, recalcProjEnd, render, scrollToToday } = D;
+  const { currentProjId, projects, closeProjMenuOnly, loadProject, updateReadOnly, updateProjUI, scheduleTasks, recalcProjEnd, render, scrollToToday, isSharedProject } = D;
   if (id === currentProjId) { closeProjMenuOnly(); return; }
   const proj = projects.find(p => p.id === id);
   if (!proj) return;
@@ -22,10 +22,10 @@ export function switchProject(id) {
 }
 
 export function updateProjUI() {
-  const { projects, currentProjId, setCurrentProjId, updateReadOnly } = D;
+  const { projects, currentProjId, setCurrentProjId, updateReadOnly, isSharedProject } = D;
   let p = projects.find(x => x.id === currentProjId);
   if (!p) {
-    const fallback = projects.find(x => !x._isShared) || projects[0];
+    const fallback = projects.find(x => !isSharedProject(x)) || projects[0];
     if (!fallback) {
       // No projects at all — clear header and show create modal
       document.getElementById('projSelectorName').textContent = t('project.noProjects');
@@ -65,17 +65,18 @@ export function closeProjMenuOnly() {
 }
 
 export function renderProjMenu() {
-  const { projects, currentProjId } = D;
+  const { projects, currentProjId, isSharedProject } = D;
   const menu = document.getElementById('projMenu');
   menu.innerHTML = '';
   projects.forEach(p => {
+    const shared = isSharedProject(p);
     const item = document.createElement('div');
     item.className = 'proj-item' + (p.id === currentProjId ? ' active' : '');
     item.innerHTML = `
-      <div class="proj-item-dot" style="background:${p.color}"></div>
-      <span class="proj-item-name">${esc(p.name)}${p._isShared ? ' <span class="collab-shared-badge">Shared</span>' : ''}</span>
-      ${!p._isShared ? `<span class="proj-item-edit" data-action="edit-proj" data-pid="${p.id}" title="Edit project">✎</span>` : ''}
-      ${!p._isShared ? `<span class="proj-item-del" data-action="delete-proj" data-pid="${p.id}" title="Delete project">✕</span>` : ''}
+      <div class="proj-item-dot" style="background:${safeColor(p.color)}"></div>
+      <span class="proj-item-name">${esc(p.name)}${shared ? ' <span class="collab-shared-badge">Shared</span>' : ''}</span>
+      ${!shared ? `<span class="proj-item-edit" data-action="edit-proj" data-pid="${p.id}" title="Edit project">✎</span>` : ''}
+      ${!shared ? `<span class="proj-item-del" data-action="delete-proj" data-pid="${p.id}" title="Delete project">✕</span>` : ''}
     `;
     item.dataset.pid = p.id;
     menu.appendChild(item);
@@ -90,27 +91,27 @@ export function renderProjMenu() {
 }
 
 export function deleteProject(id, e) {
-  const { projects, currentProjId, setProjects, resetState, closeProjMenuOnly, switchProject, saveToCloud, updateProjUI, renderProjMenu, render } = D;
+  const { projects, currentProjId, setProjects, resetState, closeProjMenuOnly, switchProject, saveToLS, saveToCloud, updateProjUI, renderProjMenu, render, isSharedProject } = D;
   e.stopPropagation();
   const p = projects.find(x => x.id === id);
-  if (!p || p._isShared) return;
+  if (!p || isSharedProject(p)) return;
   if (!confirm(t('project.deleteConfirm', { name: p.name }))) return;
   setProjects(projects.filter(x => x.id !== id));
   closeProjMenuOnly();
-  const ownedLeft = D.projects.filter(x => !x._isShared);
+  const ownedLeft = D.projects.filter(x => !isSharedProject(x));
   if (ownedLeft.length === 0) {
     // 全部刪完：重置狀態，更新 header
     resetState();
-    saveToCloud();
     updateProjUI();
     renderProjMenu();
     render();
+    D.persist();
   } else if (id === currentProjId) {
     switchProject((ownedLeft[0] || D.projects[0]).id);
-    saveToCloud();
+    D.persist();
   } else {
     renderProjMenu();
-    saveToCloud();
+    D.persist();
   }
 }
 
@@ -237,8 +238,7 @@ export function submitProject() {
       recalcProjEnd();
       updateProjUI();
       render();
-      saveToLS();
-      if (currentUser) saveToCloud();
+      D.persist();
     }
     document.getElementById('projOverlay').classList.remove('open');
     _editingProjId = null;
@@ -286,6 +286,5 @@ export function submitProject() {
   recalcProjEnd();
   updateProjUI();
   render();
-  saveToLS();
-  if (currentUser) saveToCloud();
+  D.persist();
 }

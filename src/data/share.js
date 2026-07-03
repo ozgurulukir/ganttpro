@@ -22,22 +22,29 @@ export function decodeData(b64) {
   } catch(e) { console.error('[decode]', e); return null; }
 }
 
+function randomToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return 'shr_' + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
 export function getOrCreateShareToken(proj) {
   if (!proj.shareToken) {
-    proj.shareToken = 'shr_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    proj.shareToken = randomToken();
   }
   return proj.shareToken;
 }
 
-export function saveShareDoc(token, uid, project) {
+export async function saveShareDoc(token, uid, project) {
   const encoded = encodeData(project);
   if (uid) {
     try {
-      setDoc(doc(db, 'gantt_shares', token), {
+      await setDoc(doc(db, 'gantt_shares', token), {
         token, owner_id: uid,
         project_data: JSON.parse(JSON.stringify(project))
       });
-    } catch(e) { console.error('saveShareDoc:', e); }
+    } catch(e) { console.error('saveShareDoc:', e); return null; }
   }
   return encoded;
 }

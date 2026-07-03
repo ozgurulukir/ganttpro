@@ -5,6 +5,7 @@ import * as CPM from "./core/critical-path.js";
 import * as Schedule from "./core/schedule.js";
 import * as Format from "./core/format.js";
 import * as DateUtils from "./core/date.js";
+import { validateProject, validateProjects } from "./core/validate.js";
 import { D } from "./render/deps.js";
 import { highlightRow, getPredIds, getSuccIds, highlightDeps, showTT, moveTT, hideTT } from "./render/tooltip.js";
 import { computeWorkload, renderWorkloadPanel, renderWorkloadChart } from "./render/workload.js";
@@ -23,6 +24,7 @@ import {
   addTaskInline, confirmDeleteTask, closeDeleteModal, executeDeleteTask,
   submitTask, toggleDepsMenu, closeDepsOutside, toggleDepOpt, removeDepTag,
   updateDepsTags, renderDepsMenu, openDepsEditor, openAllDepsEditor,
+  cancelInlineEditors,
 } from "./ui/modal.js";
 import {
   switchProject, updateProjUI, toggleProjMenu, closeProjOnOutside,
@@ -505,12 +507,12 @@ let _isShareLinkMode = false;
 function updateReadOnly() {
   const cp = curProj();
   // Use !! to ensure boolean (avoid undefined causing toggle() to act as actual toggle)
-  isReadOnly = !!(_isShareLinkMode || (cp && cp._isShared && cp._permission === 'read'));
+  isReadOnly = !!(_isShareLinkMode || isReadOnlyShared(cp));
   document.body.classList.toggle('readonly', isReadOnly);
   const badge = document.querySelector('.readonly-badge');
   if (badge) badge.style.display = isReadOnly ? 'flex' : 'none';
   // shareBtn and collabBtn only for own projects
-  const isOwnProj = !_isShareLinkMode && !(cp && cp._isShared);
+  const isOwnProj = !_isShareLinkMode && !isSharedProject(cp);
   ['shareBtn','collabBtn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = isOwnProj ? '' : 'none';
@@ -523,6 +525,29 @@ function getOwnerId() { return Local.getOwnerId(); }
    COLLABORATION — SHARED PROJECTS
 ═══════════════════════════════════════════ */
 let _sharedChannels = [];
+const _shareMap = new Map();
+
+function shareKey(ownerId, projectId) { return `${ownerId}:${projectId}`; }
+function recordShare(ownerId, projectId, permission) {
+  _shareMap.set(shareKey(ownerId, projectId), permission);
+}
+function getSharePermission(ownerId, projectId) {
+  return _shareMap.get(shareKey(ownerId, projectId));
+}
+function isSharedProject(proj) {
+  return proj && proj.ownerId && currentUser && proj.ownerId !== currentUser.uid &&
+    _shareMap.has(shareKey(proj.ownerId, proj.id));
+}
+function isReadOnlyShared(proj) {
+  return isSharedProject(proj) && getSharePermission(proj.ownerId, proj.id) === 'read';
+}
+function stripSharedFlags(proj) {
+  const p = { ...proj };
+  delete p._isShared;
+  delete p._permission;
+  delete p._ownerId;
+  return p;
+}
 
 async function loadSharedProjects() {
   if (!currentUser) return;
@@ -541,15 +566,14 @@ async function loadSharedProjects() {
       if (!ownerData?.projects) continue;
 
       ownerShares.forEach(share => {
-        const proj = ownerData.projects.find(p => p.id == share.project_id);
+        const raw = ownerData.projects.find(p => p.id == share.project_id);
+        if (!raw) return;
+        recordShare(ownerId, share.project_id, share.permission);
+        if (projects.find(p => p.id === raw.id && p.ownerId === ownerId)) return;
+        const proj = validateProject(raw);
         if (!proj) return;
-        if (projects.find(p => p.id === proj.id && p._isShared)) return;
-        projects.push({
-          ...JSON.parse(JSON.stringify(proj)),
-          _isShared: true,
-          _ownerId: ownerId,
-          _permission: share.permission
-        });
+        proj.ownerId = ownerId;
+        projects.push(proj);
       });
     }
 
@@ -565,16 +589,23 @@ function setupSharedRealtime(ownerIds) {
     let skipFirst = true;
     const unsub = Remote.watchUserData(ownerId, async () => {
         if (skipFirst) { skipFirst = false; return; }
+        if (_pendingCloudWrites.size > 0) return;
         const ownerData = await Remote.readUserData(ownerId);
         if (!ownerData?.projects) return;
         projects = projects.map(p => {
-          if (p._isShared && p._ownerId === ownerId) {
-            const fresh = ownerData.projects.find(op => op.id === p.id);
-            if (fresh) return { ...fresh, _isShared: true, _ownerId: ownerId, _permission: p._permission };
+          if (p.ownerId === ownerId) {
+            const raw = ownerData.projects.find(op => op.id === p.id);
+            if (raw) {
+              const fresh = validateProject(raw);
+              if (fresh) {
+                fresh.ownerId = ownerId;
+                return fresh;
+              }
+            }
           }
           return p;
         });
-        if (curProj()?._ownerId === ownerId) {
+        if (curProj()?.ownerId === ownerId) {
           tasks = curProj().tasks;
           nextId = curProj().nextId;
           scheduleTasks();
@@ -594,6 +625,7 @@ function setupSharedRealtime(ownerIds) {
 ═══════════════════════════════════════════ */
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); return; }
+  if (document.querySelector('.overlay.open, .panel.open')) return;
   if (e.key !== 'Escape' && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
   if (e.key === 't' || e.key === 'T') scrollToToday();
   if (e.key === 'd') setView('day');
@@ -669,6 +701,7 @@ function syncRenderDeps() {
   D.toggleCollapse = toggleCollapse;
   D.toggleProjMenu = toggleProjMenu;
   D.closeProjMenuOnly = closeProjMenuOnly;
+  D.renderProjMenu = renderProjMenu;
   D.switchProject = switchProject;
   D.reorderTask = reorderTask;
   D.pushHistory = pushHistory;
@@ -677,12 +710,21 @@ function syncRenderDeps() {
   D.recalcProjEnd = recalcProjEnd;
   D.saveToLS = saveToLS;
   D.saveToCloud = saveToCloud;
+  D.persist = persist;
+  D.isSharedProject = isSharedProject;
+  D.isReadOnlyShared = isReadOnlyShared;
   D.showStatus = showStatus;
   D.scrollToToday = scrollToToday;
   D.getNextGroupColor = getNextGroupColor;
   D.getOwnerId = getOwnerId;
-  D.consumeNextId = () => { const id = nextId++; if (curProj()) curProj().nextId = nextId; return id; };
+  D.consumeNextId = () => {
+    const id = nextId++;
+    if (curProj()) curProj().nextId = nextId;
+    D.nextId = nextId;
+    return id;
+  };
   D.loadProject = (proj) => {
+    cancelInlineEditors();
     if (curProj()) curProj().nextId = nextId;
     currentProjId = proj.id;
     tasks = proj.tasks;
@@ -691,31 +733,45 @@ function syncRenderDeps() {
     CHART_END = new Date(proj.endDate);
     collapsed.clear();
     _history = [];
+    D.currentProjId = currentProjId;
+    D.tasks = tasks;
+    D.nextId = nextId;
+    D.CHART_START = CHART_START;
+    D.CHART_END = CHART_END;
   };
-  D.resetState = () => { currentProjId = null; tasks = []; nextId = 1; };
-  D.setProjects = (arr) => { projects = arr; };
-  D.setCurrentProjId = (id) => { currentProjId = id; };
-  D.setChartStart = (d) => { CHART_START = d; };
-  D.setChartEnd = (d) => { CHART_END = d; };
+  D.resetState = () => {
+    currentProjId = null;
+    tasks = [];
+    nextId = 1;
+    D.currentProjId = null;
+    D.tasks = [];
+    D.nextId = 1;
+  };
+  D.setProjects = (arr) => { projects = arr; D.projects = arr; };
+  D.setCurrentProjId = (id) => { currentProjId = id; D.currentProjId = id; };
+  D.setChartStart = (d) => { CHART_START = d; D.CHART_START = d; };
+  D.setChartEnd = (d) => { CHART_END = d; D.CHART_END = d; };
   D.loadTasksFromSnapshot = (snap) => {
     const p = curProj();
     if (!p) return;
     p.tasks = JSON.parse(JSON.stringify(snap));
     tasks = p.tasks;
     collapsed.clear();
+    D.tasks = tasks;
   };
-  D.setShowBarDates = (v) => { showBarDates = v; };
-  D.setShowBaseline = (v) => { showBaseline = v; };
-  D.setIsDark = (v) => { isDark = v; };
-  D.setPPD = (v) => { PPD = v; };
+  D.setShowBarDates = (v) => { showBarDates = v; D.showBarDates = v; };
+  D.setShowBaseline = (v) => { showBaseline = v; D.showBaseline = v; };
+  D.setIsDark = (v) => { isDark = v; D.isDark = v; };
+  D.setPPD = (v) => { PPD = v; D.PPD = v; };
 
   // Auth/callback refs for auth/collab/admin modules
   D.GetCurrentUser = () => currentUser;
-  D.SetCurrentUser = (u) => { currentUser = u; };
-  D.SetGuestMode = (v) => { _guestMode = v; };
-  D.SetAppInitialized = (v) => { _appInitialized = v; };
+  D.SetCurrentUser = (u) => { currentUser = u; D.currentUser = u; };
+  D.SetGuestMode = (v) => { _guestMode = v; D._guestMode = v; };
+  D.SetAppInitialized = (v) => { _appInitialized = v; D._appInitialized = v; };
   D.IsGuestMode = () => _guestMode;
   D.initApp = initApp;
+  D.cleanupRealtime = cleanupRealtime;
   D.setSyncDot = setSyncDot;
 }
 
@@ -727,15 +783,24 @@ function render() {
   renderChartBody();
   const undoBtn = document.getElementById('undoBtn');
   if (undoBtn) undoBtn.disabled = _history.length === 0;
-  if (isReadOnly) return;
+}
+
+function debounceSaveToCloud() {
+  if (!currentUser) return;
   clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => { saveToLS(); saveToCloud(); }, 600);
+  _saveTimer = setTimeout(() => saveToCloud(), 600);
+}
+
+function persist() {
+  saveToLS();
+  debounceSaveToCloud();
 }
 
 /* ═══════════════════════════════════════════
    CLOUD SYNC STATE (Firebase init in src/data/firebase.js)
 ═══════════════════════════════════════════ */
-let _myUpdate = false;
+let _cloudSaveSeq = 0;
+const _pendingCloudWrites = new Set();
 let currentUser = null;
 let _guestMode = false;
 let _appInitialized = false;
@@ -750,6 +815,8 @@ function setSyncDot(state) {
 async function saveToCloud() {
   if (!currentUser) return;
   setSyncDot('saving');
+  const token = ++_cloudSaveSeq;
+  _pendingCloudWrites.add(token);
   try {
     if (curProj()) curProj().nextId = nextId;
     const cp = curProj();
@@ -757,23 +824,24 @@ async function saveToCloud() {
     if (!cp) {
       await Remote.writeUserData(currentUser.uid, { projects: [], currentProjId: null, nextProjId });
       setSyncDot('ok');
-    } else if (cp._isShared && cp._permission === 'edit') {
-      const ownerData = await Remote.readUserData(cp._ownerId);
+    } else if (isSharedProject(cp) && getSharePermission(cp.ownerId, cp.id) === 'edit') {
+      const ownerData = await Remote.readUserData(cp.ownerId);
       if (!ownerData?.projects) { setSyncDot('err'); return; }
       const ownerProjects = ownerData.projects.map(p =>
-        p.id === cp.id ? { ...cp, _isShared: undefined, _ownerId: undefined, _permission: undefined } : p
+        p.id === cp.id ? stripSharedFlags(cp) : p
       );
-      await Remote.updateUserData(cp._ownerId, { ...ownerData, projects: ownerProjects });
+      await Remote.updateUserData(cp.ownerId, { ...ownerData, projects: ownerProjects });
       setSyncDot('ok');
-    } else if (!cp._isShared) {
-      const ownProjects = projects.filter(p => !p._isShared);
-      _myUpdate = true;
+    } else if (!isSharedProject(cp)) {
+      const ownProjects = projects.filter(p => !isSharedProject(p)).map(stripSharedFlags);
       await Remote.writeUserData(currentUser.uid, { projects: ownProjects, currentProjId, nextProjId });
-      setTimeout(() => _myUpdate = false, 1000);
       setSyncDot('ok');
     }
   } catch(e) {
+    console.error('saveToCloud failed', e);
     setSyncDot('err');
+  } finally {
+    _pendingCloudWrites.delete(token);
   }
 }
 
@@ -782,7 +850,7 @@ async function loadFromCloud() {
   try {
     const s = await Remote.readUserData(currentUser.uid);
     if (!s) return false;
-    projects   = s.projects || [];
+    projects   = validateProjects(s.projects || []);
     nextProjId = s.nextProjId ?? 1;
     if (!projects.length) {
       // User intentionally cleared all projects
@@ -815,13 +883,22 @@ async function loadShareFromCloud(token) {
 
 let _realtimeUnsub = null;
 
+function cleanupRealtime() {
+  if (_realtimeUnsub) { _realtimeUnsub(); _realtimeUnsub = null; }
+  _sharedChannels.forEach(unsub => unsub());
+  _sharedChannels = [];
+  _shareMap.clear();
+  clearTimeout(_saveTimer);
+  _saveTimer = null;
+}
+
 function setupRealtime() {
   if (!currentUser) return;
   if (_realtimeUnsub) _realtimeUnsub();
   let skipFirst = true;
   _realtimeUnsub = Remote.watchUserData(currentUser.uid, async () => {
       if (skipFirst) { skipFirst = false; return; }
-      if (_myUpdate) return;
+      if (_pendingCloudWrites.size > 0) return;
       const ok = await loadFromCloud();
       if (ok) {
         if (projects.length) { scheduleTasks(); recalcProjEnd(); }
@@ -849,7 +926,7 @@ function showSyncToast() {
 function saveToLS() {
   try {
     if (curProj()) curProj().nextId = nextId;
-    const ownProjects = projects.filter(p => !p._isShared);
+    const ownProjects = projects.filter(p => !isSharedProject(p)).map(stripSharedFlags);
     Local.saveToLS({ projects: ownProjects, currentProjId, nextProjId });
   } catch(e) { console.error('saveToLS:', e); }
 }
@@ -858,7 +935,7 @@ function loadFromLS() {
   try {
     const d = Local.loadFromLS();
     if (!d?.projects?.length) return false;
-    projects   = d.projects;
+    projects   = validateProjects(d.projects);
     nextProjId = d.nextProjId ?? projects.length + 1;
     currentProjId = (d.currentProjId && projects.find(p => p.id === Number(d.currentProjId)))
       ? Number(d.currentProjId) : projects[0].id;
@@ -876,10 +953,17 @@ function showApp() {
   document.getElementById('main').style.display = 'flex';
 }
 
+function isSafeAvatarUrl(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:';
+  } catch { return false; }
+}
+
 function updateUserDisplay() {
   if (!currentUser) return;
   const name = currentUser.displayName || currentUser.email || '';
-  const avatar = currentUser.photoURL;
+  const avatar = isSafeAvatarUrl(currentUser.photoURL) ? currentUser.photoURL : null;
   const el = document.getElementById('userDisplay');
   if (!el) return;
   el.innerHTML = avatar
@@ -903,9 +987,6 @@ async function initApp() {
   const cloudOk = await loadFromCloud();
   if (!cloudOk) loadFromLS();
   await loadSharedProjects();
-  setupSync();
-  setupColResizers();
-  setupResizer();
   setupRealtime();
   updateProjUI();
   if (projects.length) {
@@ -1080,6 +1161,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initI18n();
   translateDOM();
   wireStaticEvents();
+  setupSync();
+  setupColResizers();
+  setupResizer();
 
   // Locale switcher: set initial value and wire change event
   const langSelect = document.getElementById('langSelect');
@@ -1108,8 +1192,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>`;
       return;
     }
-    projects = [projData];
-    currentProjId = projData.id;
+    const validated = validateProject(projData);
+    if (!validated) {
+      document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;flex-direction:column;gap:12px;color:#555">
+        <div style="font-size:48px">🔗</div>
+        <div style="font-size:18px;font-weight:600">Invalid share data</div>
+        <div style="font-size:14px;color:#888">This share link contains corrupted project data.</div>
+      </div>`;
+      return;
+    }
+    projects = [validated];
+    currentProjId = validated.id;
     tasks  = curProj().tasks;
     nextId = curProj().nextId || 100;
     CHART_START = new Date(curProj().startDate);
