@@ -3,7 +3,7 @@
 const COL_WIDTHS = [28, null, 86, 86, 52, 130, 36, 68]; // null = 1fr
 
 export function applyColGrid() {
-  const tpl = COL_WIDTHS.map(w => w === null ? 'minmax(320px,400px)' : w + 'px').join(' ');
+  const tpl = COL_WIDTHS.map(w => (w === null ? 'minmax(320px,400px)' : w + 'px')).join(' ');
   document.documentElement.style.setProperty('--cg', tpl);
 }
 

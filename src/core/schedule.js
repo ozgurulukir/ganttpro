@@ -26,10 +26,12 @@ import { taskById, groupBounds } from './tree.js';
 
 /** Are all (transitively, through sub-groups) children of `groupId` scheduled? */
 export function allGroupMembersScheduled(tasks, groupId, scheduled) {
-  return tasks.filter(t => t.parent === groupId).every(child => {
-    if (child.type === 'group') return allGroupMembersScheduled(tasks, child.id, scheduled);
-    return scheduled.has(child.id);
-  });
+  return tasks
+    .filter(t => t.parent === groupId)
+    .every(child => {
+      if (child.type === 'group') return allGroupMembersScheduled(tasks, child.id, scheduled);
+      return scheduled.has(child.id);
+    });
 }
 
 /**
@@ -42,12 +44,13 @@ export function scheduleTasks(tasks, projStart) {
   // Ensure all tasks have wday
   tasks.forEach(t => {
     if (t.type === 'task' && !t.wday)
-      t.wday = (t.start && t.end) ? countWorkingDays(t.start, t.end) : 1;
+      t.wday = t.start && t.end ? countWorkingDays(t.start, t.end) : 1;
   });
   const candidates = tasks.filter(t => t.type === 'task' || t.type === 'milestone');
   const scheduled = new Set();
   const MAX = candidates.length * 3;
-  let iter = 0, progress = true;
+  let iter = 0,
+    progress = true;
   while (progress && iter++ < MAX) {
     progress = false;
     candidates.forEach(task => {
@@ -76,9 +79,14 @@ export function scheduleTasks(tasks, projStart) {
       // Latest end among FS deps → task must start after this（含 lag 偏移）
       let latestFsEnd = null;
       deps.forEach(dep => {
-        let e = dep.type === 'task' ? dep.end
-              : dep.type === 'milestone' ? dep.date
-              : dep.type === 'group' ? groupBounds(tasks, dep.id).e : null;
+        let e =
+          dep.type === 'task'
+            ? dep.end
+            : dep.type === 'milestone'
+              ? dep.date
+              : dep.type === 'group'
+                ? groupBounds(tasks, dep.id).e
+                : null;
         if (!e) return;
         e = shiftWorkingDays(e, depLag('FS', dep.id));
         if (!latestFsEnd || e > latestFsEnd) latestFsEnd = e;
@@ -109,8 +117,11 @@ export function scheduleTasks(tasks, projStart) {
       });
 
       if (task.type === 'task') {
-        let rawStart = latestFsEnd ? nextWorkingDay(latestFsEnd)
-                     : (task.pinStart && task.start ? task.start : projStart);
+        let rawStart = latestFsEnd
+          ? nextWorkingDay(latestFsEnd)
+          : task.pinStart && task.start
+            ? task.start
+            : projStart;
         if (latestSsStart && latestSsStart > rawStart) rawStart = latestSsStart;
         // FF: task.end must >= latestFfEnd → push start so end lands on latestFfEnd
         if (latestFfEnd) {
@@ -125,8 +136,9 @@ export function scheduleTasks(tasks, projStart) {
         let s = parseDate(rawStart);
         while (isNonWorkday(formatDate(s))) s++;
         task.start = formatDate(s);
-        task.end   = addWorkingDays(task.start, task.wday || 1);
-      } else { // milestone
+        task.end = addWorkingDays(task.start, task.wday || 1);
+      } else {
+        // milestone
         let best = latestFsEnd || latestSsStart || null;
         if (best) {
           let dn = parseDate(best);
@@ -158,10 +170,14 @@ export function autoScheduleFromDeps(tasks, task) {
   deps.forEach(depId => {
     const dep = taskById(tasks, depId);
     if (!dep) return;
-    let depEnd = dep.type === 'task' ? dep.end
-                : dep.type === 'milestone' ? dep.date
-                : dep.type === 'group' ? groupBounds(tasks, dep.id).e
-                : null;
+    let depEnd =
+      dep.type === 'task'
+        ? dep.end
+        : dep.type === 'milestone'
+          ? dep.date
+          : dep.type === 'group'
+            ? groupBounds(tasks, dep.id).e
+            : null;
     if (depEnd) {
       const s = nextWorkingDay(depEnd);
       if (!candidateStart || s > candidateStart) candidateStart = s;
@@ -175,7 +191,7 @@ export function autoScheduleFromDeps(tasks, task) {
     if (s && (!candidateStart || s > candidateStart)) candidateStart = s;
   });
   if (!candidateStart) return;
-  const wdays = (task.start && task.end) ? countWorkingDays(task.start, task.end) : 1;
+  const wdays = task.start && task.end ? countWorkingDays(task.start, task.end) : 1;
   if (candidateStart > (task.start || '')) {
     task.start = candidateStart;
     task.end = addWorkingDays(task.start, wdays);

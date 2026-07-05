@@ -5,7 +5,9 @@ const OWNER_KEY = 'ganttpro_owner_id';
 export function saveToLS(data) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(data));
-  } catch(e) { console.error('saveToLS:', e); }
+  } catch (e) {
+    console.error('saveToLS:', e);
+  }
 }
 
 export function loadFromLS() {
@@ -13,7 +15,9 @@ export function loadFromLS() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return null;
     return JSON.parse(raw);
-  } catch(e) { return null; }
+  } catch (e) {
+    return null;
+  }
 }
 
 export function getOwnerId() {

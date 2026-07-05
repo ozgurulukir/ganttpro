@@ -11,7 +11,22 @@ import { renderArrows } from './arrows.js';
 import { renderWorkloadChart } from './workload.js';
 
 export function renderChartBody() {
-  const { showCriticalPath, milestoneView, workloadView, ROW_H, PPD, TODAY_STR, CHART_START, isReadOnly, totalW, getVisibleRows, dateToX, groupBounds, updateStats, openModal } = D;
+  const {
+    showCriticalPath,
+    milestoneView,
+    workloadView,
+    ROW_H,
+    PPD,
+    TODAY_STR,
+    CHART_START,
+    isReadOnly,
+    totalW,
+    getVisibleRows,
+    dateToX,
+    groupBounds,
+    updateStats,
+    openModal
+  } = D;
   const canvas = document.getElementById('chartCanvas');
   canvas.innerHTML = '';
   canvas.classList.toggle('cp-mode', showCriticalPath);

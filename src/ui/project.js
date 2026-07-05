@@ -7,8 +7,23 @@ import { t } from '../i18n/index.js';
 let _editingProjId = null;
 
 export function switchProject(id) {
-  const { currentProjId, projects, closeProjMenuOnly, loadProject, updateReadOnly, updateProjUI, scheduleTasks, recalcProjEnd, render, scrollToToday, isSharedProject } = D;
-  if (id === currentProjId) { closeProjMenuOnly(); return; }
+  const {
+    currentProjId,
+    projects,
+    closeProjMenuOnly,
+    loadProject,
+    updateReadOnly,
+    updateProjUI,
+    scheduleTasks,
+    recalcProjEnd,
+    render,
+    scrollToToday,
+    isSharedProject
+  } = D;
+  if (id === currentProjId) {
+    closeProjMenuOnly();
+    return;
+  }
   const proj = projects.find(p => p.id === id);
   if (!proj) return;
   loadProject(proj);
@@ -44,9 +59,12 @@ export function updateProjUI() {
 
 export function toggleProjMenu(e) {
   const menu = document.getElementById('projMenu');
-  const sel  = document.getElementById('projSelector');
+  const sel = document.getElementById('projSelector');
   const isOpen = menu.classList.contains('open');
-  if (isOpen) { closeProjMenuOnly(); return; }
+  if (isOpen) {
+    closeProjMenuOnly();
+    return;
+  }
   renderProjMenu();
   menu.classList.add('open');
   sel.classList.add('open');
@@ -81,17 +99,34 @@ export function renderProjMenu() {
     item.dataset.pid = p.id;
     menu.appendChild(item);
   });
-  const div = document.createElement('div'); div.className = 'proj-menu-div';
+  const div = document.createElement('div');
+  div.className = 'proj-menu-div';
   menu.appendChild(div);
   const add = document.createElement('div');
   add.className = 'proj-item proj-item-new';
   add.innerHTML = t('project.newProject');
-  add.onclick = () => { closeProjMenuOnly(); openProjModal(); };
+  add.onclick = () => {
+    closeProjMenuOnly();
+    openProjModal();
+  };
   menu.appendChild(add);
 }
 
 export function deleteProject(id, e) {
-  const { projects, currentProjId, setProjects, resetState, closeProjMenuOnly, switchProject, saveToLS, saveToCloud, updateProjUI, renderProjMenu, render, isSharedProject } = D;
+  const {
+    projects,
+    currentProjId,
+    setProjects,
+    resetState,
+    closeProjMenuOnly,
+    switchProject,
+    saveToLS,
+    saveToCloud,
+    updateProjUI,
+    renderProjMenu,
+    render,
+    isSharedProject
+  } = D;
   e.stopPropagation();
   const p = projects.find(x => x.id === id);
   if (!p || isSharedProject(p)) return;
@@ -157,13 +192,15 @@ export function openProjModal() {
     startRow.insertAdjacentElement('afterend', tplRow);
     const prevDiv = document.createElement('div');
     prevDiv.id = 'templatePreview';
-    prevDiv.style.cssText = 'display:none;margin:4px 0 0;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--t3);line-height:1.6';
+    prevDiv.style.cssText =
+      'display:none;margin:4px 0 0;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--t3);line-height:1.6';
     tplRow.insertAdjacentElement('afterend', prevDiv);
   }
 
   // Fill template options
   const sel = document.getElementById('pTemplate');
-  sel.innerHTML = `<option value="">${t('project.blankProject')}</option>` +
+  sel.innerHTML =
+    `<option value="">${t('project.blankProject')}</option>` +
     TEMPLATES.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
   sel.value = '';
   document.getElementById('templatePreview').style.display = 'none';
@@ -181,14 +218,19 @@ export function onTemplateChange() {
   const val = document.getElementById('pTemplate').value;
   const preview = document.getElementById('templatePreview');
   const tpl = TEMPLATES.find(t => t.id === val);
-  if (!tpl) { preview.style.display = 'none'; return; }
+  if (!tpl) {
+    preview.style.display = 'none';
+    return;
+  }
   // Count tasks by type
   const groups = tpl.tasks.filter(t => t.type === 'group' && t.parent !== null).length;
-  const tasks  = tpl.tasks.filter(t => t.type === 'task').length;
-  const miles  = tpl.tasks.filter(t => t.type === 'milestone').length;
+  const tasks = tpl.tasks.filter(t => t.type === 'task').length;
+  const miles = tpl.tasks.filter(t => t.type === 'milestone').length;
   // List phase names (top-level groups)
-  const phases = tpl.tasks.filter(t => t.type === 'group' && t.parent === 1)
-    .map(t => t.name).join(' → ');
+  const phases = tpl.tasks
+    .filter(t => t.type === 'group' && t.parent === 1)
+    .map(t => t.name)
+    .join(' → ');
   preview.innerHTML = `<b>${t('project.template')}:</b> ${t('project.templatePreview', { groups, tasks, miles })}<br>
     <span style="color:var(--t4)">${phases}</span>`;
   preview.style.display = '';
@@ -198,7 +240,9 @@ export function onTemplateChange() {
     const today = new Date();
     const ym = today.toLocaleDateString('sv', { timeZone: 'Asia/Taipei' }).slice(0, 7);
     nameEl.value = (tpl.defaultName || tpl.name.split('(')[0]) + ' ' + ym;
-    setTimeout(() => { nameEl.select(); }, 60);
+    setTimeout(() => {
+      nameEl.select();
+    }, 60);
   }
   // Update color dot to template color
   document.getElementById('projColorDot').style.background = tpl.color || getNextGroupColor();
@@ -215,9 +259,29 @@ export function selectColor(el) {
 }
 
 export function submitProject() {
-  const { projects, nextProjId, getOwnerId, getNextGroupColor, TEMPLATES, loadProject, setChartStart, setChartEnd, curProj, scheduleTasks, recalcProjEnd, updateProjUI, render, saveToLS, saveToCloud, currentUser } = D;
+  const {
+    projects,
+    nextProjId,
+    getOwnerId,
+    getNextGroupColor,
+    TEMPLATES,
+    loadProject,
+    setChartStart,
+    setChartEnd,
+    curProj,
+    scheduleTasks,
+    recalcProjEnd,
+    updateProjUI,
+    render,
+    saveToLS,
+    saveToCloud,
+    currentUser
+  } = D;
   const name = document.getElementById('pName').value.trim();
-  if (!name) { document.getElementById('pName').focus(); return; }
+  if (!name) {
+    document.getElementById('pName').focus();
+    return;
+  }
   const start = document.getElementById('pStart').value;
 
   // 重複名稱提醒
@@ -245,9 +309,9 @@ export function submitProject() {
     return;
   }
 
-  const tplId   = document.getElementById('pTemplate').value;
-  const tpl     = TEMPLATES.find(t => t.id === tplId);
-  const color   = tpl ? tpl.color : getNextGroupColor();
+  const tplId = document.getElementById('pTemplate').value;
+  const tpl = TEMPLATES.find(t => t.id === tplId);
+  const color = tpl ? tpl.color : getNextGroupColor();
 
   let projTasks, projNextId;
   if (tpl) {
@@ -257,7 +321,7 @@ export function submitProject() {
     projTasks[0].color = color;
     projNextId = Math.max(...projTasks.map(t => t.id)) + 1;
   } else {
-    projTasks  = [{ id:1, name, type:'group', parent:null, color, assignee:'' }];
+    projTasks = [{ id: 1, name, type: 'group', parent: null, color, assignee: '' }];
     projNextId = 2;
   }
 
@@ -268,7 +332,8 @@ export function submitProject() {
 
   const newProj = {
     id: nextProjId,
-    name, color,
+    name,
+    color,
     startDate: start,
     endDate: end,
     nextId: projNextId,

@@ -10,13 +10,21 @@
 import { diffDays, parseDate } from './date.js';
 
 /** Fallback palette for assignees without an explicit color. */
-const AV_PALETTE = ['#5E6AD2','#10B981','#F59E0B','#EF4444','#8B5CF6','#0EA5E9','#EC4899','#14B8A6'];
+const AV_PALETTE = [
+  '#5E6AD2',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#0EA5E9',
+  '#EC4899',
+  '#14B8A6'
+];
 
 /** Pixel x-position of a date string, relative to `chartStart` at `ppd` px/day. */
 export function dateToX(str, chartStart, ppd) {
-  const startStr = chartStart instanceof Date
-    ? chartStart.toISOString().slice(0, 10)
-    : String(chartStart);
+  const startStr =
+    chartStart instanceof Date ? chartStart.toISOString().slice(0, 10) : String(chartStart);
   return Math.round(diffDays(str, startStr) * ppd);
 }
 
@@ -46,7 +54,7 @@ export function darkenColor(hex, amount = 0.35) {
   const r = parseInt(h.slice(0, 2), 16);
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
-  return `rgb(${Math.round(r*(1-amount))},${Math.round(g*(1-amount))},${Math.round(b*(1-amount))})`;
+  return `rgb(${Math.round(r * (1 - amount))},${Math.round(g * (1 - amount))},${Math.round(b * (1 - amount))})`;
 }
 
 /** Validate a #RRGGBB hex color string. */
@@ -62,13 +70,18 @@ export function safeColor(c, fallback = '#5E6AD2') {
 /** #RRGGBB hex → 'rgba(r,g,b,alpha)'. Short/invalid hex falls back to indigo. */
 export function hexToRgba(hex, alpha) {
   if (!isValidHexColor(hex)) return `rgba(94,106,210,${alpha})`;
-  const r = parseInt(hex.slice(1,3), 16);
-  const g = parseInt(hex.slice(3,5), 16);
-  const b = parseInt(hex.slice(5,7), 16);
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
 /** Escape HTML special characters — prevents XSS in innerHTML sinks. */
 export function esc(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

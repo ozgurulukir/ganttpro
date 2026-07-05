@@ -212,6 +212,8 @@ export function addDepToInput(rowNum, type, excludeId) {
   inp.focus();
 }
 
+export let modalOpen = false;
+
 export function openModal(unused, prefillDate) {
   const { isReadOnly, curProj, openProjModal, TODAY_STR } = D;
   if (isReadOnly) return;
@@ -354,6 +356,7 @@ export function openModalUnder(taskId) {
   populateModal(null, [], parentId);
   updateModalForType();
   document.getElementById('overlay').classList.add('open');
+  modalOpen = true;
   setTimeout(() => document.getElementById('fName').focus(), 50);
 }
 
@@ -386,6 +389,7 @@ export function openEditModal(taskId) {
   }
   updateModalForType();
   document.getElementById('overlay').classList.add('open');
+  modalOpen = true;
   setupDepsInputListener(taskId);
   setTimeout(() => document.getElementById('fName').focus(), 50);
 }
@@ -393,6 +397,7 @@ export function openEditModal(taskId) {
 export function closeModal(e) {
   if (!e || e.target === document.getElementById('overlay')) {
     document.getElementById('overlay').classList.remove('open');
+    modalOpen = false;
   }
 }
 
@@ -596,6 +601,7 @@ export function submitTask() {
 
   editingTaskId = null;
   document.getElementById('overlay').classList.remove('open');
+  modalOpen = false;
   scheduleTasks();
   recalcProjEnd();
   render();

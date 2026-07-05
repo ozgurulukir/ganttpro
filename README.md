@@ -25,14 +25,14 @@ Vite + Firebase.
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Build | Vite 8 |
-| Frontend | Vanilla JS (ES modules, no framework) |
-| Backend | Firebase (Auth + Firestore, modular v9 SDK) |
-| Testing | Node.js native test runner (`node --test`) |
-| Formatting | Prettier |
-| Language | Traditional Chinese (zh-TW) |
+| Layer      | Technology                                  |
+| ---------- | ------------------------------------------- |
+| Build      | Vite 8                                      |
+| Frontend   | Vanilla JS (ES modules, no framework)       |
+| Backend    | Firebase (Auth + Firestore, modular v9 SDK) |
+| Testing    | Node.js native test runner (`node --test`)  |
+| Formatting | Prettier                                    |
+| Language   | Traditional Chinese (zh-TW)                 |
 
 ## Quick Start
 
@@ -131,12 +131,12 @@ The web API key is public by design (Firebase client-side SDK).
 
 ### Firestore collections
 
-| Collection | Purpose |
-|---|---|
-| `gantt_user_data` | Per-user project data (all projects as opaque blob) |
-| `gantt_project_shares` | Named collaboration grants (owner → invitee) |
-| `gantt_allowed_users` | Registration allowlist (self-service) |
-| `gantt_shares` | Public read-only share-link snapshots |
+| Collection             | Purpose                                             |
+| ---------------------- | --------------------------------------------------- |
+| `gantt_user_data`      | Per-user project data (all projects as opaque blob) |
+| `gantt_project_shares` | Named collaboration grants (owner → invitee)        |
+| `gantt_allowed_users`  | Registration allowlist (self-service)               |
+| `gantt_shares`         | Public read-only share-link snapshots               |
 
 ### Security rules
 

@@ -1,8 +1,8 @@
-import { auth, googleProvider } from "./data/firebase.js";
-import { signInWithPopup, signOut as firebaseSignOut } from "firebase/auth";
-import * as Remote from "./data/remote.js";
-import { D } from "./render/deps.js";
-import { t } from "./i18n/index.js";
+import { auth, googleProvider } from './data/firebase.js';
+import { signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import * as Remote from './data/remote.js';
+import { D } from './render/deps.js';
+import { t } from './i18n/index.js';
 
 // Read admin email from Vite env var, fall back to default for backward compat.
 // Copy .env.example to .env and set VITE_ADMIN_EMAIL to your email.
@@ -17,7 +17,7 @@ export async function signInWithGoogle() {
   document.getElementById('loginError').style.display = 'none';
   try {
     await signInWithPopup(auth, googleProvider);
-  } catch(e) {
+  } catch (e) {
     if (e.code !== 'auth/popup-closed-by-user') alert(t('login.registerFailed') + e.message);
   }
 }
@@ -54,13 +54,15 @@ export async function submitRegister() {
   errEl.style.display = 'none';
   try {
     await Remote.registerUser(user.email, {
-      email: user.email, name: nickname,
-      is_admin: false, added_at: new Date().toISOString()
+      email: user.email,
+      name: nickname,
+      is_admin: false,
+      added_at: new Date().toISOString()
     });
     document.getElementById('registerPanel').style.display = 'none';
     document.getElementById('loginPanel').style.display = 'flex';
     await D.initApp();
-  } catch(e) {
+  } catch (e) {
     errEl.textContent = t('login.registerFailed') + e.message;
     errEl.style.display = '';
   }

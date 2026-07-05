@@ -85,13 +85,17 @@ export function validateProject(raw) {
   const id = toInt(p.id, null);
   if (id === null || id <= 0) return null;
 
-  const tasks = Array.isArray(p.tasks)
-    ? p.tasks.map(validateTask).filter(Boolean)
-    : [];
+  const tasks = Array.isArray(p.tasks) ? p.tasks.map(validateTask).filter(Boolean) : [];
 
   // Ensure at least a root group exists
   if (!tasks.length || tasks[0].parent !== null) {
-    tasks.unshift({ id: 1, name: toStr(p.name).slice(0, 200) || 'Project', type: 'group', parent: null, color: DEFAULT_COLOR });
+    tasks.unshift({
+      id: 1,
+      name: toStr(p.name).slice(0, 200) || 'Project',
+      type: 'group',
+      parent: null,
+      color: DEFAULT_COLOR
+    });
   }
 
   const startDate = toDateStr(p.startDate) || '2026-04-01';
@@ -114,6 +118,8 @@ export function validateProject(raw) {
     proj.baseline = p.baseline;
   }
   if (p.ownerId) proj.ownerId = toStr(p.ownerId);
+
+  delete proj.shareToken;
 
   return proj;
 }

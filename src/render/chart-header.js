@@ -7,7 +7,8 @@ import { renderMilestoneTimeline } from './milestone.js';
 import { t } from '../i18n/index.js';
 
 export function renderChartHeader() {
-  const { CHART_START, CHART_END, PPD, TODAY, TODAY_STR, milestoneView, tasks, dateToX, totalW } = D;
+  const { CHART_START, CHART_END, PPD, TODAY, TODAY_STR, milestoneView, tasks, dateToX, totalW } =
+    D;
   const head = document.getElementById('chartHead');
   head.innerHTML = '';
   const tw = totalW();
@@ -25,7 +26,8 @@ export function renderChartHeader() {
   const endDn = parseDate(toStr(CHART_END));
   while (curDn <= endDn) {
     const curD = new Date(curDn * 86400000);
-    const y = curD.getUTCFullYear(), m = curD.getUTCMonth();
+    const y = curD.getUTCFullYear(),
+      m = curD.getUTCMonth();
     const monthEndDn = Math.floor(Date.UTC(y, m + 1, 0) / 86400000);
     const clampedDn = Math.min(monthEndDn, endDn);
     const x1 = dateToX(formatDate(curDn));
@@ -53,8 +55,17 @@ export function renderChartHeader() {
       const off = isNonWorkday(ds);
       const isTdy = ds === TODAY_STR;
       const el = document.createElement('div');
-      const dayColor = isTdy ? '' : hol ? ' day-sun' : dow === 6 ? ' day-sat' : dow === 0 ? ' day-sun' : ' day-weekday';
-      el.className = 'week-cell day-cell' + dayColor + (isTdy ? ' today-wk' : '') + (off ? ' wknd-cell' : '');
+      const dayColor = isTdy
+        ? ''
+        : hol
+          ? ' day-sun'
+          : dow === 6
+            ? ' day-sat'
+            : dow === 0
+              ? ' day-sun'
+              : ' day-weekday';
+      el.className =
+        'week-cell day-cell' + dayColor + (isTdy ? ' today-wk' : '') + (off ? ' wknd-cell' : '');
       el.style.cssText = `left:${x}px;width:${PPD}px`;
       if (hol) el.title = t(hol);
       const dayDate = new Date(dn * 86400000).getUTCDate();
@@ -66,10 +77,11 @@ export function renderChartHeader() {
     // Align to Monday
     let dn = parseDate(toStr(CHART_START));
     const dow = dayOfWeek(dn);
-    dn -= (dow === 0 ? 6 : dow - 1);
+    dn -= dow === 0 ? 6 : dow - 1;
     while (dn <= endDn) {
       const weDn = dn + 6;
-      const ds = formatDate(dn), weStr = formatDate(weDn);
+      const ds = formatDate(dn),
+        weStr = formatDate(weDn);
       const x1 = Math.max(0, dateToX(ds));
       const x2 = Math.min(tw, dateToX(weStr) + PPD);
       if (x1 < tw && x2 > 0) {
@@ -78,7 +90,7 @@ export function renderChartHeader() {
         el.className = 'week-cell' + (isTdy ? ' today-wk' : '');
         el.style.cssText = `left:${x1}px;width:${x2 - x1}px`;
         const dd = new Date(dn * 86400000);
-        el.textContent = `${dd.getUTCMonth()+1}/${dd.getUTCDate()}`;
+        el.textContent = `${dd.getUTCMonth() + 1}/${dd.getUTCDate()}`;
         wRow.appendChild(el);
       }
       dn += 7;
@@ -90,7 +102,8 @@ export function renderChartHeader() {
     mnDn = Math.floor(Date.UTC(csD.getUTCFullYear(), csD.getUTCMonth(), 1) / 86400000);
     while (mnDn <= endDn) {
       const md = new Date(mnDn * 86400000);
-      const y = md.getUTCFullYear(), m = md.getUTCMonth();
+      const y = md.getUTCFullYear(),
+        m = md.getUTCMonth();
       const monthEndDn = Math.floor(Date.UTC(y, m + 1, 0) / 86400000);
       const clampedDn = Math.min(monthEndDn, endDn);
       const x1 = Math.max(0, dateToX(formatDate(mnDn)));
@@ -115,8 +128,9 @@ export function renderChartHeader() {
     const tlRow = document.createElement('div');
     tlRow.className = 'ms-timeline-row';
     tlRow.style.width = tw + 'px';
-    const allMs = tasks.filter(t => t.type === 'milestone' && !t.done)
-      .sort((a, b) => (a.date || '') < (b.date || '') ? -1 : 1);
+    const allMs = tasks
+      .filter(t => t.type === 'milestone' && !t.done)
+      .sort((a, b) => ((a.date || '') < (b.date || '') ? -1 : 1));
     const root = tasks.find(t => t.parent === null);
     if (root) renderMilestoneTimeline(tlRow, root, allMs);
     head.appendChild(tlRow);

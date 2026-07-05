@@ -45,40 +45,46 @@ export function computeCriticalPath(tasks) {
   // 2. 後向傳遞：計算每個節點的 LF（最晚完成日）
   // 3. Float = LF - EF；Float=0 → 關鍵任務
 
-  const nodes = tasks.filter(t =>
-    (t.type === 'task' && t.start && t.end) ||
-    (t.type === 'milestone' && t.date)
+  const nodes = tasks.filter(
+    t => (t.type === 'task' && t.start && t.end) || (t.type === 'milestone' && t.date)
   );
   if (!nodes.length) return new Set();
 
-  const getS = t => t.type === 'milestone' ? t.date : t.start;
-  const getE = t => t.type === 'milestone' ? t.date : t.end;
-  const wdur = t => t.type === 'task' ? countWorkingDays(t.start, t.end) : 0;
+  const getS = t => (t.type === 'milestone' ? t.date : t.start);
+  const getE = t => (t.type === 'milestone' ? t.date : t.end);
+  const wdur = t => (t.type === 'task' ? countWorkingDays(t.start, t.end) : 0);
   const nodeIds = new Set(nodes.map(t => t.id));
 
   // 建立「後繼者」關係（所有依賴類型）
   const succList = {}; // succList[predId] = [{succ, type}]
-  nodes.forEach(t => { succList[t.id] = []; });
   nodes.forEach(t => {
-    const reg = (list, type) => (list || []).forEach(predId => {
-      if (nodeIds.has(predId)) succList[predId].push({ succ: t, type });
-    });
-    reg(t.deps,   'FS');
-    reg(t.sdeps,  'SS');
+    succList[t.id] = [];
+  });
+  nodes.forEach(t => {
+    const reg = (list, type) =>
+      (list || []).forEach(predId => {
+        if (nodeIds.has(predId)) succList[predId].push({ succ: t, type });
+      });
+    reg(t.deps, 'FS');
+    reg(t.sdeps, 'SS');
     reg(t.ffdeps, 'FF');
     reg(t.sfdeps, 'SF');
   });
 
   // 專案結束日 = 所有任務中最晚的 EF
-  const projEnd = nodes.filter(t => t.type === 'task')
+  const projEnd = nodes
+    .filter(t => t.type === 'task')
     .reduce((mx, t) => (t.end > mx ? t.end : mx), '');
   if (!projEnd) return new Set();
 
   // 後向傳遞：迭代計算 LF
   const LF = {};
-  nodes.forEach(t => { LF[t.id] = null; });
+  nodes.forEach(t => {
+    LF[t.id] = null;
+  });
 
-  let changed = true, iter = 0;
+  let changed = true,
+    iter = 0;
   while (changed && iter++ < 500) {
     changed = false;
     nodes.forEach(t => {
@@ -109,9 +115,7 @@ export function computeCriticalPath(tasks) {
                 const succLS = subtractWorkingDays(succLF, wdur(succ) - 1);
                 c = t.type === 'task' ? addWorkingDays(succLS, wdur(t) - 1) : succLS;
               } else {
-                c = t.type === 'task'
-                  ? addWorkingDays(getS(succ), wdur(t) - 1)
-                  : getS(succ);
+                c = t.type === 'task' ? addWorkingDays(getS(succ), wdur(t) - 1) : getS(succ);
               }
               break;
 
@@ -135,7 +139,10 @@ export function computeCriticalPath(tasks) {
         if (!newLF) newLF = t.type === 'task' ? projEnd : getS(t);
       }
 
-      if (newLF && newLF !== LF[t.id]) { LF[t.id] = newLF; changed = true; }
+      if (newLF && newLF !== LF[t.id]) {
+        LF[t.id] = newLF;
+        changed = true;
+      }
     });
   }
 
@@ -167,10 +174,20 @@ export function getCriticalPredTaskIds(tasks, criticalTaskIds, task) {
     }
     if (dep.type === 'milestone') {
       // 里程碑：追蹤所有依賴類型
-      [...(dep.deps||[]), ...(dep.sdeps||[]), ...(dep.ffdeps||[]), ...(dep.sfdeps||[])].forEach(trace);
+      [
+        ...(dep.deps || []),
+        ...(dep.sdeps || []),
+        ...(dep.ffdeps || []),
+        ...(dep.sfdeps || [])
+      ].forEach(trace);
     }
   }
   // 追蹤所有四種依賴類型的前置任務
-  [...(task.deps||[]), ...(task.sdeps||[]), ...(task.ffdeps||[]), ...(task.sfdeps||[])].forEach(trace);
+  [
+    ...(task.deps || []),
+    ...(task.sdeps || []),
+    ...(task.ffdeps || []),
+    ...(task.sfdeps || [])
+  ].forEach(trace);
   return [...result];
 }

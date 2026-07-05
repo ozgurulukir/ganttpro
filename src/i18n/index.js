@@ -25,9 +25,9 @@ export async function initI18n() {
     fallbackLng: FALLBACK,
     resources: {
       en: { translation: en },
-      'zh-TW': { translation: zhTW },
+      'zh-TW': { translation: zhTW }
     },
-    interpolation: { escapeValue: false },
+    interpolation: { escapeValue: false }
   });
 }
 

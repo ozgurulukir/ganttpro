@@ -24,14 +24,14 @@
 
 ## 技術棧
 
-| 層級 | 技術 |
-|------|------|
-| 建置工具 | Vite 8 |
-| 前端 | Vanilla JS（ES 模組，無框架） |
-| 後端 | Firebase（Auth + Firestore，modular v9 SDK） |
-| 測試 | Node.js 原生測試執行器（`node --test`） |
-| 格式化 | Prettier |
-| 語言 | 繁體中文（zh-TW） |
+| 層級     | 技術                                         |
+| -------- | -------------------------------------------- |
+| 建置工具 | Vite 8                                       |
+| 前端     | Vanilla JS（ES 模組，無框架）                |
+| 後端     | Firebase（Auth + Firestore，modular v9 SDK） |
+| 測試     | Node.js 原生測試執行器（`node --test`）      |
+| 格式化   | Prettier                                     |
+| 語言     | 繁體中文（zh-TW）                            |
 
 ## 快速開始
 
@@ -125,12 +125,12 @@ Web API 金鑰為 Firebase 客戶端 SDK 公開資訊。
 
 ### Firestore 集合
 
-| 集合 | 用途 |
-|------|------|
-| `gantt_user_data` | 每位使用者的專案資料（所有專案為不透明 blob） |
-| `gantt_project_shares` | 具名協作授權（擁有者 → 受邀者） |
-| `gantt_allowed_users` | 註冊允許清單（自行註冊） |
-| `gantt_shares` | 公開唯讀分享連結快照 |
+| 集合                   | 用途                                          |
+| ---------------------- | --------------------------------------------- |
+| `gantt_user_data`      | 每位使用者的專案資料（所有專案為不透明 blob） |
+| `gantt_project_shares` | 具名協作授權（擁有者 → 受邀者）               |
+| `gantt_allowed_users`  | 註冊允許清單（自行註冊）                      |
+| `gantt_shares`         | 公開唯讀分享連結快照                          |
 
 ### 安全性規則
 

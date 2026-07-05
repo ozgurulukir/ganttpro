@@ -3,8 +3,17 @@
    Collections: gantt_user_data, gantt_project_shares, gantt_allowed_users. */
 import { db } from './firebase.js';
 import {
-  doc, getDoc, setDoc, updateDoc, deleteDoc,
-  collection, query, where, orderBy, getDocs, onSnapshot
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  onSnapshot
 } from 'firebase/firestore';
 
 /* ── gantt_user_data ── */
@@ -16,14 +25,15 @@ export async function readUserData(uid) {
 }
 
 export async function writeUserData(uid, data) {
-  await setDoc(doc(db, 'gantt_user_data', uid),
+  await setDoc(
+    doc(db, 'gantt_user_data', uid),
     { data, updated_at: new Date().toISOString() },
-    { merge: true });
+    { merge: true }
+  );
 }
 
 export async function updateUserData(uid, data) {
-  await updateDoc(doc(db, 'gantt_user_data', uid),
-    { data, updated_at: new Date().toISOString() });
+  await updateDoc(doc(db, 'gantt_user_data', uid), { data, updated_at: new Date().toISOString() });
 }
 
 export function watchUserData(uid, callback) {
@@ -33,16 +43,17 @@ export function watchUserData(uid, callback) {
 /* ── gantt_project_shares ── */
 
 export async function getProjectSharesForEmail(email) {
-  const q = query(collection(db, 'gantt_project_shares'),
-    where('shared_with_email', '==', email));
+  const q = query(collection(db, 'gantt_project_shares'), where('shared_with_email', '==', email));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 export async function getProjectSharesForOwner(projId, uid) {
-  const q = query(collection(db, 'gantt_project_shares'),
+  const q = query(
+    collection(db, 'gantt_project_shares'),
     where('project_id', '==', String(projId)),
-    where('owner_id', '==', uid));
+    where('owner_id', '==', uid)
+  );
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
@@ -67,8 +78,7 @@ export async function registerUser(email, data) {
 }
 
 export async function getAllUsers() {
-  const q = query(collection(db, 'gantt_allowed_users'),
-    orderBy('added_at', 'asc'));
+  const q = query(collection(db, 'gantt_allowed_users'), orderBy('added_at', 'asc'));
   const snap = await getDocs(q);
   return snap.docs.map(d => d.data());
 }

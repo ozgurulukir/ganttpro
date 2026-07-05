@@ -48,9 +48,12 @@ test('scheduleTasks — FS chain schedules sequentially', () => {
     { id: 'C', parent: null, type: 'task', deps: ['B'] }
   ];
   scheduleTasks(tasks, '2026-05-04');
-  assert.equal(tasks[0].start, '2026-05-04'); assert.equal(tasks[0].end, '2026-05-04');
-  assert.equal(tasks[1].start, '2026-05-05'); assert.equal(tasks[1].end, '2026-05-05');
-  assert.equal(tasks[2].start, '2026-05-06'); assert.equal(tasks[2].end, '2026-05-06');
+  assert.equal(tasks[0].start, '2026-05-04');
+  assert.equal(tasks[0].end, '2026-05-04');
+  assert.equal(tasks[1].start, '2026-05-05');
+  assert.equal(tasks[1].end, '2026-05-05');
+  assert.equal(tasks[2].start, '2026-05-06');
+  assert.equal(tasks[2].end, '2026-05-06');
 });
 
 test('scheduleTasks — wday>1 spans multiple working days', () => {
@@ -59,8 +62,10 @@ test('scheduleTasks — wday>1 spans multiple working days', () => {
     { id: 'B', parent: null, type: 'task', wday: 2, deps: ['A'] }
   ];
   scheduleTasks(tasks, '2026-05-04');
-  assert.equal(tasks[0].start, '2026-05-04'); assert.equal(tasks[0].end, '2026-05-06');
-  assert.equal(tasks[1].start, '2026-05-07'); assert.equal(tasks[1].end, '2026-05-08');
+  assert.equal(tasks[0].start, '2026-05-04');
+  assert.equal(tasks[0].end, '2026-05-06');
+  assert.equal(tasks[1].start, '2026-05-07');
+  assert.equal(tasks[1].end, '2026-05-08');
 });
 
 test('scheduleTasks — SS dependency starts when predecessor starts', () => {
@@ -154,9 +159,7 @@ test('autoScheduleFromDeps — milestone is a no-op', () => {
 });
 
 test('autoScheduleFromDeps — task with no deps is a no-op', () => {
-  const tasks = [
-    { id: 'T', parent: null, type: 'task', start: '2026-04-29', end: '2026-04-29' }
-  ];
+  const tasks = [{ id: 'T', parent: null, type: 'task', start: '2026-04-29', end: '2026-04-29' }];
   autoScheduleFromDeps(tasks, tasks[0]);
   assert.equal(tasks[0].start, '2026-04-29'); // unchanged
 });

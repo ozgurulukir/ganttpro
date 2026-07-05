@@ -59,6 +59,7 @@ npm run dev
 ```
 
 > **IMPORTANT**: The admin email appears in two places that must match:
+>
 > - `.env` — used by the client-side admin UI gate (`src/auth.js`)
 > - `firestore.rules` — server-side enforcement (generated from `firestore.rules.template`)
 >
@@ -339,9 +340,9 @@ The Vite build output in `dist/` is intended for static hosting (Firebase Hostin
 | Run tests                | `npm test`                                                 |
 | Format code              | `npm run format`                                           |
 | Generate Firestore rules | `npm run build:rules`                                      |
-| Deploy Firestore rules   | `npm run firebase login` → `npm run deploy:rules`         |
+| Deploy Firestore rules   | `npm run firebase login` → `npm run deploy:rules`          |
 | Add a user-facing string | `src/i18n/locales/en.json` + `src/i18n/locales/zh-TW.json` |
-| Change Firebase project  | `.env` (`VITE_FIREBASE_*` vars) + redeploy rules             |
-| Change admin email       | `.env` + `npm run build:rules` + redeploy rules             |
+| Change Firebase project  | `.env` (`VITE_FIREBASE_*` vars) + redeploy rules           |
+| Change admin email       | `.env` + `npm run build:rules` + redeploy rules            |
 | Add pure logic + tests   | `src/core/*.js` + `tests/*.test.js`                        |
 | Add a DOM feature        | `src/main.js` or appropriate `render/` / `ui/` module      |
