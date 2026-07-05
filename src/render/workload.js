@@ -9,24 +9,27 @@ import { t } from '../i18n/index.js';
 export function computeWorkload() {
   const { tasks } = D;
   const byName = new Map();
-  tasks.filter(tk => tk.type === 'task' && tk.start && tk.end && !tk.done).forEach(tk => {
-    const name = tk.assignee || t('workload.unassigned');
-    if (!byName.has(name)) byName.set(name, { days: new Map(), count: 0 });
-    const rec = byName.get(name);
-    rec.count++;
-    let dn = parseDate(tk.start);
-    const endDn = parseDate(tk.end);
-    while (dn <= endDn) {
-      const ds = formatDate(dn);
-      if (!isNonWorkday(ds)) {
-        rec.days.set(ds, (rec.days.get(ds) || 0) + 1);
+  tasks
+    .filter(tk => tk.type === 'task' && tk.start && tk.end && !tk.done)
+    .forEach(tk => {
+      const name = tk.assignee || t('workload.unassigned');
+      if (!byName.has(name)) byName.set(name, { days: new Map(), count: 0 });
+      const rec = byName.get(name);
+      rec.count++;
+      let dn = parseDate(tk.start);
+      const endDn = parseDate(tk.end);
+      while (dn <= endDn) {
+        const ds = formatDate(dn);
+        if (!isNonWorkday(ds)) {
+          rec.days.set(ds, (rec.days.get(ds) || 0) + 1);
+        }
+        dn++;
       }
-      dn++;
-    }
-  });
+    });
   const unassigned = t('workload.unassigned');
   const names = [...byName.keys()].sort((a, b) =>
-    a === unassigned ? 1 : b === unassigned ? -1 : a.localeCompare(b, 'en'));
+    a === unassigned ? 1 : b === unassigned ? -1 : a.localeCompare(b, 'en')
+  );
   return { names, byName };
 }
 
@@ -59,7 +62,8 @@ export function renderWorkloadPanel(body) {
     nm.textContent = name;
     nc.appendChild(nm);
     const cnt = document.createElement('span');
-    cnt.style.cssText = 'font-size:11px;color:var(--t3);margin-left:auto;margin-right:8px;flex-shrink:0';
+    cnt.style.cssText =
+      'font-size:11px;color:var(--t3);margin-left:auto;margin-right:8px;flex-shrink:0';
     cnt.textContent = byName.get(name).count + ' ' + t('workload.active');
     nc.appendChild(cnt);
     row.appendChild(nc);
@@ -96,7 +100,12 @@ export function renderWorkloadChart(canvas, tw) {
       const c = document.createElement('div');
       c.className = 'wl-cell';
       c.style.cssText = `left:${x}px;width:${PPD}px;background:${
-        count >= 3 ? 'rgba(239,68,68,.55)' : count === 2 ? 'rgba(94,106,210,.5)' : 'rgba(94,106,210,.22)'}`;
+        count >= 3
+          ? 'rgba(239,68,68,.55)'
+          : count === 2
+            ? 'rgba(94,106,210,.5)'
+            : 'rgba(94,106,210,.22)'
+      }`;
       c.title = `${name}  ${day}: ${count} ${t('workload.active')}`;
       if (PPD >= 18) c.textContent = count;
       row.appendChild(c);

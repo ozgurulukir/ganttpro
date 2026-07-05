@@ -2,14 +2,7 @@
    All pure; dateToX and avColor take their config as explicit params. */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import {
-  dateToX,
-  toStr,
-  initials,
-  avColor,
-  darkenColor,
-  hexToRgba
-} from '../src/core/format.js';
+import { dateToX, toStr, initials, avColor, darkenColor, hexToRgba } from '../src/core/format.js';
 
 /* ── dateToX ── */
 
@@ -58,8 +51,8 @@ test('avColor — explicit map override wins', () => {
 test('avColor — no map entry falls back to deterministic palette', () => {
   const c1 = avColor('Alice', {});
   const c2 = avColor('Alice', undefined);
-  assert.equal(c1, c2);            // deterministic
-  assert.ok(c1.startsWith('#'));   // a palette hex
+  assert.equal(c1, c2); // deterministic
+  assert.ok(c1.startsWith('#')); // a palette hex
 });
 
 test('avColor — different names can map to different colors', () => {

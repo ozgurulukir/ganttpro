@@ -329,64 +329,89 @@
             <input type="checkbox" id="settingBaseline" checked />
             <span data-i18n="settings.showBaseline">Show baseline</span>
           </label>
-      <div class="settings-sep"></div>
-      <label class="settings-item">
-        <span data-i18n="settings.arrowStyle">Arrow Style</span>
-        <select id="settingArrowStyle" style="margin-left:auto;padding:2px 4px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--t1)">
-          <option value="bezier" data-i18n="settings.bezier">Bezier</option>
-          <option value="elbow" data-i18n="settings.elbow">Elbow</option>
-          <option value="straight" data-i18n="settings.straight">Straight</option>
-        </select>
-      </label>
-      <div class="settings-sep"></div>
-      <button class="settings-action" id="setBaselineBtn" data-i18n="settings.setBaseline">📐 Set Baseline</button>
-      <button class="settings-action btn-owner-only" id="settingVersionBtn" data-i18n="settings.versionHistory">🕐 Version History</button>
-      <div class="settings-sep"></div>
-      <button class="settings-action" id="worktimeBtn" data-i18n="worktime.title">🗓 Work Time Settings</button>
-    </div>
-  </div>
+          <div class="settings-sep"></div>
+          <label class="settings-item">
+            <span data-i18n="settings.arrowStyle">Arrow Style</span>
+            <select
+              id="settingArrowStyle"
+              style="
+                margin-left: auto;
+                padding: 2px 4px;
+                font-size: 11px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                background: var(--surface);
+                color: var(--t1);
+              "
+            >
+              <option value="bezier" data-i18n="settings.bezier">Bezier</option>
+              <option value="elbow" data-i18n="settings.elbow">Elbow</option>
+              <option value="straight" data-i18n="settings.straight">Straight</option>
+            </select>
+          </label>
+          <div class="settings-sep"></div>
+          <button class="settings-action" id="setBaselineBtn" data-i18n="settings.setBaseline">
+            📐 Set Baseline
+          </button>
+          <button
+            class="settings-action btn-owner-only"
+            id="settingVersionBtn"
+            data-i18n="settings.versionHistory"
+          >
+            🕐 Version History
+          </button>
+          <div class="settings-sep"></div>
+          <button class="settings-action" id="worktimeBtn" data-i18n="worktime.title">
+            🗓 Work Time Settings
+          </button>
+        </div>
       </div>
-      <button
-        class="btn"
-        id="adminBtn"
-        title="Admin panel"
-        style="display: none"
-        data-i18n-title="toolbar.adminHint"
-        data-i18n="toolbar.admin"
-      >
-        👑 Admin
-      </button>
-      <div id="userDisplay"></div>
-      <button
-        class="btn"
-        id="signOutBtn"
-        title="Sign out"
-        style="display: none"
-        data-i18n-title="toolbar.signOutHint"
-        data-i18n="toolbar.signOut"
-      >
-        Sign Out
-      </button>
-      <div
-        class="sync-dot"
-        id="syncDot"
-        title="Cloud sync status"
-        data-i18n-title="status.syncDefault"
-      ></div>
     </div>
+    <button
+      class="btn"
+      id="adminBtn"
+      title="Admin panel"
+      style="display: none"
+      data-i18n-title="toolbar.adminHint"
+      data-i18n="toolbar.admin"
+    >
+      👑 Admin
+    </button>
+    <div id="userDisplay"></div>
+    <button
+      class="btn"
+      id="signOutBtn"
+      title="Sign out"
+      style="display: none"
+      data-i18n-title="toolbar.signOutHint"
+      data-i18n="toolbar.signOut"
+    >
+      Sign Out
+    </button>
+    <div
+      class="sync-dot"
+      id="syncDot"
+      title="Cloud sync status"
+      data-i18n-title="status.syncDefault"
+    ></div>
 
     <!-- VERSION PANEL -->
     <div class="ver-backdrop" id="verBackdrop"></div>
     <div class="ver-panel" id="verPanel">
-  <div class="ver-head">
-    <span class="ver-head-title">🕐 <span data-i18n="settings.versionHistory">Version History</span></span>
-    <button class="ver-close" id="verCloseBtn">✕</button>
-  </div>
-  <div class="ver-tabs" id="verTabs">
-    <button class="ver-tab active" data-tab="versions" data-i18n="settings.versionHistory">Versions</button>
-    <button class="ver-tab" data-tab="audit" data-i18n="audit.tab">Audit Log</button>
-  </div>
-  <div class="ver-create">
+      <div class="ver-head">
+        <span class="ver-head-title">
+          🕐
+          <span data-i18n="settings.versionHistory">Version History</span>
+        </span>
+        <button class="ver-close" id="verCloseBtn">✕</button>
+      </div>
+      <div class="ver-tabs" id="verTabs">
+        <button class="ver-tab active" data-tab="versions" data-i18n="settings.versionHistory">
+          Versions
+        </button>
+        <button class="ver-tab" data-tab="audit" data-i18n="audit.tab">Audit Log</button>
+      </div>
+      <div class="ver-create">
         <input
           id="verNameInput"
           data-i18n-placeholder="settings.versionNamePlaceholder"
@@ -396,7 +421,7 @@
         <button id="createVersionBtn" data-i18n="settings.createVersion">Create Version</button>
       </div>
       <div class="ver-list" id="verList"></div>
-  <div id="auditContent" style="display:none"></div>
+      <div id="auditContent" style="display: none"></div>
     </div>
 
     <!-- SHARE MODAL -->
@@ -692,40 +717,67 @@
             />
           </div>
         </div>
-        <button type="button" class="modal-toggle" id="modalAdvancedToggle"><span class="chevron">▾</span> <span data-i18n="modal.advanced">Advanced Options</span></button>
+        <button type="button" class="modal-toggle" id="modalAdvancedToggle">
+          <span class="chevron">▾</span>
+          <span data-i18n="modal.advanced">Advanced Options</span>
+        </button>
         <div class="modal-advanced collapsed" id="modalAdvanced">
-        <div class="form-row" id="rowDeps">
-          <label class="form-lbl" data-i18n="modal.dependencies">Dependencies</label>
-          <div id="fDepsWrap">
+          <div class="form-row" id="rowDeps">
+            <label class="form-lbl" data-i18n="modal.dependencies">Dependencies</label>
+            <div id="fDepsWrap">
+              <input
+                class="form-ctrl"
+                id="fDeps"
+                data-i18n-placeholder="modal.depsPlaceholder"
+                placeholder="Enter row numbers (e.g. 2, 2SS, 2FS+3) or pick below"
+                autocomplete="off"
+              />
+              <div id="fDepsList"></div>
+            </div>
+            <div
+              id="fDepsTip"
+              style="font-size: 11px; color: var(--t3); margin-top: 4px; line-height: 1.5"
+            ></div>
+          </div>
+          <div class="form-row" id="rowAssignee">
+            <label class="form-lbl" data-i18n="modal.assignee">Assignee</label>
             <input
               class="form-ctrl"
-              id="fDeps"
-              data-i18n-placeholder="modal.depsPlaceholder"
-              placeholder="Enter row numbers (e.g. 2, 2SS, 2FS+3) or pick below"
+              id="fAssignee"
+              list="assigneeList"
+              data-i18n-placeholder="modal.assigneePlaceholder"
+              placeholder="Enter name (optional)"
               autocomplete="off"
             />
-            <div id="fDepsList"></div>
+            <datalist id="assigneeList"></datalist>
           </div>
-          <div
-            id="fDepsTip"
-            style="font-size: 11px; color: var(--t3); margin-top: 4px; line-height: 1.5"
-          ></div>
-        </div>
-        <div class="form-row" id="rowAssignee">
-          <label class="form-lbl" data-i18n="modal.assignee">Assignee</label>
-          <input
-            class="form-ctrl"
-            id="fAssignee"
-            list="assigneeList"
-            data-i18n-placeholder="modal.assigneePlaceholder"
-            placeholder="Enter name (optional)"
-            autocomplete="off"
-          />
-          <datalist id="assigneeList"></datalist>
-        </div>
-        <div class="form-row"><label class="form-lbl" data-i18n="modal.hyperlink">Hyperlink</label><input class="form-ctrl" id="fHyperlink" data-i18n-placeholder="modal.hyperlinkPlaceholder" placeholder="Enter document link (copy only)"></div>
-        <div class="form-row"><label class="form-lbl" data-i18n="modal.approvalStatus">Approval</label><select class="form-ctrl" id="fApproval"><option value="" data-i18n="modal.noApproval">No approval</option><option value="pending" data-i18n="modal.pendingApproval">Pending</option><option value="approved" data-i18n="modal.approved">Approved</option><option value="rejected" data-i18n="modal.rejected">Rejected</option></select></div>
-        <div class="form-row"><label class="form-lbl" data-i18n="modal.evidenceLink">Evidence</label><input class="form-ctrl" id="fEvidence" data-i18n-placeholder="modal.evidencePlaceholder" placeholder="Enter evidence link"></div>
+          <div class="form-row">
+            <label class="form-lbl" data-i18n="modal.hyperlink">Hyperlink</label>
+            <input
+              class="form-ctrl"
+              id="fHyperlink"
+              data-i18n-placeholder="modal.hyperlinkPlaceholder"
+              placeholder="Enter document link (copy only)"
+            />
+          </div>
+          <div class="form-row">
+            <label class="form-lbl" data-i18n="modal.approvalStatus">Approval</label>
+            <select class="form-ctrl" id="fApproval">
+              <option value="" data-i18n="modal.noApproval">No approval</option>
+              <option value="pending" data-i18n="modal.pendingApproval">Pending</option>
+              <option value="approved" data-i18n="modal.approved">Approved</option>
+              <option value="rejected" data-i18n="modal.rejected">Rejected</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="form-lbl" data-i18n="modal.evidenceLink">Evidence</label>
+            <input
+              class="form-ctrl"
+              id="fEvidence"
+              data-i18n-placeholder="modal.evidencePlaceholder"
+              placeholder="Enter evidence link"
+            />
+          </div>
         </div>
         <div
           class="form-row"
@@ -837,29 +889,181 @@
       </div>
     </div>
 
-<!-- SHORTCUTS OVERLAY -->
-<div class="overlay" id="shortcutsOverlay" style="cursor:pointer">
-  <div class="modal" style="width:480px;padding:24px" onclick="event.stopPropagation()">
-    <div class="modal-title" data-i18n="shortcuts.title">⌨ Keyboard Shortcuts</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;font-size:12px;margin-top:12px">
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">E</kbd> Expand All</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">C</kbd> Collapse All</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">F</kbd> Fit to Window</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">T</kbd> Jump to Today</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">N</kbd> New Task</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">D/W/M</kbd> Day/Week/Month</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">R</kbd> Workload View</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">G</kbd> Gantt View</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">Ctrl+Z</kbd> Undo</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">Alt+W</kbd> Toggle WBS</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">?</kbd> This Help</span>
-      <span><kbd style="background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">Esc</kbd> Close Modal</span>
+    <!-- SHORTCUTS OVERLAY -->
+    <div class="overlay" id="shortcutsOverlay" style="cursor: pointer">
+      <div class="modal" style="width: 480px; padding: 24px" onclick="event.stopPropagation()">
+        <div class="modal-title" data-i18n="shortcuts.title">⌨ Keyboard Shortcuts</div>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 24px;
+            font-size: 12px;
+            margin-top: 12px;
+          "
+        >
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              E
+            </kbd>
+            Expand All
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              C
+            </kbd>
+            Collapse All
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              F
+            </kbd>
+            Fit to Window
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              T
+            </kbd>
+            Jump to Today
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              N
+            </kbd>
+            New Task
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              D/W/M
+            </kbd>
+            Day/Week/Month
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              R
+            </kbd>
+            Workload View
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              G
+            </kbd>
+            Gantt View
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              Ctrl+Z
+            </kbd>
+            Undo
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              Alt+W
+            </kbd>
+            Toggle WBS
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              ?
+            </kbd>
+            This Help
+          </span>
+          <span>
+            <kbd
+              style="
+                background: var(--bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+              "
+            >
+              Esc
+            </kbd>
+            Close Modal
+          </span>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<!-- TOOLTIP -->
-<div class="tooltip" id="tooltip"></div>
+    <!-- TOOLTIP -->
+    <div class="tooltip" id="tooltip"></div>
 
     <script type="module" src="/src/main.js"></script>
   </body>

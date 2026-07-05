@@ -7,20 +7,35 @@ import { showTT, moveTT, hideTT, highlightDeps } from './tooltip.js';
 
 export function getWorkingSegs(startStr, endStr) {
   const segs = [];
-  let dn = parseDate(startStr), endDn = parseDate(endStr), segS = null;
+  let dn = parseDate(startStr),
+    endDn = parseDate(endStr),
+    segS = null;
   while (dn < endDn) {
     const ds = formatDate(dn);
     const isOff = isNonWorkday(ds);
     if (!isOff && !segS) segS = ds;
-    else if (isOff && segS) { segs.push({s: segS, e: ds}); segS = null; }
+    else if (isOff && segS) {
+      segs.push({ s: segS, e: ds });
+      segS = null;
+    }
     dn++;
   }
-  if (segS) segs.push({s: segS, e: endStr});
+  if (segS) segs.push({ s: segS, e: endStr });
   return segs;
 }
 
 export function renderBar(row, task) {
-  const { dateToX, showCriticalPath, criticalTaskIds, showBarDates, showBaseline, isReadOnly, curProj, TODAY_STR, PPD } = D;
+  const {
+    dateToX,
+    showCriticalPath,
+    criticalTaskIds,
+    showBarDates,
+    showBaseline,
+    isReadOnly,
+    curProj,
+    TODAY_STR,
+    PPD
+  } = D;
   if (!task.start || !task.end) return;
   const x1 = dateToX(task.start);
   const visualEnd = addDays(task.end, 1);
@@ -30,7 +45,10 @@ export function renderBar(row, task) {
 
   const bar = document.createElement('div');
   const isOverdue = task.type === 'task' && !task.done && task.end && task.end < TODAY_STR;
-  bar.className = 'gantt-bar' + (showCriticalPath && criticalTaskIds.has(task.id) ? ' cp-critical' : '') + (isOverdue ? ' overdue' : '');
+  bar.className =
+    'gantt-bar' +
+    (showCriticalPath && criticalTaskIds.has(task.id) ? ' cp-critical' : '') +
+    (isOverdue ? ' overdue' : '');
   bar.dataset.id = task.id;
   bar.style.cssText = `left:${x1}px;width:${w}px`;
 
@@ -47,7 +65,7 @@ export function renderBar(row, task) {
   inner.appendChild(bg);
 
   // 進度填充（深色段）
-  const prog = task.done ? 100 : (task.progress || 0);
+  const prog = task.done ? 100 : task.progress || 0;
   if (prog > 0) {
     const pf = document.createElement('div');
     pf.className = 'bar-prog';
@@ -55,14 +73,18 @@ export function renderBar(row, task) {
     inner.appendChild(pf);
   }
 
-  const fmt = s => { const [,m,d] = s.split('-'); return `${+m}/${+d}`; };
+  const fmt = s => {
+    const [, m, d] = s.split('-');
+    return `${+m}/${+d}`;
+  };
 
   // Task name: centered across full bar area
   if (w > 70) {
     const lbl = document.createElement('div');
     lbl.className = 'bar-lbl';
-    lbl.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;padding:0 8px;z-index:2;pointer-events:none';
-    const wdayStr = (task.type === 'task' && task.wday) ? ` ${task.wday}d` : '';
+    lbl.style.cssText =
+      'position:absolute;inset:0;display:flex;align-items:center;padding:0 8px;z-index:2;pointer-events:none';
+    const wdayStr = task.type === 'task' && task.wday ? ` ${task.wday}d` : '';
     lbl.textContent = (task.name || '') + wdayStr;
     inner.appendChild(lbl);
   }
@@ -80,9 +102,15 @@ export function renderBar(row, task) {
     bar.appendChild(ed);
   }
 
-  bar.addEventListener('mouseenter', e => { showTT(e, task); highlightDeps(task.id, true); });
+  bar.addEventListener('mouseenter', e => {
+    showTT(e, task);
+    highlightDeps(task.id, true);
+  });
   bar.addEventListener('mousemove', moveTT);
-  bar.addEventListener('mouseleave', e => { hideTT(); highlightDeps(task.id, false); });
+  bar.addEventListener('mouseleave', e => {
+    hideTT();
+    highlightDeps(task.id, false);
+  });
 
   if (!isReadOnly && task.type === 'task') attachBarDrag(bar, task);
 
@@ -102,8 +130,22 @@ export function renderBar(row, task) {
 
 /* ── BAR DRAG（拖移整條 / 拖拉左右緣調整起訖）── */
 export function attachBarDrag(bar, task) {
-  const { PPD, pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser, tasks } = D;
-  const hasDeps = (task.deps||[]).length || (task.sdeps||[]).length || (task.ffdeps||[]).length || (task.sfdeps||[]).length;
+  const {
+    PPD,
+    pushHistory,
+    scheduleTasks,
+    recalcProjEnd,
+    render,
+    saveToLS,
+    saveToCloud,
+    currentUser,
+    tasks
+  } = D;
+  const hasDeps =
+    (task.deps || []).length ||
+    (task.sdeps || []).length ||
+    (task.ffdeps || []).length ||
+    (task.sfdeps || []).length;
 
   // 右緣：調整結束日（永遠可用）；左緣與整條拖移：僅無依賴任務（有依賴時開始日由排程決定）
   const mkHandle = side => {
@@ -119,14 +161,15 @@ export function attachBarDrag(bar, task) {
 
   bar.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
-    const mode = e.target === hr ? 'r' : (hl && e.target === hl) ? 'l' : (hasDeps ? null : 'move');
+    const mode = e.target === hr ? 'r' : hl && e.target === hl ? 'l' : hasDeps ? null : 'move';
     if (!mode) return;
     e.preventDefault();
     e.stopPropagation();
     const startX = e.clientX;
     const origLeft = parseFloat(bar.style.left);
     const origW = parseFloat(bar.style.width);
-    let moved = false, delta = 0;
+    let moved = false,
+      delta = 0;
     document.body.style.userSelect = 'none';
 
     const onMove = ev => {
@@ -136,12 +179,12 @@ export function attachBarDrag(bar, task) {
       hideTT();
       delta = Math.round(dx / PPD);
       if (mode === 'move') {
-        bar.style.left = (origLeft + delta * PPD) + 'px';
+        bar.style.left = origLeft + delta * PPD + 'px';
       } else if (mode === 'r') {
         bar.style.width = Math.max(PPD, origW + delta * PPD) + 'px';
       } else {
         const w2 = Math.max(PPD, origW - delta * PPD);
-        bar.style.left = (origLeft + origW - w2) + 'px';
+        bar.style.left = origLeft + origW - w2 + 'px';
         bar.style.width = w2 + 'px';
       }
     };
@@ -150,15 +193,29 @@ export function attachBarDrag(bar, task) {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       document.body.style.userSelect = '';
-      if (!moved || !delta) { render(); return; }
-      if (!tasks.includes(task)) { render(); return; }
+      if (!moved || !delta) {
+        render();
+        return;
+      }
+      if (!tasks.includes(task)) {
+        render();
+        return;
+      }
       pushHistory();
       const shiftCal = (str, days) => addDays(str, days);
-      const snapFwd = str => { let dn = parseDate(str); while (isNonWorkday(formatDate(dn))) dn++; return formatDate(dn); };
-      const snapBack = str => { let dn = parseDate(str); while (isNonWorkday(formatDate(dn))) dn--; return formatDate(dn); };
+      const snapFwd = str => {
+        let dn = parseDate(str);
+        while (isNonWorkday(formatDate(dn))) dn++;
+        return formatDate(dn);
+      };
+      const snapBack = str => {
+        let dn = parseDate(str);
+        while (isNonWorkday(formatDate(dn))) dn--;
+        return formatDate(dn);
+      };
       const wd = task.wday || countWorkingDays(task.start, task.end);
       // 依拖動方向吸附到工作日（往右跳到下個工作日、往左跳回上個工作日）
-      const snapDir = str => delta > 0 ? snapFwd(str) : snapBack(str);
+      const snapDir = str => (delta > 0 ? snapFwd(str) : snapBack(str));
 
       if (mode === 'move') {
         task.start = snapDir(shiftCal(task.start, delta));

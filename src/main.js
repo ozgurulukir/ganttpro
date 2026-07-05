@@ -33,6 +33,7 @@ import { renderChartHeader } from './render/chart-header.js';
 import { renderChartBody } from './render/chart-body.js';
 import { renderTaskPanel } from './render/task-panel.js';
 import {
+  modalOpen,
   populateModal,
   syncWday,
   syncEndFromWday,
@@ -1308,6 +1309,7 @@ function stripSharedFlags(proj) {
   delete p._isShared;
   delete p._permission;
   delete p._ownerId;
+  delete p.shareToken;
   return p;
 }
 
@@ -1620,6 +1622,7 @@ function debounceSaveToCloud() {
 }
 
 function persist() {
+  _dirtySinceCloud = true;
   saveToLS();
   debounceSaveToCloud();
 }
@@ -1628,6 +1631,7 @@ function persist() {
    CLOUD SYNC STATE (Firebase init in src/data/firebase.js)
 ═══════════════════════════════════════════ */
 let _cloudSaveSeq = 0;
+let _dirtySinceCloud = false;
 const _pendingCloudWrites = new Set();
 let currentUser = null;
 let _guestMode = false;
@@ -1663,6 +1667,7 @@ async function saveToCloud() {
         nextProjId
       });
       setSyncDot('ok');
+      _dirtySinceCloud = false;
     } else if (isSharedProject(cp) && getSharePermission(cp.ownerId, cp.id) === 'edit') {
       const ownerData = await Remote.readUserData(cp.ownerId);
       if (!ownerData?.projects) {
@@ -1674,6 +1679,7 @@ async function saveToCloud() {
       );
       await Remote.updateUserData(cp.ownerId, { ...ownerData, projects: ownerProjects });
       setSyncDot('ok');
+      _dirtySinceCloud = false;
     } else if (!isSharedProject(cp)) {
       const ownProjects = projects.filter(p => !isSharedProject(p)).map(stripSharedFlags);
       await Remote.writeUserData(currentUser.uid, {
@@ -1682,6 +1688,7 @@ async function saveToCloud() {
         nextProjId
       });
       setSyncDot('ok');
+      _dirtySinceCloud = false;
     }
   } catch (e) {
     console.error('saveToCloud failed', e);
@@ -1757,6 +1764,8 @@ function setupRealtime() {
       return;
     }
     if (_pendingCloudWrites.size > 0) return;
+    if (_dirtySinceCloud) return;
+    if (modalOpen) return;
     const ok = await loadFromCloud();
     if (ok) {
       if (projects.length) {

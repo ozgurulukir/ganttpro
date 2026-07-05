@@ -8,18 +8,23 @@ export function encodeData(obj) {
     let bin = '';
     for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
     return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  } catch(e) { return null; }
+  } catch (e) {
+    return null;
+  }
 }
 
 export function decodeData(b64) {
   try {
     const std = b64.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = std + '='.repeat((4 - std.length % 4) % 4);
+    const padded = std + '='.repeat((4 - (std.length % 4)) % 4);
     const bin = atob(padded);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return JSON.parse(new TextDecoder().decode(bytes));
-  } catch(e) { console.error('[decode]', e); return null; }
+  } catch (e) {
+    console.error('[decode]', e);
+    return null;
+  }
 }
 
 function randomToken() {
@@ -41,15 +46,19 @@ export async function saveShareDoc(token, uid, project) {
   if (uid) {
     try {
       await setDoc(doc(db, 'gantt_shares', token), {
-        token, owner_id: uid,
+        token,
+        owner_id: uid,
         project_data: JSON.parse(JSON.stringify(project))
       });
-    } catch(e) { console.error('saveShareDoc:', e); return null; }
+    } catch (e) {
+      console.error('saveShareDoc:', e);
+      return null;
+    }
   }
   return encoded;
 }
 
 export async function loadShareDoc(token) {
   const snap = await getDoc(doc(db, 'gantt_shares', token));
-  return snap.exists() ? (snap.data().project_data || null) : null;
+  return snap.exists() ? snap.data().project_data || null : null;
 }

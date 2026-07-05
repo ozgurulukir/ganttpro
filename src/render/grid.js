@@ -15,7 +15,8 @@ export function renderGrid(canvas, tw, th) {
   const endDn = parseDate(endStr);
   while (mnDn <= endDn) {
     const md = new Date(mnDn * 86400000);
-    const y = md.getUTCFullYear(), m = md.getUTCMonth();
+    const y = md.getUTCFullYear(),
+      m = md.getUTCMonth();
     const x = dateToX(formatDate(mnDn));
     if (x > 0) {
       const l = document.createElement('div');
@@ -48,7 +49,7 @@ export function renderGrid(canvas, tw, th) {
   } else if (gridGran === 'week') {
     let dn = parseDate(startStr);
     const dow = dayOfWeek(dn);
-    dn -= (dow === 0 ? 6 : dow - 1);
+    dn -= dow === 0 ? 6 : dow - 1;
     while (dn <= endDn) {
       const x = dateToX(formatDate(dn));
       if (x >= 0) {

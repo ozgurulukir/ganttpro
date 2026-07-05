@@ -117,7 +117,17 @@ describe('validateProject', () => {
       nextId: 3,
       tasks: [
         { id: 1, name: 'P', type: 'group', parent: null, color: '#0EA5E9' },
-        { id: 2, name: 'T1', type: 'task', parent: 1, color: '#818CF8', start: 'bad', end: '2026-04-10', wday: 5, done: false },
+        {
+          id: 2,
+          name: 'T1',
+          type: 'task',
+          parent: 1,
+          color: '#818CF8',
+          start: 'bad',
+          end: '2026-04-10',
+          wday: 5,
+          done: false
+        },
         { id: 'evil', name: 'bad', type: 'task' }
       ]
     });
@@ -133,9 +143,25 @@ describe('validateProject', () => {
 describe('validateProjects', () => {
   it('filters out invalid projects', () => {
     const arr = validateProjects([
-      { id: 1, name: 'A', color: '#0EA5E9', startDate: '2026-04-01', endDate: '2026-07-31', nextId: 2, tasks: [] },
+      {
+        id: 1,
+        name: 'A',
+        color: '#0EA5E9',
+        startDate: '2026-04-01',
+        endDate: '2026-07-31',
+        nextId: 2,
+        tasks: []
+      },
       { name: 'bad' },
-      { id: 2, name: 'B', color: '#10B981', startDate: '2026-04-01', endDate: '2026-07-31', nextId: 2, tasks: [] }
+      {
+        id: 2,
+        name: 'B',
+        color: '#10B981',
+        startDate: '2026-04-01',
+        endDate: '2026-07-31',
+        nextId: 2,
+        tasks: []
+      }
     ]);
     assert.equal(arr.length, 2);
     assert.equal(arr[0].name, 'A');

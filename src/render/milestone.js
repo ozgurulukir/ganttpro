@@ -9,10 +9,10 @@ import { t } from '../i18n/index.js';
 /* Single horizontal milestone timeline — all milestones on one spine */
 export function renderMilestoneTimeline(row, groupTask, msList) {
   const { MS_ROW_H, PPD, TODAY_STR, dateToX } = D;
-  const center  = MS_ROW_H / 2;   // 80px (spine Y)
-  const halfD   = 8;               // diamond half-size
-  const connH   = 28;              // connector height
-  const rowW    = parseInt(row.style.width) || 9999;
+  const center = MS_ROW_H / 2; // 80px (spine Y)
+  const halfD = 8; // diamond half-size
+  const connH = 28; // connector height
+  const rowW = parseInt(row.style.width) || 9999;
 
   // Single spine — use accent color
   const spine = document.createElement('div');
@@ -39,7 +39,7 @@ export function renderMilestoneTimeline(row, groupTask, msList) {
   msList.forEach((ms, idx) => {
     const x = dateToX(ms.date) + PPD / 2;
     if (x < -60 || x > rowW + 60) return;
-    const above   = idx % 2 === 0;
+    const above = idx % 2 === 0;
     const msColor = safeColor(ms.color || groupTask.color);
 
     // Connector line
@@ -53,8 +53,9 @@ export function renderMilestoneTimeline(row, groupTask, msList) {
     // Diamond
     const d = document.createElement('div');
     d.className = 'ms-dot';
-    d.style.cssText = `left:${x - halfD}px;top:${center - halfD}px;` +
-      `width:${halfD*2}px;height:${halfD*2}px;` +
+    d.style.cssText =
+      `left:${x - halfD}px;top:${center - halfD}px;` +
+      `width:${halfD * 2}px;height:${halfD * 2}px;` +
       `background:${msColor};box-shadow:0 2px 10px ${msColor}70`;
     d.addEventListener('mouseenter', e => showTT(e, ms));
     d.addEventListener('mousemove', moveTT);
@@ -62,9 +63,7 @@ export function renderMilestoneTimeline(row, groupTask, msList) {
     row.appendChild(d);
 
     // Name label
-    const nameTop = above
-      ? center - halfD - connH - 14
-      : center + halfD + connH + 2;
+    const nameTop = above ? center - halfD - connH - 14 : center + halfD + connH + 2;
     const lbl = document.createElement('div');
     lbl.className = 'ms-lbl';
     lbl.style.cssText = `left:${x}px;top:${nameTop}px;color:${msColor};font-size:11px`;
@@ -82,7 +81,20 @@ export function renderMilestoneTimeline(row, groupTask, msList) {
 }
 
 export function renderMilestone(row, task) {
-  const { PPD, dateToX, isReadOnly, showBaseline, curProj, pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser } = D;
+  const {
+    PPD,
+    dateToX,
+    isReadOnly,
+    showBaseline,
+    curProj,
+    pushHistory,
+    scheduleTasks,
+    recalcProjEnd,
+    render,
+    saveToLS,
+    saveToCloud,
+    currentUser
+  } = D;
   const x = dateToX(task.date) + PPD / 2;
   const d = document.createElement('div');
   d.className = 'milestone-d';
@@ -94,7 +106,11 @@ export function renderMilestone(row, task) {
   d.addEventListener('mouseleave', hideTT);
 
   // 拖移里程碑（無依賴時；有依賴的日期由排程決定）
-  const msDeps = (task.deps||[]).length || (task.sdeps||[]).length || (task.ffdeps||[]).length || (task.sfdeps||[]).length;
+  const msDeps =
+    (task.deps || []).length ||
+    (task.sdeps || []).length ||
+    (task.ffdeps || []).length ||
+    (task.sfdeps || []).length;
   if (!isReadOnly && !msDeps) {
     d.style.cursor = 'grab';
     d.addEventListener('mousedown', e => {
@@ -103,7 +119,8 @@ export function renderMilestone(row, task) {
       e.stopPropagation();
       const startX = e.clientX;
       const origLeft = parseFloat(d.style.left);
-      let moved = false, delta = 0;
+      let moved = false,
+        delta = 0;
       document.body.style.userSelect = 'none';
       const onMove = ev => {
         const dx = ev.clientX - startX;
@@ -111,16 +128,19 @@ export function renderMilestone(row, task) {
         moved = true;
         hideTT();
         delta = Math.round(dx / PPD);
-        d.style.left = (origLeft + delta * PPD) + 'px';
+        d.style.left = origLeft + delta * PPD + 'px';
       };
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
         document.body.style.userSelect = '';
-        if (!moved || !delta) { render(); return; }
+        if (!moved || !delta) {
+          render();
+          return;
+        }
         pushHistory();
         let dn = parseDate(task.date) + delta;
-        while (isNonWorkday(formatDate(dn))) dn += (delta > 0 ? 1 : -1);
+        while (isNonWorkday(formatDate(dn))) dn += delta > 0 ? 1 : -1;
         task.date = formatDate(dn);
         task.pinStart = true;
         scheduleTasks();

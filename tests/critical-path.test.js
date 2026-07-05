@@ -60,7 +60,14 @@ test('computeCriticalPath — parallel paths: longer path critical, shorter has 
     { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
     { id: 'B', parent: null, type: 'task', start: '2026-05-05', end: '2026-05-08', deps: ['A'] },
     { id: 'C', parent: null, type: 'task', start: '2026-05-05', end: '2026-05-05', deps: ['A'] },
-    { id: 'D', parent: null, type: 'task', start: '2026-05-11', end: '2026-05-11', deps: ['B', 'C'] }
+    {
+      id: 'D',
+      parent: null,
+      type: 'task',
+      start: '2026-05-11',
+      end: '2026-05-11',
+      deps: ['B', 'C']
+    }
   ];
   const c = computeCriticalPath(tasks);
   assert.ok(c.has('A'), 'A critical');
@@ -113,7 +120,14 @@ test('getCriticalPredTaskIds — skips non-critical predecessor', () => {
     { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
     { id: 'B', parent: null, type: 'task', start: '2026-05-05', end: '2026-05-08', deps: ['A'] },
     { id: 'C', parent: null, type: 'task', start: '2026-05-05', end: '2026-05-05', deps: ['A'] },
-    { id: 'D', parent: null, type: 'task', start: '2026-05-11', end: '2026-05-11', deps: ['B', 'C'] }
+    {
+      id: 'D',
+      parent: null,
+      type: 'task',
+      start: '2026-05-11',
+      end: '2026-05-11',
+      deps: ['B', 'C']
+    }
   ];
   const crit = computeCriticalPath(tasks); // {A, B, D}
   const preds = getCriticalPredTaskIds(tasks, crit, tasks[3]); // D's predecessors
