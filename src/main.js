@@ -1269,7 +1269,7 @@ function recalcProjEnd() {
     // Expand chart by 1 month to give room
     const d = new Date(maxEnd);
     d.setMonth(d.getMonth() + 1);
-    const newStr = formatDate(Math.floor(d.getTime() / 86400000) + 719163);
+    const newStr = formatDate(Math.floor(d.getTime() / 86400000));
     if (newStr > curProj().endDate) curProj().endDate = newStr;
     CHART_END = new Date(curProj().endDate);
     persist();
