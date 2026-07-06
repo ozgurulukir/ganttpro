@@ -133,3 +133,30 @@ test('getCriticalPredTaskIds — skips non-critical predecessor', () => {
   const preds = getCriticalPredTaskIds(tasks, crit, tasks[3]); // D's predecessors
   assert.deepEqual(preds, ['B']); // C has float, excluded
 });
+
+test('computeCriticalPath — FS dependency with float on successor side', () => {
+  // A -> B(FS). A is 1 day. B is 1 day, but starts 3 days later due to other constraints.
+  // A should not be critical unless its float (B.LF - 1 - A.duration) is 0.
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
+    // B's start is driven by something else to 08, not A.
+    { id: 'B', parent: null, type: 'task', start: '2026-05-08', end: '2026-05-08', deps: ['A'] },
+    // A parallel path that takes the whole time
+    { id: 'C', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-08' }
+  ];
+  const c = computeCriticalPath(tasks);
+  assert.ok(!c.has('A'), 'A should not be critical as it has float');
+  assert.ok(c.has('B'), 'B is critical because its end determines the project end');
+  assert.ok(c.has('C'), 'C is critical as it spans the whole duration');
+});
+
+test('computeCriticalPath — milestone end is correctly used for projEnd', () => {
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
+    { id: 'M', parent: null, type: 'milestone', date: '2026-05-05', deps: ['A'] }
+  ];
+  const c = computeCriticalPath(tasks);
+  // Without the fix, A's LF would be A.end (05-04) and float = 0
+  // With the fix, projEnd = M.date (05-05), A's LF is driven by M, A is critical.
+  assert.ok(c.has('A'));
+});

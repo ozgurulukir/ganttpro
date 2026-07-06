@@ -61,7 +61,7 @@ export function buildDepsText(tasks, collapsed, milestoneView, task) {
  * cycles.  Empty/blank input yields [].
  */
 export function parseDepInput(val, taskId, tasks, collapsed, milestoneView) {
-  if (!val.trim()) return [];
+  if (!val || !val.trim()) return [];
   return val
     .split(',')
     .map(s => {

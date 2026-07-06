@@ -154,6 +154,19 @@ export function scheduleTasks(tasks, projStart) {
       progress = true;
     });
   }
+  if (candidates.some(t => !scheduled.has(t.id))) {
+    import('./deps.js').then(Deps => {
+      candidates
+        .filter(t => !scheduled.has(t.id))
+        .forEach(t => {
+          (t.deps || []).forEach(depId => {
+            if (Deps.wouldCreateCycle(tasks, t.id, depId)) {
+              console.warn(`Cycle detected between ${t.id} and ${depId}`);
+            }
+          });
+        });
+    });
+  }
 }
 
 /**
@@ -191,7 +204,7 @@ export function autoScheduleFromDeps(tasks, task) {
     if (s && (!candidateStart || s > candidateStart)) candidateStart = s;
   });
   if (!candidateStart) return;
-  const wdays = task.start && task.end ? countWorkingDays(task.start, task.end) : 1;
+  const wdays = task.wday || (task.start && task.end ? countWorkingDays(task.start, task.end) : 1);
   if (candidateStart > (task.start || '')) {
     task.start = candidateStart;
     task.end = addWorkingDays(task.start, wdays);

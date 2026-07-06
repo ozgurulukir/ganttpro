@@ -72,9 +72,10 @@ export function computeCriticalPath(tasks) {
   });
 
   // 專案結束日 = 所有任務中最晚的 EF
-  const projEnd = nodes
-    .filter(t => t.type === 'task')
-    .reduce((mx, t) => (t.end > mx ? t.end : mx), '');
+  const projEnd = nodes.reduce((mx, t) => {
+    const e = t.type === 'task' ? t.end : t.type === 'milestone' ? t.date : null;
+    return e && e > mx ? e : mx;
+  }, '');
   if (!projEnd) return new Set();
 
   // 後向傳遞：迭代計算 LF
@@ -102,9 +103,15 @@ export function computeCriticalPath(tasks) {
 
           switch (type) {
             case 'FS':
-              // t 必須在 succ 開始前完成 → t.LF = prevWorkingDay(succ.LS)
-              // succ.LS = succ.LF - succ_duration + 1；簡化：用 prevWorkingDay(succ.start)
-              c = prevWorkingDay(getS(succ));
+              // t 必須在 succ 開始前完成 → t.LF = succ.LS - 1
+              // succ.LS = succ.LF - succ_duration + 1;
+              // so t.LF = succ.LF - succ_duration
+              if (succLF && succ.type === 'task') {
+                const succLS = subtractWorkingDays(succLF, wdur(succ) - 1);
+                c = prevWorkingDay(succLS);
+              } else {
+                c = prevWorkingDay(getS(succ));
+              }
               break;
 
             case 'SS':

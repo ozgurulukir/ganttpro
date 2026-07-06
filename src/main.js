@@ -135,9 +135,7 @@ import { logAudit } from './data/audit.js';
 ═══════════════════════════════════════════ */
 let CHART_START = new Date('2026-04-01');
 let CHART_END = new Date('2026-07-31');
-const TODAY_STR = new Date().toLocaleDateString('sv', { timeZone: 'Asia/Taipei' });
-const TODAY = new Date(TODAY_STR);
-document.getElementById('sTodayDisplay').textContent = TODAY_STR;
+document.getElementById('sTodayDisplay').textContent = formatDate(Date.now() / 86400000 + 719163);
 const ROW_H = 36;
 const BAR_H = 20;
 
@@ -930,27 +928,48 @@ let isDark = false;
 
 /* ─── UNDO HISTORY ─── */
 const MAX_HISTORY = 50;
-let _history = [];
+
+function getHistory() {
+  if (!curProj()) return [];
+  if (!curProj()._history) curProj()._history = [];
+  return curProj()._history;
+}
 
 function pushHistory() {
-  _history.push({ tasks: JSON.parse(JSON.stringify(tasks)), nextId });
-  if (_history.length > MAX_HISTORY) _history.shift();
+  const h = getHistory();
+  // Deep clone tasks and metadata
+  h.push({
+    tasks: JSON.parse(JSON.stringify(tasks)),
+    nextId,
+    startDate: curProj().startDate,
+    endDate: curProj().endDate,
+    name: curProj().name,
+    color: curProj().color
+  });
+  if (h.length > MAX_HISTORY) h.shift();
   const btn = document.getElementById('undoBtn');
   if (btn) btn.disabled = false;
 }
 
 function undo() {
-  if (!_history.length || !curProj()) return;
-  const snap = _history.pop();
+  const h = getHistory();
+  if (!h.length || !curProj()) return;
+  const snap = h.pop();
   curProj().tasks = snap.tasks;
   curProj().nextId = snap.nextId;
+  curProj().startDate = snap.startDate;
+  curProj().endDate = snap.endDate;
+  curProj().name = snap.name;
+  curProj().color = snap.color;
   tasks = curProj().tasks;
   nextId = curProj().nextId;
+  CHART_START = new Date(curProj().startDate);
+  CHART_END = new Date(curProj().endDate);
   scheduleTasks();
   recalcProjEnd();
   render();
   const btn = document.getElementById('undoBtn');
-  if (btn) btn.disabled = _history.length === 0;
+  if (btn) btn.disabled = getHistory().length === 0;
 }
 
 /* ═══════════════════════════════════════════
@@ -1235,22 +1254,28 @@ function updateChartStart() {
 }
 
 function recalcProjEnd() {
-  const proj = curProj();
-  if (!proj) return;
-  updateChartStart();
-  let maxDate = null;
-  tasks.forEach(t => {
-    const e = t.end || t.date;
-    if (e && (!maxDate || e > maxDate)) maxDate = e;
+  if (!curProj()) return;
+  const nodes = tasks.filter(
+    t => (t.type === 'task' && t.end) || (t.type === 'milestone' && t.date)
+  );
+  let maxEnd = '';
+  nodes.forEach(t => {
+    const e = t.type === 'task' ? t.end : t.date;
+    if (e > maxEnd) maxEnd = e;
   });
-  if (!maxDate) return;
-  // Pad 3 months beyond last task end
-  const maxD = new Date(maxDate + 'T00:00:00Z');
-  maxD.setUTCMonth(maxD.getUTCMonth() + 3);
-  const endStr = maxD.toISOString().slice(0, 10);
-  proj.endDate = endStr;
-  CHART_END = maxD;
-  document.getElementById('sPeriod').textContent = `${proj.startDate} — ${endStr}`;
+  if (maxEnd && maxEnd > curProj().endDate) {
+    curProj().endDate = maxEnd;
+    CHART_END = new Date(maxEnd);
+    // Expand chart by 1 month to give room
+    const d = new Date(maxEnd);
+    d.setMonth(d.getMonth() + 1);
+    const newStr = formatDate(Math.floor(d.getTime() / 86400000) + 719163);
+    if (newStr > curProj().endDate) curProj().endDate = newStr;
+    CHART_END = new Date(curProj().endDate);
+    save();
+  }
+  const sPeriod = document.getElementById('sPeriod');
+  if (sPeriod) sPeriod.textContent = `${curProj().startDate} ~ ${curProj().endDate}`;
 }
 /* ═══════════════════════════════════════════
    OWNER & SHARE SYSTEM
@@ -1452,8 +1477,7 @@ function syncRenderDeps() {
   D.PPDS = PPDS;
   D.CHART_START = CHART_START;
   D.CHART_END = CHART_END;
-  D.TODAY = TODAY;
-  D.TODAY_STR = TODAY_STR;
+  D.TODAY = new Date(formatDate(Date.now() / 86400000 + 719163));
   D.ROW_H = ROW_H;
   D.BAR_H = BAR_H;
   D.MS_ROW_H = MS_ROW_H;
@@ -1612,7 +1636,7 @@ function render() {
   renderChartHeader();
   renderChartBody();
   const undoBtn = document.getElementById('undoBtn');
-  if (undoBtn) undoBtn.disabled = _history.length === 0;
+  if (undoBtn) undoBtn.disabled = getHistory().length === 0;
 }
 
 function debounceSaveToCloud() {
