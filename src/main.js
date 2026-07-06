@@ -1477,7 +1477,7 @@ function syncRenderDeps() {
   D.PPDS = PPDS;
   D.CHART_START = CHART_START;
   D.CHART_END = CHART_END;
-  D.TODAY = new Date(formatDate(Date.now() / 86400000 + 719163));
+  D.TODAY = new Date(formatDate(Math.floor(Date.now() / 86400000)));
   D.ROW_H = ROW_H;
   D.BAR_H = BAR_H;
   D.MS_ROW_H = MS_ROW_H;
