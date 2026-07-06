@@ -1272,7 +1272,7 @@ function recalcProjEnd() {
     const newStr = formatDate(Math.floor(d.getTime() / 86400000) + 719163);
     if (newStr > curProj().endDate) curProj().endDate = newStr;
     CHART_END = new Date(curProj().endDate);
-    save();
+    persist();
   }
   const sPeriod = document.getElementById('sPeriod');
   if (sPeriod) sPeriod.textContent = `${curProj().startDate} ~ ${curProj().endDate}`;
