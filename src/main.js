@@ -135,7 +135,7 @@ import { logAudit } from './data/audit.js';
 ═══════════════════════════════════════════ */
 let CHART_START = new Date('2026-04-01');
 let CHART_END = new Date('2026-07-31');
-document.getElementById('sTodayDisplay').textContent = formatDate(Date.now() / 86400000 + 719163);
+document.getElementById('sTodayDisplay').textContent = formatDate(Math.floor(Date.now() / 86400000));
 const ROW_H = 36;
 const BAR_H = 20;
 
