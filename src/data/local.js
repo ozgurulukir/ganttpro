@@ -6,7 +6,11 @@ export function saveToLS(data) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(data));
   } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      alert('Storage Quota Exceeded. Your changes may not be saved. Please free up some space.');
+    }
     console.error('saveToLS:', e);
+    throw e;
   }
 }
 

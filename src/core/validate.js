@@ -215,6 +215,16 @@ export function validateProject(raw) {
 
   delete proj.shareToken;
 
+  return migrate(proj);
+}
+
+export function migrate(proj) {
+  // Add schema version and migrations for backwards compatibility
+  if (!proj.schemaVersion) {
+    proj.schemaVersion = 1;
+  }
+  // Future migrations can be added here:
+  // if (proj.schemaVersion === 1) { ... proj.schemaVersion = 2; }
   return proj;
 }
 
