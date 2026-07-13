@@ -160,3 +160,19 @@ test('computeCriticalPath — milestone end is correctly used for projEnd', () =
   // With the fix, projEnd = M.date (05-05), A's LF is driven by M, A is critical.
   assert.ok(c.has('A'));
 });
+
+test('computeCriticalPath — FS successor with idle slack does not overconstrain predecessor', () => {
+  // A(1d) -> M(milestone) -> D(1d). C(6d) defines projEnd.
+  // M has idle slack (LF is 05-08, ES is 05-05).
+  // A should not be forced to 0 float by M's start date.
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
+    { id: 'M', parent: null, type: 'milestone', date: '2026-05-05', deps: ['A'] },
+    { id: 'D', parent: null, type: 'task', start: '2026-05-06', end: '2026-05-06', deps: ['M'] },
+    { id: 'C', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-11' } // Defines projEnd = 05-11
+  ];
+  const c = computeCriticalPath(tasks);
+  assert.ok(!c.has('A'), 'A should not be critical because M has idle slack');
+  assert.ok(!c.has('D'), 'D should not be critical');
+  assert.ok(c.has('C'), 'C is critical as it spans the whole duration');
+});
