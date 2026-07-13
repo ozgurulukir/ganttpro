@@ -1062,10 +1062,24 @@ function pushHistory() {
 	h.push({
 		tasks: JSON.parse(JSON.stringify(tasks)),
 		nextId,
+		currentProjId,
+		collapsed: Array.from(collapsed),
+		viewMode,
+		showCriticalPath,
+		showWBS,
+		isDark,
+		CHART_START: new Date(CHART_START),
+		CHART_END: new Date(CHART_END),
+		milestoneView,
+		workloadView,
+		showBarDates,
+		showBaseline,
 		startDate: curProj().startDate,
 		endDate: curProj().endDate,
 		name: curProj().name,
 		color: curProj().color,
+		versions: curProj().versions ? JSON.parse(JSON.stringify(curProj().versions)) : [],
+		baseline: curProj().baseline ? JSON.parse(JSON.stringify(curProj().baseline)) : null,
 	});
 	if (h.length > MAX_HISTORY) h.shift();
 	const btn = document.getElementById("undoBtn");
@@ -1076,16 +1090,46 @@ function undo() {
 	const h = getHistory();
 	if (!h.length || !curProj()) return;
 	const snap = h.pop();
-	curProj().tasks = snap.tasks;
+
+	curProj().tasks.length = 0;
+	curProj().tasks.push(...snap.tasks);
 	curProj().nextId = snap.nextId;
 	curProj().startDate = snap.startDate;
 	curProj().endDate = snap.endDate;
 	curProj().name = snap.name;
 	curProj().color = snap.color;
-	tasks = curProj().tasks;
+	curProj().versions = snap.versions ? JSON.parse(JSON.stringify(snap.versions)) : [];
+	curProj().baseline = snap.baseline ? JSON.parse(JSON.stringify(snap.baseline)) : null;
+
 	nextId = curProj().nextId;
-	CHART_START = new Date(curProj().startDate);
-	CHART_END = new Date(curProj().endDate);
+
+	collapsed.clear();
+	if (snap.collapsed) {
+		snap.collapsed.forEach(id => collapsed.add(id));
+	}
+
+	if (snap.viewMode) setView(snap.viewMode);
+
+	showCriticalPath = snap.showCriticalPath;
+	showWBS = snap.showWBS;
+	isDark = snap.isDark;
+	CHART_START = new Date(snap.CHART_START);
+	CHART_END = new Date(snap.CHART_END);
+	milestoneView = snap.milestoneView;
+	workloadView = snap.workloadView;
+	showBarDates = snap.showBarDates;
+	showBaseline = snap.showBaseline;
+
+	// UI sync where necessary
+	document.body.classList.toggle("ms-view", milestoneView);
+	document.body.classList.toggle("show-wbs", showWBS);
+	const cpBtn = document.getElementById("cpBtn");
+	if (cpBtn) cpBtn.classList.toggle("active", showCriticalPath);
+	if (showCriticalPath) criticalTaskIds = computeCriticalPath();
+	else criticalTaskIds = new Set();
+	const wbsBtn = document.getElementById("wbsBtn");
+	if (wbsBtn) wbsBtn.classList.toggle("active", showWBS);
+
 	scheduleTasks();
 	recalcProjEnd();
 	render();
@@ -1685,7 +1729,10 @@ function syncRenderDeps() {
 		CHART_START = new Date(proj.startDate);
 		CHART_END = new Date(proj.endDate);
 		collapsed.clear();
-		_history = [];
+
+		const btn = document.getElementById("undoBtn");
+		if (btn) btn.disabled = getHistory().length === 0;
+
 		D.currentProjId = currentProjId;
 		D.tasks = tasks;
 		D.nextId = nextId;
