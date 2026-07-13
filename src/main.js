@@ -1108,7 +1108,13 @@ function undo() {
 		snap.collapsed.forEach(id => collapsed.add(id));
 	}
 
-	if (snap.viewMode) setView(snap.viewMode);
+	if (snap.viewMode) {
+		viewMode = snap.viewMode;
+		PPD = PPDS[snap.viewMode];
+		document.querySelectorAll('#viewBtns .btn').forEach((b) => {
+			b.classList.toggle('active', b.dataset.v === snap.viewMode);
+		});
+	}
 
 	showCriticalPath = snap.showCriticalPath;
 	showWBS = snap.showWBS;
@@ -1120,20 +1126,38 @@ function undo() {
 	showBarDates = snap.showBarDates;
 	showBaseline = snap.showBaseline;
 
-	// UI sync where necessary
-	document.body.classList.toggle("ms-view", milestoneView);
-	document.body.classList.toggle("show-wbs", showWBS);
-	const cpBtn = document.getElementById("cpBtn");
-	if (cpBtn) cpBtn.classList.toggle("active", showCriticalPath);
+	// UI sync
+	document.body.classList.toggle('ms-view', milestoneView);
+	document.body.classList.toggle('show-wbs', showWBS);
+	document.body.classList.toggle('dark', isDark);
+
+	const darkBtn = document.getElementById('darkBtn');
+	if (darkBtn) darkBtn.textContent = isDark ? '☀️' : '🌙';
+
+	const bd = document.getElementById('settingBarDates');
+	if (bd) bd.checked = showBarDates;
+	const bl = document.getElementById('settingBaseline');
+	if (bl) bl.checked = showBaseline;
+
+	const cv = milestoneView ? 'milestone' : workloadView ? 'workload' : 'gantt';
+	document.querySelectorAll('#chartViewBtns .btn').forEach((b) => {
+		b.classList.toggle('active', b.dataset.cv === cv);
+	});
+
+	const cpBtn = document.getElementById('cpBtn');
+	if (cpBtn) cpBtn.classList.toggle('active', showCriticalPath);
 	if (showCriticalPath) criticalTaskIds = computeCriticalPath();
 	else criticalTaskIds = new Set();
-	const wbsBtn = document.getElementById("wbsBtn");
-	if (wbsBtn) wbsBtn.classList.toggle("active", showWBS);
+	const wbsBtn = document.getElementById('wbsBtn');
+	if (wbsBtn) wbsBtn.classList.toggle('active', showWBS);
+
+	updateProjUI();
+	renderVersionList();
 
 	scheduleTasks();
 	recalcProjEnd();
 	render();
-	const btn = document.getElementById("undoBtn");
+	const btn = document.getElementById('undoBtn');
 	if (btn) btn.disabled = getHistory().length === 0;
 }
 
