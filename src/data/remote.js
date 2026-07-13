@@ -13,10 +13,35 @@ import {
   where,
   orderBy,
   getDocs,
-  onSnapshot
+  onSnapshot,
+  runTransaction
 } from 'firebase/firestore';
 
 /* ── gantt_user_data ── */
+
+export async function updateSharedProjectAtomic(ownerId, sharedProject) {
+  const docRef = doc(db, 'gantt_user_data', ownerId);
+  return await runTransaction(db, async (transaction) => {
+    const docSnap = await transaction.get(docRef);
+    if (!docSnap.exists()) {
+      throw new Error("Owner document does not exist!");
+    }
+    const data = docSnap.data().data || {};
+    if (!data.projects) {
+      throw new Error("Owner projects not found!");
+    }
+    const ownerProjects = data.projects.map((p) =>
+      p.id === sharedProject.id ? sharedProject : p
+    );
+    transaction.update(docRef, {
+      data: {
+        ...data,
+        projects: ownerProjects
+      },
+      updated_at: new Date().toISOString()
+    });
+  });
+}
 
 export async function readUserData(uid) {
   const snap = await getDoc(doc(db, 'gantt_user_data', uid));
