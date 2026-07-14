@@ -69,6 +69,41 @@ describe('validateTask', () => {
     assert.equal(t.done, true);
     assert.equal(t.start, undefined);
   });
+
+  it('bounds wday to 1..3650 and progress to 0..100', () => {
+    const t1 = validateTask({ id: 1, type: 'task', wday: -5, progress: -10 });
+    assert.equal(t1.wday, 1);
+    assert.equal(t1.progress, 0);
+
+    const t2 = validateTask({ id: 2, type: 'task', wday: 1e9, progress: 150 });
+    assert.equal(t2.wday, 3650);
+    assert.equal(t2.progress, 100);
+  });
+
+  it('strips control characters from name', () => {
+    const t = validateTask({ id: 1, type: 'task', name: 'Task\x00\x1FName' });
+    assert.equal(t.name, 'TaskName');
+  });
+
+  it('validates lags correctly', () => {
+    const t = validateTask({
+      id: 1,
+      type: 'task',
+      lags: {
+        FS2: 400,
+        SS3: -400,
+        FF4: 10,
+        SF5: -20,
+        INVALID6: 50
+      }
+    });
+    assert.deepStrictEqual(t.lags, {
+      FS2: 365,
+      SS3: -365,
+      FF4: 10,
+      SF5: -20
+    });
+  });
 });
 
 describe('validateProject', () => {

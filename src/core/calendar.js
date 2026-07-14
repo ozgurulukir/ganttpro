@@ -89,11 +89,7 @@ export const TW_HOLIDAYS = {
 export const TW_MAKEUP_WORKDAYS = new Set(['2025-02-08']);
 
 export function dateKey(d) {
-  return d instanceof Date
-    ? d.toISOString().slice(0, 10)
-    : typeof d === 'number'
-      ? formatDate(d)
-      : String(d);
+  return d instanceof Date ? d.toISOString().slice(0, 10) : String(d);
 }
 export function getHoliday(d) {
   return TW_HOLIDAYS[dateKey(d)] || null;
@@ -178,7 +174,6 @@ export function shiftWorkingDays(dateStr, days) {
 export function countWorkingDays(startStr, endStr) {
   let dn = parseDate(startStr);
   const endDn = parseDate(endStr);
-  if (dn > endDn) return -1;
   let count = 0;
   while (dn <= endDn) {
     if (!isNonWorkday(formatDate(dn))) count++;
