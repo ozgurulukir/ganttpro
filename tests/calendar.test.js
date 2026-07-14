@@ -61,6 +61,10 @@ test('countWorkingDays — inclusive both ends, floors at 1', () => {
   assert.equal(countWorkingDays('2026-07-06', '2026-07-06'), 1); // single day
 });
 
+test('countWorkingDays — throws on start > end', () => {
+  assert.throws(() => countWorkingDays('2026-07-10', '2026-07-06'), /start cannot be after end/);
+});
+
 test('shiftWorkingDays — 0 no-op, positive forward, negative back', () => {
   assert.equal(shiftWorkingDays('2026-07-06', 0), '2026-07-06');
   assert.equal(shiftWorkingDays('2026-07-06', 2), '2026-07-08'); // Mon→Wed

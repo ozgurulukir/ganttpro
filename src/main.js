@@ -1257,6 +1257,7 @@ function reorderTask(srcId, targetId, insertBefore) {
 	const targetIdx = tasks.indexOf(target);
 	tasks.splice(insertBefore ? targetIdx : targetIdx + 1, 0, src);
 
+	scheduleTasks();
 	recalcProjEnd();
 	render();
 }

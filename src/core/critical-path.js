@@ -73,7 +73,7 @@ export function computeCriticalPath(tasks) {
 
   // 專案結束日 = 所有任務中最晚的 EF
   const projEnd = nodes.reduce((mx, t) => {
-    const e = t.type === 'task' ? t.end : t.type === 'milestone' ? t.date : null;
+    const e = t.type === 'task' ? t.end : (t.type === 'milestone' ? t.date : null);
     return e && e > mx ? e : mx;
   }, '');
   if (!projEnd) return new Set();
