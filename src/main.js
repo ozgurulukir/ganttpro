@@ -139,7 +139,7 @@ import {
 	addShare,
 	removeShare,
 } from "./collab.js";
-import { auth, googleProvider } from "./data/firebase.js";
+import { auth, db, googleProvider, firebaseError } from "./data/firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import * as Local from "./data/local.js";
 import * as Share from "./data/share.js";
@@ -158,9 +158,11 @@ import { logAudit } from "./data/audit.js";
 ═══════════════════════════════════════════ */
 let CHART_START = new Date("2026-04-01");
 let CHART_END = new Date("2026-07-31");
-document.getElementById("sTodayDisplay").textContent = formatDate(
-	Math.floor(Date.now() / 86400000),
-);
+{
+	const _td = document.getElementById("sTodayDisplay");
+	if (_td)
+		_td.textContent = DateUtils.formatDate(Math.floor(Date.now() / 86400000));
+}
 const ROW_H = 36;
 const BAR_H = 20;
 
@@ -1582,6 +1584,7 @@ async function loadSharedProjects() {
 }
 
 function setupSharedRealtime(ownerIds) {
+	if (!db) return;
 	_sharedChannels.forEach((unsub) => unsub());
 	_sharedChannels = [];
 
@@ -1693,7 +1696,8 @@ function syncRenderDeps() {
 	D.PPDS = PPDS;
 	D.CHART_START = CHART_START;
 	D.CHART_END = CHART_END;
-	D.TODAY = new Date(formatDate(Math.floor(Date.now() / 86400000)));
+	D.TODAY_STR = formatDate(Math.floor(Date.now() / 86400000));
+	D.TODAY = new Date(D.TODAY_STR);
 	D.ROW_H = ROW_H;
 	D.BAR_H = BAR_H;
 	D.MS_ROW_H = MS_ROW_H;
@@ -1879,6 +1883,7 @@ const _pendingCloudWrites = new Set();
 let currentUser = null;
 let _guestMode = false;
 let _appInitialized = false;
+let _initAppPromise = null;
 
 const _syncChannel = new BroadcastChannel("gantt_sync");
 let _syncReloadTimer = null;
@@ -2063,7 +2068,7 @@ function cleanupRealtime() {
 }
 
 function setupRealtime() {
-	if (!currentUser) return;
+	if (!currentUser || !db) return;
 	if (_realtimeUnsub) _realtimeUnsub();
 	let skipFirst = true;
 	_realtimeUnsub = Remote.watchUserData(currentUser.uid, async () => {
@@ -2144,6 +2149,7 @@ function showApp() {
 	document.getElementById("loginScreen").style.display = "none";
 	document.getElementById("appToolbar").style.display = "flex";
 	document.getElementById("main").style.display = "flex";
+	if (typeof window.__gpReady === "function") window.__gpReady();
 }
 
 function isSafeAvatarUrl(url) {
@@ -2171,44 +2177,55 @@ function updateUserDisplay() {
 
 async function initApp() {
 	if (_appInitialized) return;
-	_appInitialized = true;
-	// Clear header immediately before showing app, preventing cached name flash
-	const _nameEl = document.getElementById("projSelectorName");
-	if (_nameEl) _nameEl.textContent = "";
-	showApp();
-	updateUserDisplay();
-	// Clear hardcoded demo data before cloud load to prevent flash
-	projects = [];
-	currentProjId = null;
-	tasks = [];
+	if (_initAppPromise) {
+		await _initAppPromise;
+		return;
+	}
+	_initAppPromise = (async () => {
+		try {
+			// Clear header immediately before showing app, preventing cached name flash
+			const _nameEl = document.getElementById("projSelectorName");
+			if (_nameEl) _nameEl.textContent = "";
+			showApp();
+			updateUserDisplay();
+			// Clear hardcoded demo data before cloud load to prevent flash
+			projects = [];
+			currentProjId = null;
+			tasks = [];
 
-	if (navigator.onLine && hasOfflinePending()) {
-		clearOfflinePending();
-		// If we had pending offline writes, we should load from local storage first, then save to cloud
-		loadFromLS();
-		saveToCloud();
-	}
+			if (navigator.onLine && hasOfflinePending()) {
+				clearOfflinePending();
+				// If we had pending offline writes, load from local storage first, then save to cloud
+				loadFromLS();
+				saveToCloud();
+			}
 
-	const cloudOk = await loadFromCloud();
-	if (!cloudOk) loadFromLS();
-	await loadSharedProjects();
-	setupRealtime();
-	updateProjUI();
-	if (projects.length) {
-		scheduleTasks();
-		recalcProjEnd();
-	}
-	render();
-	setSyncDot(cloudOk ? "ok" : _guestMode ? "off" : "err");
-	setTimeout(scrollToToday, 120);
-	const adminBtn = document.getElementById("adminBtn");
-	if (adminBtn) adminBtn.style.display = isAdmin() ? "" : "none";
-	if (_guestMode) {
-		const el = document.getElementById("userDisplay");
-		if (el)
-			el.innerHTML = `<div title="Guest mode (local)" style="width:26px;height:26px;border-radius:50%;background:var(--t4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">G</div>`;
-		document.getElementById("signOutBtn").style.display = "";
-	}
+			const cloudOk = await loadFromCloud();
+			if (!cloudOk) loadFromLS();
+			await loadSharedProjects();
+			setupRealtime();
+			updateProjUI();
+			if (projects.length) {
+				scheduleTasks();
+				recalcProjEnd();
+			}
+			render();
+			setSyncDot(cloudOk ? "ok" : _guestMode ? "off" : "err");
+			setTimeout(scrollToToday, 120);
+			const adminBtn = document.getElementById("adminBtn");
+			if (adminBtn) adminBtn.style.display = isAdmin() ? "" : "none";
+			if (_guestMode) {
+				const el = document.getElementById("userDisplay");
+				if (el)
+					el.innerHTML = `<div title="Guest mode (local)" style="width:26px;height:26px;border-radius:50%;background:var(--t4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">G</div>`;
+				document.getElementById("signOutBtn").style.display = "";
+			}
+			_appInitialized = true;
+		} finally {
+			_initAppPromise = null;
+		}
+	})();
+	await _initAppPromise;
 }
 
 /* ═══════════════════════════════════════════
@@ -2471,31 +2488,54 @@ function wireStaticEvents() {
 /* ═══════════════════════════════════════════
    INIT
 ══════════════════════════════════════════ */
+// Diagnostic flag: confirms module evaluated successfully (all imports resolved).
+window.__gpModuleLoaded = true;
+
 document.addEventListener("DOMContentLoaded", async () => {
-	await initI18n();
-	translateDOM();
-	wireStaticEvents();
-	setupSync();
-	setupColResizers();
-	setupResizer();
+	// Define revealLogin early so it's available even if later setup throws.
+	const revealLogin = () => {
+		const chk = document.getElementById("authChecking");
+		const panel = document.getElementById("loginPanel");
+		if (chk) chk.style.display = "none";
+		if (
+			panel &&
+			document.getElementById("registerPanel").style.display === "none"
+		)
+			panel.style.display = "flex";
+		if (typeof window.__gpReady === "function") window.__gpReady();
+	};
 
-	// Locale switcher: set initial value and wire change event
-	const langSelect = document.getElementById("langSelect");
-	if (langSelect) {
-		langSelect.value = getLocale();
-		langSelect.addEventListener("change", () => {
-			setLocale(langSelect.value);
-			render();
-		});
+	try {
+		await initI18n();
+		translateDOM();
+		wireStaticEvents();
+		setupSync();
+		setupColResizers();
+		setupResizer();
+
+		// Locale switcher: set initial value and wire change event
+		const langSelect = document.getElementById("langSelect");
+		if (langSelect) {
+			langSelect.value = getLocale();
+			langSelect.addEventListener("change", () => {
+				setLocale(langSelect.value);
+				render();
+			});
+		}
+
+		// Restore WBS toggle state
+		showWBS = localStorage.getItem("gp_showWBS") === "1";
+		if (showWBS) document.body.classList.add("show-wbs");
+
+		initContextMenu();
+		syncRenderDeps();
+		// Diagnostic flag: confirms all setup completed without throwing.
+		window.__gpSetupDone = true;
+	} catch (e) {
+		console.error("Setup failed:", e);
+		revealLogin();
+		return;
 	}
-
-	// Restore WBS toggle state
-	showWBS = localStorage.getItem("gp_showWBS") === "1";
-	if (showWBS) document.body.classList.add("show-wbs");
-
-	initContextMenu();
-
-	syncRenderDeps();
 	const urlParams = new URLSearchParams(location.search);
 	const shareToken = urlParams.get("share");
 
@@ -2541,16 +2581,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 	}
 
 	// Auth-required mode
-	const revealLogin = () => {
-		const chk = document.getElementById("authChecking");
-		const panel = document.getElementById("loginPanel");
-		if (chk) chk.style.display = "none";
-		if (
-			panel &&
-			document.getElementById("registerPanel").style.display === "none"
-		)
-			panel.style.display = "flex";
-	};
+	// If Firebase itself failed to initialise (no auth object), skip straight
+	// to the login panel — the user can still use guest/local mode.
+	if (firebaseError || !auth) {
+		console.error("Firebase unavailable:", firebaseError);
+		revealLogin();
+		return;
+	}
+
 	// 保險：Firebase 無回應（離線、被擋）時 4 秒後仍顯示登入按鈕
 	const authFallback = setTimeout(() => {
 		if (!_appInitialized) revealLogin();
@@ -2562,8 +2600,28 @@ document.addEventListener("DOMContentLoaded", async () => {
 		if (user) {
 			// 既有 session：直接進入 app，不顯示登入按鈕
 			currentUser = user;
-			const authorized = await checkAuthorized();
-			if (authorized) await initApp();
+			try {
+				const authorized = await Promise.race([
+					checkAuthorized(),
+					new Promise((_, reject) =>
+						setTimeout(
+							() => reject(new Error("checkAuthorized timeout")),
+							5000,
+						),
+					),
+				]);
+				if (authorized) {
+					await Promise.race([
+						initApp(),
+						new Promise((_, reject) =>
+							setTimeout(() => reject(new Error("initApp timeout")), 10000),
+						),
+					]);
+				}
+			} catch (e) {
+				console.error("Auth check failed:", e);
+				revealLogin();
+			}
 			// 未授權時 checkAuthorized 已切換到註冊面板，這裡只需把檢查中提示收掉
 			if (!_appInitialized) {
 				const chk = document.getElementById("authChecking");
@@ -2573,4 +2631,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 			revealLogin();
 		}
 	});
+
+	// Global error handlers: if anything uncaught happens before init completes,
+	// make sure the user is not stuck on the spinner forever.
+	window.addEventListener("error", (event) => {
+		console.error("Global error:", event.error);
+		if (!_appInitialized) revealLogin();
+	});
+	window.addEventListener("unhandledrejection", (event) => {
+		console.error("Unhandled rejection:", event.reason);
+		if (!_appInitialized) revealLogin();
+	});
+
+	D.revealLogin = revealLogin;
 });
