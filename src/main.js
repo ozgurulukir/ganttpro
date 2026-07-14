@@ -1455,6 +1455,7 @@ function recalcProjEnd() {
 		const e = t.type === "task" ? t.end : t.date;
 		if (e > maxEnd) maxEnd = e;
 	});
+	let changed = false;
 	if (maxEnd && maxEnd > curProj().endDate) {
 		curProj().endDate = maxEnd;
 		CHART_END = new Date(maxEnd);
@@ -1464,6 +1465,14 @@ function recalcProjEnd() {
 		const newStr = formatDate(Math.floor(d.getTime() / 86400000));
 		if (newStr > curProj().endDate) curProj().endDate = newStr;
 		CHART_END = new Date(curProj().endDate);
+		changed = true;
+	} else if (!maxEnd && !curProj().endDate) {
+		// Edge case: empty project and no end date, set a default
+		curProj().endDate = curProj().startDate;
+		CHART_END = new Date(curProj().startDate);
+		changed = true;
+	}
+	if (changed) {
 		persist();
 	}
 	const sPeriod = document.getElementById("sPeriod");
@@ -1530,6 +1539,7 @@ function stripSharedFlags(proj) {
 	delete p._isShared;
 	delete p._permission;
 	delete p._ownerId;
+	delete p.ownerId;
 	delete p._history;
 	delete p.shareToken;
 	return p;
@@ -2043,6 +2053,9 @@ function saveToLS() {
 		Local.saveToLS({ projects: ownProjects, currentProjId, nextProjId });
 	} catch (e) {
 		console.error("saveToLS:", e);
+		if (e.name === "QuotaExceededError") {
+			showStatus(t("status.quotaExceeded"));
+		}
 	}
 }
 

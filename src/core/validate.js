@@ -196,6 +196,21 @@ export function validateProject(raw) {
 
   delete proj.shareToken;
 
+  return migrate(proj);
+}
+
+export function migrate(proj) {
+  const CURRENT_SCHEMA = 1;
+  if (!proj.schemaVersion || proj.schemaVersion < 1) {
+    proj.schemaVersion = 1;
+  }
+  // Guard: if data from a newer client has a higher schemaVersion,
+  // clamp to current so this client doesn't silently drop fields.
+  if (proj.schemaVersion > CURRENT_SCHEMA) {
+    proj.schemaVersion = CURRENT_SCHEMA;
+  }
+  // Future migrations:
+  // if (proj.schemaVersion === 1) { ...transform...; proj.schemaVersion = 2; }
   return proj;
 }
 
