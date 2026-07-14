@@ -150,13 +150,33 @@ test('computeCriticalPath — FS dependency with float on successor side', () =>
   assert.ok(c.has('C'), 'C is critical as it spans the whole duration');
 });
 
-test('computeCriticalPath — milestone end is correctly used for projEnd', () => {
+test('computeCriticalPath — SS successor with idle slack does not overconstrain predecessor', () => {
+  // A(1d) --SS--> M(milestone). C(6d) defines projEnd.
+  // M has idle slack (LF is 05-08, ES is 05-05).
+  // A's start should not be forced to 0 float by M's start date.
   const tasks = [
-    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
-    { id: 'M', parent: null, type: 'milestone', date: '2026-05-05', deps: ['A'] }
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04', sdeps: ['M'] },
+    { id: 'M', parent: null, type: 'milestone', date: '2026-05-05' },
+    { id: 'C', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-11' } // Defines projEnd = 05-11
   ];
   const c = computeCriticalPath(tasks);
-  // Without the fix, A's LF would be A.end (05-04) and float = 0
-  // With the fix, projEnd = M.date (05-05), A's LF is driven by M, A is critical.
-  assert.ok(c.has('A'));
+  assert.ok(!c.has('A'), 'A should not be critical because M has idle slack (SS)');
+  assert.ok(!c.has('M'), 'M should not be critical');
+  assert.ok(c.has('C'), 'C is critical as it spans the whole duration');
+});
+
+test('computeCriticalPath — FS successor with idle slack does not overconstrain predecessor', () => {
+  // A(1d) -> M(milestone) -> D(1d). C(6d) defines projEnd.
+  // M has idle slack (LF is 05-08, ES is 05-05).
+  // A should not be forced to 0 float by M's start date.
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
+    { id: 'M', parent: null, type: 'milestone', date: '2026-05-05', deps: ['A'] },
+    { id: 'D', parent: null, type: 'task', start: '2026-05-06', end: '2026-05-06', deps: ['M'] },
+    { id: 'C', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-11' } // Defines projEnd = 05-11
+  ];
+  const c = computeCriticalPath(tasks);
+  assert.ok(!c.has('A'), 'A should not be critical because M has idle slack');
+  assert.ok(!c.has('D'), 'D should not be critical');
+  assert.ok(c.has('C'), 'C is critical as it spans the whole duration');
 });

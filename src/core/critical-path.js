@@ -106,8 +106,8 @@ export function computeCriticalPath(tasks) {
               // t 必須在 succ 開始前完成 → t.LF = succ.LS - 1
               // succ.LS = succ.LF - succ_duration + 1;
               // so t.LF = succ.LF - succ_duration
-              if (succLF && succ.type === 'task') {
-                const succLS = subtractWorkingDays(succLF, wdur(succ) - 1);
+              if (succLF) {
+                const succLS = succ.type === 'task' ? subtractWorkingDays(succLF, wdur(succ) - 1) : succLF;
                 c = prevWorkingDay(succLS);
               } else {
                 c = prevWorkingDay(getS(succ));
@@ -118,8 +118,8 @@ export function computeCriticalPath(tasks) {
               // t 必須在 succ 開始前開始 → t.LS = succ.LS
               // t.LF = t.LS + t_duration - 1 = succ.LS + t_duration - 1
               // succ.LS = succ.LF - succ_duration + 1（已知 succLF 時）
-              if (succLF && succ.type === 'task') {
-                const succLS = subtractWorkingDays(succLF, wdur(succ) - 1);
+              if (succLF) {
+                const succLS = succ.type === 'task' ? subtractWorkingDays(succLF, wdur(succ) - 1) : succLF;
                 c = t.type === 'task' ? addWorkingDays(succLS, wdur(t) - 1) : succLS;
               } else {
                 c = t.type === 'task' ? addWorkingDays(getS(succ), wdur(t) - 1) : getS(succ);
