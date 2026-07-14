@@ -168,3 +168,82 @@ describe('validateProjects', () => {
     assert.equal(arr[1].name, 'B');
   });
 });
+
+describe('Issue #7 specific validation rules', () => {
+  it('rejects parent: 0', () => {
+    assert.equal(validateTask({ id: 1, type: 'task', parent: 0 }), null);
+    assert.equal(validateTask({ id: 1, type: 'task', parent: '0' }), null);
+  });
+
+  it('strips control characters and zero-width spaces from names and assignees', () => {
+    const t = validateTask({
+      id: 1,
+      type: 'task',
+      name: 'hello\u200Bworld\x00',
+      assignee: 'john\u200Bdoe\u200E'
+    });
+    assert.equal(t.name, 'helloworld');
+    assert.equal(t.assignee, 'johndoe');
+  });
+
+  it('ensures shape consistency for deps/sdeps/ffdeps/sfdeps', () => {
+    const t = validateTask({ id: 1, type: 'task' });
+    assert.deepStrictEqual(t.deps, []);
+    assert.deepStrictEqual(t.sdeps, []);
+    assert.deepStrictEqual(t.ffdeps, []);
+    assert.deepStrictEqual(t.sfdeps, []);
+
+    const m = validateTask({ id: 2, type: 'milestone' });
+    assert.deepStrictEqual(m.deps, []);
+    assert.deepStrictEqual(m.sdeps, []);
+    assert.deepStrictEqual(m.ffdeps, []);
+    assert.deepStrictEqual(m.sfdeps, []);
+  });
+
+  it('prunes phantom dependencies in project tasks', () => {
+    const p = validateProject({
+      id: 1,
+      tasks: [
+        { id: 1, type: 'group', parent: null },
+        { id: 2, type: 'task', parent: 1, deps: [3, 4], ffdeps: [99] },
+        { id: 3, type: 'task', parent: 1 }
+      ]
+    });
+    // Task 2 should only have dep 3
+    assert.deepStrictEqual(p.tasks[1].deps, [3]);
+    assert.deepStrictEqual(p.tasks[1].ffdeps, []);
+  });
+
+  it('prunes phantom dependencies in snapshots', () => {
+    const p = validateProject({
+      id: 1,
+      tasks: [{ id: 1, type: 'group', parent: null }],
+      versions: [
+        {
+          id: 'v1',
+          name: 'v1',
+          snapshot: [
+            { id: 1, type: 'group', parent: null },
+            { id: 2, type: 'task', parent: 1, deps: [99] }
+          ]
+        }
+      ]
+    });
+    assert.deepStrictEqual(p.versions[0].snapshot[1].deps, []);
+  });
+
+  it('enforces baseline dates cap at 500', () => {
+    const dates = {};
+    const tasks = [{ id: 1, type: 'group', parent: null }];
+    for (let i = 2; i <= 600; i++) {
+      tasks.push({ id: i, type: 'task', parent: 1 });
+      dates[i] = '2026-04-01';
+    }
+    const p = validateProject({
+      id: 1,
+      tasks,
+      baseline: { dates }
+    });
+    assert.equal(Object.keys(p.baseline.dates).length, 500);
+  });
+});
