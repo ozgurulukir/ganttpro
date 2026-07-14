@@ -1507,20 +1507,16 @@ function setupSharedRealtime(ownerIds) {
 
 	ownerIds.forEach((ownerId) => {
 		let skipFirst = true;
-			const unsub = Remote.watchUserData(ownerId, async (snap) => {
+		const unsub = Remote.watchUserData(ownerId, async (snap) => {
 			if (skipFirst) {
 				skipFirst = false;
 				return;
 			}
-				// Skip if we are currently saving.
-				// For shared projects, we should also check if we are making pending writes for THIS project,
-				// but _pendingCloudWrites is global for now, so it's a safe blanket check.
+			// Skip if we are currently saving to avoid clobbering in-flight writes
 			if (_pendingCloudWrites.size > 0) return;
+			if (snap && snap.id !== ownerId) return;
 
-				// Optional: Ensure this snapshot actually matches the expected ownerId (onSnapshot already guarantees this if watchUserData passes ownerId properly)
-				if (snap && snap.id !== ownerId) return;
-
-				const ownerData = snap ? (snap.data()?.data || null) : await Remote.readUserData(ownerId);
+			const ownerData = snap ? snap.data()?.data || null : await Remote.readUserData(ownerId);
 			if (!ownerData?.projects) return;
 			projects = projects.map((p) => {
 				if (p.ownerId === ownerId) {
@@ -1802,20 +1798,46 @@ let _guestMode = false;
 let _appInitialized = false;
 
 const _syncChannel = new BroadcastChannel("gantt_sync");
-_syncChannel.onmessage = async (e) => {
+let _syncReloadTimer = null;
+
+/* Offline queue: saveToCloud always pushes full state, so we only need
+   a flag to know a push is pending. Flush on reconnect or next init. */
+function setOfflinePending() {
+	const q = JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]");
+	if (!q.includes("pending")) {
+		q.push("pending");
+		localStorage.setItem("gantt_offline_queue", JSON.stringify(q));
+	}
+}
+
+function clearOfflinePending() {
+	localStorage.removeItem("gantt_offline_queue");
+}
+
+function hasOfflinePending() {
+	return JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]").length > 0;
+}
+
+_syncChannel.onmessage = (e) => {
 	if (e.data?.type === "save") {
 		if (_pendingCloudWrites.size > 0 || modalOpen || _dirtySinceCloud) return;
-		const ok = await loadFromCloud();
-		if (ok) {
-			if (projects.length) {
-				scheduleTasks();
-				recalcProjEnd();
+		// Debounce: another tab saved. Wait briefly in case the user
+		// is also editing, then reload. Prevents clobbering unsaved work.
+		clearTimeout(_syncReloadTimer);
+		_syncReloadTimer = setTimeout(async () => {
+			if (_dirtySinceCloud || _pendingCloudWrites.size > 0) return;
+			const ok = await loadFromCloud();
+			if (ok) {
+				if (projects.length) {
+					scheduleTasks();
+					recalcProjEnd();
+				}
+				saveToLS();
+				updateProjUI();
+				render();
+				showSyncToast();
 			}
-			saveToLS();
-			updateProjUI();
-			render();
-			showSyncToast();
-		}
+		}, 400);
 	}
 };
 
@@ -1872,15 +1894,7 @@ async function saveToCloud() {
 	const token = ++_cloudSaveSeq;
 
 	if (!navigator.onLine) {
-		console.log("Offline: queuing write.");
-		const q = JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]");
-		// Instead of queueing full operations, we just queue a flag,
-		// because saveToCloud always pushes the entire current state.
-		// For simplicity, we just need to know there's a pending push.
-		if (!q.includes("pending")) {
-			q.push("pending");
-			localStorage.setItem("gantt_offline_queue", JSON.stringify(q));
-		}
+		setOfflinePending();
 		setSyncDot("err");
 		return;
 	}
@@ -1895,11 +1909,7 @@ async function saveToCloud() {
 		console.error("saveToCloud failed", e);
 		setSyncDot("err");
 		if (e.message && e.message.includes("offline")) {
-			const q = JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]");
-			if (!q.includes("pending")) {
-				q.push("pending");
-				localStorage.setItem("gantt_offline_queue", JSON.stringify(q));
-			}
+			setOfflinePending();
 		}
 	} finally {
 		_pendingCloudWrites.delete(savePromise);
@@ -1907,10 +1917,8 @@ async function saveToCloud() {
 }
 
 window.addEventListener("online", () => {
-	const q = JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]");
-	if (q.length > 0) {
-		console.log("Online: flushing offline queue");
-		localStorage.removeItem("gantt_offline_queue");
+	if (hasOfflinePending()) {
+		clearOfflinePending();
 		saveToCloud();
 	}
 });
@@ -2088,10 +2096,8 @@ async function initApp() {
 	currentProjId = null;
 	tasks = [];
 
-	const q = JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]");
-	if (navigator.onLine && q.length > 0) {
-		console.log("Online on init: flushing offline queue");
-		localStorage.removeItem("gantt_offline_queue");
+	if (navigator.onLine && hasOfflinePending()) {
+		clearOfflinePending();
 		// If we had pending offline writes, we should load from local storage first, then save to cloud
 		loadFromLS();
 		saveToCloud();
