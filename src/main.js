@@ -1586,13 +1586,16 @@ function setupSharedRealtime(ownerIds) {
 
 	ownerIds.forEach((ownerId) => {
 		let skipFirst = true;
-		const unsub = Remote.watchUserData(ownerId, async () => {
+		const unsub = Remote.watchUserData(ownerId, async (snap) => {
 			if (skipFirst) {
 				skipFirst = false;
 				return;
 			}
+			// Skip if we are currently saving to avoid clobbering in-flight writes
 			if (_pendingCloudWrites.size > 0) return;
-			const ownerData = await Remote.readUserData(ownerId);
+			if (snap && snap.id !== ownerId) return;
+
+			const ownerData = snap ? snap.data()?.data || null : await Remote.readUserData(ownerId);
 			if (!ownerData?.projects) return;
 			projects = projects.map((p) => {
 				if (p.ownerId === ownerId) {
@@ -1876,6 +1879,50 @@ let currentUser = null;
 let _guestMode = false;
 let _appInitialized = false;
 
+const _syncChannel = new BroadcastChannel("gantt_sync");
+let _syncReloadTimer = null;
+
+/* Offline queue: saveToCloud always pushes full state, so we only need
+   a flag to know a push is pending. Flush on reconnect or next init. */
+function setOfflinePending() {
+	const q = JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]");
+	if (!q.includes("pending")) {
+		q.push("pending");
+		localStorage.setItem("gantt_offline_queue", JSON.stringify(q));
+	}
+}
+
+function clearOfflinePending() {
+	localStorage.removeItem("gantt_offline_queue");
+}
+
+function hasOfflinePending() {
+	return JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]").length > 0;
+}
+
+_syncChannel.onmessage = (e) => {
+	if (e.data?.type === "save") {
+		if (_pendingCloudWrites.size > 0 || modalOpen || _dirtySinceCloud) return;
+		// Debounce: another tab saved. Wait briefly in case the user
+		// is also editing, then reload. Prevents clobbering unsaved work.
+		clearTimeout(_syncReloadTimer);
+		_syncReloadTimer = setTimeout(async () => {
+			if (_dirtySinceCloud || _pendingCloudWrites.size > 0) return;
+			const ok = await loadFromCloud();
+			if (ok) {
+				if (projects.length) {
+					scheduleTasks();
+					recalcProjEnd();
+				}
+				saveToLS();
+				updateProjUI();
+				render();
+				showSyncToast();
+			}
+		}, 400);
+	}
+};
+
 function setSyncDot(state) {
 	const dot = document.getElementById("syncDot");
 	if (!dot) return;
@@ -1890,60 +1937,73 @@ function setSyncDot(state) {
 		}[state] || t("status.syncDefault");
 }
 
+async function _saveToCloudInner() {
+	if (curProj()) curProj().nextId = nextId;
+	const cp = curProj();
+
+	if (!cp) {
+		await Remote.writeUserData(currentUser.uid, {
+			projects: [],
+			currentProjId: null,
+			nextProjId,
+		});
+		setSyncDot("ok");
+		_dirtySinceCloud = false;
+	} else if (
+		isSharedProject(cp) &&
+		getSharePermission(cp.ownerId, cp.id) === "edit"
+	) {
+		await Remote.updateSharedProjectAtomic(cp.ownerId, stripSharedFlags(cp));
+		setSyncDot("ok");
+		_dirtySinceCloud = false;
+	} else if (!isSharedProject(cp)) {
+		const ownProjects = projects
+			.filter((p) => !isSharedProject(p))
+			.map(stripSharedFlags);
+		await Remote.writeUserData(currentUser.uid, {
+			projects: ownProjects,
+			currentProjId,
+			nextProjId,
+		});
+		setSyncDot("ok");
+		_dirtySinceCloud = false;
+	}
+}
+
 async function saveToCloud() {
 	if (!currentUser) return;
 	setSyncDot("saving");
 	const token = ++_cloudSaveSeq;
-	_pendingCloudWrites.add(token);
-	try {
-		if (curProj()) curProj().nextId = nextId;
-		const cp = curProj();
 
-		if (!cp) {
-			await Remote.writeUserData(currentUser.uid, {
-				projects: [],
-				currentProjId: null,
-				nextProjId,
-			});
-			setSyncDot("ok");
-			_dirtySinceCloud = false;
-		} else if (
-			isSharedProject(cp) &&
-			getSharePermission(cp.ownerId, cp.id) === "edit"
-		) {
-			const ownerData = await Remote.readUserData(cp.ownerId);
-			if (!ownerData?.projects) {
-				setSyncDot("err");
-				return;
-			}
-			const ownerProjects = ownerData.projects.map((p) =>
-				p.id === cp.id ? stripSharedFlags(cp) : p,
-			);
-			await Remote.updateUserData(cp.ownerId, {
-				...ownerData,
-				projects: ownerProjects,
-			});
-			setSyncDot("ok");
-			_dirtySinceCloud = false;
-		} else if (!isSharedProject(cp)) {
-			const ownProjects = projects
-				.filter((p) => !isSharedProject(p))
-				.map(stripSharedFlags);
-			await Remote.writeUserData(currentUser.uid, {
-				projects: ownProjects,
-				currentProjId,
-				nextProjId,
-			});
-			setSyncDot("ok");
-			_dirtySinceCloud = false;
-		}
+	if (!navigator.onLine) {
+		setOfflinePending();
+		setSyncDot("err");
+		return;
+	}
+
+	const savePromise = _saveToCloudInner();
+	_pendingCloudWrites.add(savePromise);
+
+	try {
+		await savePromise;
+		_syncChannel.postMessage({ type: "save" });
 	} catch (e) {
 		console.error("saveToCloud failed", e);
 		setSyncDot("err");
+		if (e.message && e.message.includes("offline")) {
+			setOfflinePending();
+		}
 	} finally {
-		_pendingCloudWrites.delete(token);
+		_pendingCloudWrites.delete(savePromise);
 	}
 }
+
+window.addEventListener("online", () => {
+	if (hasOfflinePending()) {
+		clearOfflinePending();
+		saveToCloud();
+	}
+});
 
 async function loadFromCloud() {
 	if (!currentUser) return false;
@@ -2120,6 +2180,14 @@ async function initApp() {
 	projects = [];
 	currentProjId = null;
 	tasks = [];
+
+	if (navigator.onLine && hasOfflinePending()) {
+		clearOfflinePending();
+		// If we had pending offline writes, we should load from local storage first, then save to cloud
+		loadFromLS();
+		saveToCloud();
+	}
+
 	const cloudOk = await loadFromCloud();
 	if (!cloudOk) loadFromLS();
 	await loadSharedProjects();
@@ -2250,7 +2318,17 @@ function wireStaticEvents() {
 		closeSettings();
 	});
 	clk("adminBtn", () => import("./admin.js").then((m) => m.openAdminPanel()));
-	clk("signOutBtn", signOut);
+	clk("signOutBtn", async () => {
+		if (_pendingCloudWrites.size > 0) {
+			setSyncDot("saving");
+			try {
+				await Promise.allSettled(_pendingCloudWrites);
+			} catch (e) {
+				console.error("Error waiting for pending writes before signout", e);
+			}
+		}
+		signOut();
+	});
 
 	// ── Version panel ──
 	clk("verBackdrop", closeVersionPanel);
