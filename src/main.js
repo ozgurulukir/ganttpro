@@ -1398,9 +1398,11 @@ function recalcProjEnd() {
 		CHART_END = new Date(curProj().endDate);
 		persist();
 	}
-	const sPeriod = document.getElementById("sPeriod");
-	if (sPeriod)
-		sPeriod.textContent = `${curProj().startDate} ~ ${curProj().endDate}`;
+	requestAnimationFrame(() => {
+		const sPeriod = document.getElementById("sPeriod");
+		if (sPeriod)
+			sPeriod.textContent = `${curProj().startDate} ~ ${curProj().endDate}`;
+	});
 }
 /* ═══════════════════════════════════════════
    OWNER & SHARE SYSTEM
@@ -1561,7 +1563,10 @@ document.addEventListener("keydown", (e) => {
 	if (document.querySelector(".overlay.open, .panel.open")) return;
 	if (
 		e.key !== "Escape" &&
-		(e.target.tagName === "INPUT" || e.target.tagName === "SELECT")
+		(e.target.tagName === "INPUT" ||
+			e.target.tagName === "SELECT" ||
+			e.target.tagName === "TEXTAREA" ||
+			e.target.isContentEditable)
 	)
 		return;
 	if (e.key === "e") expandAll();
@@ -1793,6 +1798,14 @@ const _pendingCloudWrites = new Set();
 let currentUser = null;
 let _guestMode = false;
 let _appInitialized = false;
+let _resizersSetup = false;
+
+function safeSetupResizers() {
+	if (_resizersSetup) return;
+	_resizersSetup = true;
+	setupColResizers();
+	setupResizer();
+}
 
 function setSyncDot(state) {
 	const dot = document.getElementById("syncDot");
@@ -2025,7 +2038,6 @@ function updateUserDisplay() {
 
 async function initApp() {
 	if (_appInitialized) return;
-	_appInitialized = true;
 	// Clear header immediately before showing app, preventing cached name flash
 	const _nameEl = document.getElementById("projSelectorName");
 	if (_nameEl) _nameEl.textContent = "";
@@ -2055,6 +2067,7 @@ async function initApp() {
 			el.innerHTML = `<div title="Guest mode (local)" style="width:26px;height:26px;border-radius:50%;background:var(--t4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">G</div>`;
 		document.getElementById("signOutBtn").style.display = "";
 	}
+	_appInitialized = true;
 }
 
 /* ═══════════════════════════════════════════
@@ -2312,8 +2325,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 	translateDOM();
 	wireStaticEvents();
 	setupSync();
-	setupColResizers();
-	setupResizer();
+	safeSetupResizers();
 
 	// Locale switcher: set initial value and wire change event
 	const langSelect = document.getElementById("langSelect");
@@ -2365,8 +2377,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 		CHART_END = new Date(curProj().endDate);
 		isReadOnly = true;
 		document.body.classList.add("readonly");
-		setupColResizers();
-		setupResizer();
+		safeSetupResizers();
 		updateProjUI();
 		scheduleTasks();
 		recalcProjEnd();

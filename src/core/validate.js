@@ -101,8 +101,18 @@ export function validateTask(raw) {
       if (Object.keys(lags).length) task.lags = lags;
     }
   } else if (type === 'group') {
-    // no start/end/progress/done, no deps
+    // no start/end/progress/done
+    delete task.start;
+    delete task.end;
+    delete task.progress;
+    delete task.done;
   }
+
+  // ffdeps/sfdeps always assign for shape consistency
+  if (!task.deps) task.deps = [];
+  if (!task.sdeps) task.sdeps = [];
+  if (!task.ffdeps) task.ffdeps = [];
+  if (!task.sfdeps) task.sfdeps = [];
 
   return task;
 }
@@ -117,7 +127,32 @@ export function validateProject(raw) {
   const tasks = Array.isArray(p.tasks) ? p.tasks.map(validateTask).filter(Boolean) : [];
 
   // Ensure exactly one root group exists
-  const roots = tasks.filter(t => t.parent === null);
+  let roots = tasks.filter(t => t.parent === null);
+
+  // Guard against cycles where there are NO roots but there are tasks
+  if (roots.length === 0 && tasks.length > 0) {
+    const rootId = Math.max(1, ...tasks.map(t => t.id)) + 1;
+    tasks.unshift({
+      id: rootId,
+      name: toStr(p.name).slice(0, 200) || 'Project',
+      type: 'group',
+      parent: null,
+      color: DEFAULT_COLOR,
+      deps: [], sdeps: [], ffdeps: [], sfdeps: []
+    });
+    // Break any circular reference or orphaned tasks by reparenting to the synthetic root
+    tasks.forEach((t, i) => {
+      if (i > 0 && (t.parent === null || !tasks.some(x => x.id === t.parent))) t.parent = rootId;
+    });
+    // In case there is a pure cycle (everyone has a valid parent but it's a loop)
+    // we forcibly break the loop by reparenting the first original task (now at index 1).
+    // Note that we check `tasks.slice(1)` because tasks[0] is the newly added root itself.
+    if (!tasks.slice(1).some(t => t.parent === null || t.parent === rootId)) {
+      tasks[1].parent = rootId;
+    }
+    roots = tasks.filter(t => t.parent === null);
+  }
+
   if (roots.length !== 1) {
     if (roots.length > 1) {
       // Reparent extra roots to the first one

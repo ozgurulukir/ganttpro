@@ -44,10 +44,13 @@ export function getTreeLines(rows, idx) {
 }
 
 /** Does `id` (transitively, through groups) have a milestone descendant? */
-export function hasMilestoneDescendant(tasks, id) {
+export function hasMilestoneDescendant(tasks, id, visited = new Set()) {
+  if (visited.has(id)) return false;
+  visited.add(id);
+
   for (const t of tasks.filter(t => t.parent === id)) {
     if (t.type === 'milestone') return true;
-    if (t.type === 'group' && hasMilestoneDescendant(tasks, t.id)) return true;
+    if (t.type === 'group' && hasMilestoneDescendant(tasks, t.id, visited)) return true;
   }
   return false;
 }
@@ -92,7 +95,10 @@ export function getVisibleRows(tasks, collapsed, milestoneView) {
   return rows;
 }
 
-/** Are all direct task children of group `id` done (≥1 required)? */
+/**
+ * Are all direct task children of group `id` done (≥1 required)?
+ * Note: Milestones are intentionally ignored in this calculation.
+ */
 export function groupAllDone(tasks, id) {
   const children = tasks.filter(t => t.parent === id && t.type === 'task');
   return children.length > 0 && children.every(t => t.done);

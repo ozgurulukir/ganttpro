@@ -20,6 +20,8 @@ export function loadFromLS() {
   }
 }
 
+// Note: OWNER_KEY assumes a one-to-one mapping between browser profile and user.
+// It does not support shared devices well.
 export function getOwnerId() {
   let id = localStorage.getItem(OWNER_KEY);
   if (!id) {
