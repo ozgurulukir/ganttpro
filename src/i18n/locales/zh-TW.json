@@ -70,7 +70,8 @@
     "syncOff": "唯讀模式",
     "syncLocal": "本地模式（不同步雲端）",
     "syncDefault": "雲端同步",
-    "dataUpdated": "其他用戶已更新資料"
+    "dataUpdated": "其他用戶已更新資料",
+    "quotaExceeded": "儲存空間已滿——您的變更可能無法儲存，請清理空間。"
   },
   "taskPanel": {
     "noTasks": "這個專案還沒有任務",

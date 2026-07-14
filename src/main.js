@@ -1062,10 +1062,24 @@ function pushHistory() {
 	h.push({
 		tasks: JSON.parse(JSON.stringify(tasks)),
 		nextId,
+		currentProjId,
+		collapsed: Array.from(collapsed),
+		viewMode,
+		showCriticalPath,
+		showWBS,
+		isDark,
+		CHART_START: curProj().startDate,
+		CHART_END: curProj().endDate,
+		milestoneView,
+		workloadView,
+		showBarDates,
+		showBaseline,
 		startDate: curProj().startDate,
 		endDate: curProj().endDate,
 		name: curProj().name,
 		color: curProj().color,
+		versions: curProj().versions ? JSON.parse(JSON.stringify(curProj().versions)) : [],
+		baseline: curProj().baseline ? JSON.parse(JSON.stringify(curProj().baseline)) : null,
 	});
 	if (h.length > MAX_HISTORY) h.shift();
 	const btn = document.getElementById("undoBtn");
@@ -1076,20 +1090,74 @@ function undo() {
 	const h = getHistory();
 	if (!h.length || !curProj()) return;
 	const snap = h.pop();
-	curProj().tasks = snap.tasks;
+
+	curProj().tasks.length = 0;
+	curProj().tasks.push(...snap.tasks);
 	curProj().nextId = snap.nextId;
 	curProj().startDate = snap.startDate;
 	curProj().endDate = snap.endDate;
 	curProj().name = snap.name;
 	curProj().color = snap.color;
-	tasks = curProj().tasks;
+	curProj().versions = snap.versions ? JSON.parse(JSON.stringify(snap.versions)) : [];
+	curProj().baseline = snap.baseline ? JSON.parse(JSON.stringify(snap.baseline)) : null;
+
 	nextId = curProj().nextId;
-	CHART_START = new Date(curProj().startDate);
-	CHART_END = new Date(curProj().endDate);
+
+	collapsed.clear();
+	if (snap.collapsed) {
+		snap.collapsed.forEach(id => collapsed.add(id));
+	}
+
+	if (snap.viewMode) {
+		viewMode = snap.viewMode;
+		PPD = PPDS[snap.viewMode];
+		document.querySelectorAll('#viewBtns .btn').forEach((b) => {
+			b.classList.toggle('active', b.dataset.v === snap.viewMode);
+		});
+	}
+
+	showCriticalPath = snap.showCriticalPath;
+	showWBS = snap.showWBS;
+	isDark = snap.isDark;
+	CHART_START = new Date(snap.CHART_START);
+	CHART_END = new Date(snap.CHART_END);
+	milestoneView = snap.milestoneView;
+	workloadView = snap.workloadView;
+	showBarDates = snap.showBarDates;
+	showBaseline = snap.showBaseline;
+
+	// UI sync
+	document.body.classList.toggle('ms-view', milestoneView);
+	document.body.classList.toggle('show-wbs', showWBS);
+	document.body.classList.toggle('dark', isDark);
+
+	const darkBtn = document.getElementById('darkBtn');
+	if (darkBtn) darkBtn.textContent = isDark ? '☀️' : '🌙';
+
+	const bd = document.getElementById('settingBarDates');
+	if (bd) bd.checked = showBarDates;
+	const bl = document.getElementById('settingBaseline');
+	if (bl) bl.checked = showBaseline;
+
+	const cv = milestoneView ? 'milestone' : workloadView ? 'workload' : 'gantt';
+	document.querySelectorAll('#chartViewBtns .btn').forEach((b) => {
+		b.classList.toggle('active', b.dataset.cv === cv);
+	});
+
+	const cpBtn = document.getElementById('cpBtn');
+	if (cpBtn) cpBtn.classList.toggle('active', showCriticalPath);
+	if (showCriticalPath) criticalTaskIds = computeCriticalPath();
+	else criticalTaskIds = new Set();
+	const wbsBtn = document.getElementById('wbsBtn');
+	if (wbsBtn) wbsBtn.classList.toggle('active', showWBS);
+
+	updateProjUI();
+	renderVersionList();
+
 	scheduleTasks();
 	recalcProjEnd();
 	render();
-	const btn = document.getElementById("undoBtn");
+	const btn = document.getElementById('undoBtn');
 	if (btn) btn.disabled = getHistory().length === 0;
 }
 
@@ -1388,6 +1456,7 @@ function recalcProjEnd() {
 		const e = t.type === "task" ? t.end : t.date;
 		if (e > maxEnd) maxEnd = e;
 	});
+	let changed = false;
 	if (maxEnd && maxEnd > curProj().endDate) {
 		curProj().endDate = maxEnd;
 		CHART_END = new Date(maxEnd);
@@ -1397,6 +1466,14 @@ function recalcProjEnd() {
 		const newStr = formatDate(Math.floor(d.getTime() / 86400000));
 		if (newStr > curProj().endDate) curProj().endDate = newStr;
 		CHART_END = new Date(curProj().endDate);
+		changed = true;
+	} else if (!maxEnd && !curProj().endDate) {
+		// Edge case: empty project and no end date, set a default
+		curProj().endDate = curProj().startDate;
+		CHART_END = new Date(curProj().startDate);
+		changed = true;
+	}
+	if (changed) {
 		persist();
 	}
 	const sPeriod = document.getElementById("sPeriod");
@@ -1463,6 +1540,8 @@ function stripSharedFlags(proj) {
 	delete p._isShared;
 	delete p._permission;
 	delete p._ownerId;
+	delete p.ownerId;
+	delete p._history;
 	delete p.shareToken;
 	return p;
 }
@@ -1508,13 +1587,16 @@ function setupSharedRealtime(ownerIds) {
 
 	ownerIds.forEach((ownerId) => {
 		let skipFirst = true;
-		const unsub = Remote.watchUserData(ownerId, async () => {
+		const unsub = Remote.watchUserData(ownerId, async (snap) => {
 			if (skipFirst) {
 				skipFirst = false;
 				return;
 			}
+			// Skip if we are currently saving to avoid clobbering in-flight writes
 			if (_pendingCloudWrites.size > 0) return;
-			const ownerData = await Remote.readUserData(ownerId);
+			if (snap && snap.id !== ownerId) return;
+
+			const ownerData = snap ? snap.data()?.data || null : await Remote.readUserData(ownerId);
 			if (!ownerData?.projects) return;
 			projects = projects.map((p) => {
 				if (p.ownerId === ownerId) {
@@ -1686,7 +1768,10 @@ function syncRenderDeps() {
 		CHART_START = new Date(proj.startDate);
 		CHART_END = new Date(proj.endDate);
 		collapsed.clear();
-		_history = [];
+
+		const btn = document.getElementById("undoBtn");
+		if (btn) btn.disabled = getHistory().length === 0;
+
 		D.currentProjId = currentProjId;
 		D.tasks = tasks;
 		D.nextId = nextId;
@@ -1795,6 +1880,50 @@ let currentUser = null;
 let _guestMode = false;
 let _appInitialized = false;
 
+const _syncChannel = new BroadcastChannel("gantt_sync");
+let _syncReloadTimer = null;
+
+/* Offline queue: saveToCloud always pushes full state, so we only need
+   a flag to know a push is pending. Flush on reconnect or next init. */
+function setOfflinePending() {
+	const q = JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]");
+	if (!q.includes("pending")) {
+		q.push("pending");
+		localStorage.setItem("gantt_offline_queue", JSON.stringify(q));
+	}
+}
+
+function clearOfflinePending() {
+	localStorage.removeItem("gantt_offline_queue");
+}
+
+function hasOfflinePending() {
+	return JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]").length > 0;
+}
+
+_syncChannel.onmessage = (e) => {
+	if (e.data?.type === "save") {
+		if (_pendingCloudWrites.size > 0 || modalOpen || _dirtySinceCloud) return;
+		// Debounce: another tab saved. Wait briefly in case the user
+		// is also editing, then reload. Prevents clobbering unsaved work.
+		clearTimeout(_syncReloadTimer);
+		_syncReloadTimer = setTimeout(async () => {
+			if (_dirtySinceCloud || _pendingCloudWrites.size > 0) return;
+			const ok = await loadFromCloud();
+			if (ok) {
+				if (projects.length) {
+					scheduleTasks();
+					recalcProjEnd();
+				}
+				saveToLS();
+				updateProjUI();
+				render();
+				showSyncToast();
+			}
+		}, 400);
+	}
+};
+
 function setSyncDot(state) {
 	const dot = document.getElementById("syncDot");
 	if (!dot) return;
@@ -1809,60 +1938,73 @@ function setSyncDot(state) {
 		}[state] || t("status.syncDefault");
 }
 
+async function _saveToCloudInner() {
+	if (curProj()) curProj().nextId = nextId;
+	const cp = curProj();
+
+	if (!cp) {
+		await Remote.writeUserData(currentUser.uid, {
+			projects: [],
+			currentProjId: null,
+			nextProjId,
+		});
+		setSyncDot("ok");
+		_dirtySinceCloud = false;
+	} else if (
+		isSharedProject(cp) &&
+		getSharePermission(cp.ownerId, cp.id) === "edit"
+	) {
+		await Remote.updateSharedProjectAtomic(cp.ownerId, stripSharedFlags(cp));
+		setSyncDot("ok");
+		_dirtySinceCloud = false;
+	} else if (!isSharedProject(cp)) {
+		const ownProjects = projects
+			.filter((p) => !isSharedProject(p))
+			.map(stripSharedFlags);
+		await Remote.writeUserData(currentUser.uid, {
+			projects: ownProjects,
+			currentProjId,
+			nextProjId,
+		});
+		setSyncDot("ok");
+		_dirtySinceCloud = false;
+	}
+}
+
 async function saveToCloud() {
 	if (!currentUser) return;
 	setSyncDot("saving");
 	const token = ++_cloudSaveSeq;
-	_pendingCloudWrites.add(token);
-	try {
-		if (curProj()) curProj().nextId = nextId;
-		const cp = curProj();
 
-		if (!cp) {
-			await Remote.writeUserData(currentUser.uid, {
-				projects: [],
-				currentProjId: null,
-				nextProjId,
-			});
-			setSyncDot("ok");
-			_dirtySinceCloud = false;
-		} else if (
-			isSharedProject(cp) &&
-			getSharePermission(cp.ownerId, cp.id) === "edit"
-		) {
-			const ownerData = await Remote.readUserData(cp.ownerId);
-			if (!ownerData?.projects) {
-				setSyncDot("err");
-				return;
-			}
-			const ownerProjects = ownerData.projects.map((p) =>
-				p.id === cp.id ? stripSharedFlags(cp) : p,
-			);
-			await Remote.updateUserData(cp.ownerId, {
-				...ownerData,
-				projects: ownerProjects,
-			});
-			setSyncDot("ok");
-			_dirtySinceCloud = false;
-		} else if (!isSharedProject(cp)) {
-			const ownProjects = projects
-				.filter((p) => !isSharedProject(p))
-				.map(stripSharedFlags);
-			await Remote.writeUserData(currentUser.uid, {
-				projects: ownProjects,
-				currentProjId,
-				nextProjId,
-			});
-			setSyncDot("ok");
-			_dirtySinceCloud = false;
-		}
+	if (!navigator.onLine) {
+		setOfflinePending();
+		setSyncDot("err");
+		return;
+	}
+
+	const savePromise = _saveToCloudInner();
+	_pendingCloudWrites.add(savePromise);
+
+	try {
+		await savePromise;
+		_syncChannel.postMessage({ type: "save" });
 	} catch (e) {
 		console.error("saveToCloud failed", e);
 		setSyncDot("err");
+		if (e.message && e.message.includes("offline")) {
+			setOfflinePending();
+		}
 	} finally {
-		_pendingCloudWrites.delete(token);
+		_pendingCloudWrites.delete(savePromise);
 	}
 }
+
+window.addEventListener("online", () => {
+	if (hasOfflinePending()) {
+		clearOfflinePending();
+		saveToCloud();
+	}
+});
 
 async function loadFromCloud() {
 	if (!currentUser) return false;
@@ -1972,6 +2114,9 @@ function saveToLS() {
 		Local.saveToLS({ projects: ownProjects, currentProjId, nextProjId });
 	} catch (e) {
 		console.error("saveToLS:", e);
+		if (e.name === "QuotaExceededError") {
+			showStatus(t("status.quotaExceeded"));
+		}
 	}
 }
 
@@ -2036,6 +2181,14 @@ async function initApp() {
 	projects = [];
 	currentProjId = null;
 	tasks = [];
+
+	if (navigator.onLine && hasOfflinePending()) {
+		clearOfflinePending();
+		// If we had pending offline writes, we should load from local storage first, then save to cloud
+		loadFromLS();
+		saveToCloud();
+	}
+
 	const cloudOk = await loadFromCloud();
 	if (!cloudOk) loadFromLS();
 	await loadSharedProjects();
@@ -2166,7 +2319,17 @@ function wireStaticEvents() {
 		closeSettings();
 	});
 	clk("adminBtn", () => import("./admin.js").then((m) => m.openAdminPanel()));
-	clk("signOutBtn", signOut);
+	clk("signOutBtn", async () => {
+		if (_pendingCloudWrites.size > 0) {
+			setSyncDot("saving");
+			try {
+				await Promise.allSettled(_pendingCloudWrites);
+			} catch (e) {
+				console.error("Error waiting for pending writes before signout", e);
+			}
+		}
+		signOut();
+	});
 
 	// ── Version panel ──
 	clk("verBackdrop", closeVersionPanel);

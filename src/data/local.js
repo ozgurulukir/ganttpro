@@ -7,6 +7,7 @@ export function saveToLS(data) {
     localStorage.setItem(LS_KEY, JSON.stringify(data));
   } catch (e) {
     console.error('saveToLS:', e);
+    throw e;
   }
 }
 
