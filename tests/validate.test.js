@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { validateProject, validateTask, validateProjects } from '../src/core/validate.js';
+import { validateProject, validateTask, validateProjects, migrate } from '../src/core/validate.js';
 
 describe('validateTask', () => {
   it('returns a sanitized task for valid input', () => {
@@ -245,5 +245,36 @@ describe('Issue #7 specific validation rules', () => {
       baseline: { dates }
     });
     assert.equal(Object.keys(p.baseline.dates).length, 500);
+  });
+});
+
+describe('migrate', () => {
+  it('stamps schemaVersion=1 on projects without it', () => {
+    const proj = { id: 1, tasks: [], name: 'Test' };
+    migrate(proj);
+    assert.equal(proj.schemaVersion, 1);
+  });
+
+  it('preserves existing schemaVersion=1', () => {
+    const proj = { id: 1, tasks: [], name: 'Test', schemaVersion: 1 };
+    migrate(proj);
+    assert.equal(proj.schemaVersion, 1);
+  });
+
+  it('clamps future schemaVersion down to current', () => {
+    const proj = { id: 1, tasks: [], name: 'Test', schemaVersion: 5 };
+    migrate(proj);
+    assert.equal(proj.schemaVersion, 1);
+  });
+
+  it('stamps schemaVersion=1 for zero or negative values', () => {
+    const proj = { id: 1, tasks: [], name: 'Test', schemaVersion: 0 };
+    migrate(proj);
+    assert.equal(proj.schemaVersion, 1);
+  });
+
+  it('validateProject includes schemaVersion in output', () => {
+    const p = validateProject({ id: 1, tasks: [{ id: 1, type: 'group', parent: null }] });
+    assert.equal(p.schemaVersion, 1);
   });
 });
