@@ -1980,6 +1980,9 @@ function saveToLS() {
 		Local.saveToLS({ projects: ownProjects, currentProjId, nextProjId });
 	} catch (e) {
 		console.error("saveToLS:", e);
+		if (e.name === "QuotaExceededError") {
+			showStatus(t("status.quotaExceeded"));
+		}
 	}
 }
 
