@@ -1068,8 +1068,8 @@ function pushHistory() {
 		showCriticalPath,
 		showWBS,
 		isDark,
-		CHART_START: new Date(CHART_START),
-		CHART_END: new Date(CHART_END),
+		CHART_START: curProj().startDate,
+		CHART_END: curProj().endDate,
 		milestoneView,
 		workloadView,
 		showBarDates,
@@ -1530,6 +1530,7 @@ function stripSharedFlags(proj) {
 	delete p._isShared;
 	delete p._permission;
 	delete p._ownerId;
+	delete p._history;
 	delete p.shareToken;
 	return p;
 }
