@@ -161,12 +161,6 @@ let CHART_END = new Date("2026-07-31");
 let TODAY_STR = formatDate(Math.floor(Date.now() / 86400000));
 const sTodayDisplay = document.getElementById("sTodayDisplay");
 if (sTodayDisplay) sTodayDisplay.textContent = TODAY_STR;
-setInterval(recomputeToday, 60000);
-document.addEventListener('visibilitychange', () => {
-	if (document.visibilityState === 'visible') {
-		recomputeToday();
-	}
-});
 function recomputeToday() {
 	const newTodayStr = formatDate(Math.floor(Date.now() / 86400000));
 	if (TODAY_STR !== newTodayStr) {
@@ -175,6 +169,12 @@ function recomputeToday() {
 		render();
 	}
 }
+setInterval(recomputeToday, 60000);
+document.addEventListener('visibilitychange', () => {
+	if (document.visibilityState === 'visible') {
+		recomputeToday();
+	}
+});
 const ROW_H = 36;
 const BAR_H = 20;
 
