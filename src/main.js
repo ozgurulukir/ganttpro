@@ -159,7 +159,7 @@ import { logAudit } from "./data/audit.js";
 let CHART_START = new Date("2026-04-01");
 let CHART_END = new Date("2026-07-31");
 let TODAY_STR = formatDate(Math.floor(Date.now() / 86400000));
-let sTodayDisplay = document.getElementById("sTodayDisplay");
+const sTodayDisplay = document.getElementById("sTodayDisplay");
 if (sTodayDisplay) sTodayDisplay.textContent = TODAY_STR;
 setInterval(recomputeToday, 60000);
 document.addEventListener('visibilitychange', () => {
