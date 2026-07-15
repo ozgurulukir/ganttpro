@@ -246,6 +246,39 @@ describe('Issue #7 specific validation rules', () => {
     });
     assert.equal(Object.keys(p.baseline.dates).length, 500);
   });
+
+  it('caps wday at 3650', () => {
+    const t = validateTask({ id: 1, type: 'task', wday: 9999 });
+    assert.equal(t.wday, 3650);
+  });
+
+  it('clamps wday minimum to 1', () => {
+    const t = validateTask({ id: 1, type: 'task', wday: -5 });
+    assert.equal(t.wday, 1);
+  });
+
+  it('bounds progress to 0..100', () => {
+    const over = validateTask({ id: 1, type: 'task', progress: 150 });
+    assert.equal(over.progress, 100);
+    const under = validateTask({ id: 1, type: 'task', progress: -10 });
+    assert.equal(under.progress, 0);
+  });
+
+  it('validates lags keys and bounds values to -365..365', () => {
+    const t = validateTask({
+      id: 1, type: 'task',
+      lags: { 'FS2': 10, 'SS3': -500, 'badkey': 5, 'FF4': 400 }
+    });
+    assert.equal(t.lags['FS2'], 10);
+    assert.equal(t.lags['SS3'], -365);
+    assert.equal(t.lags['FF4'], 365);
+    assert.equal(t.lags['badkey'], undefined);
+  });
+
+  it('strips control characters from task name', () => {
+    const t = validateTask({ id: 1, type: 'task', name: 'hello\x00world\x1Ftest' });
+    assert.equal(t.name, 'helloworldtest');
+  });
 });
 
 describe('migrate', () => {
