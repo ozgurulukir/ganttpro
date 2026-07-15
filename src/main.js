@@ -1478,9 +1478,13 @@ function recalcProjEnd() {
 	if (changed) {
 		persist();
 	}
-	const sPeriod = document.getElementById("sPeriod");
-	if (sPeriod)
-		sPeriod.textContent = `${curProj().startDate} ~ ${curProj().endDate}`;
+	const proj = curProj();
+	const periodText = proj ? `${proj.startDate} ~ ${proj.endDate}` : "";
+	requestAnimationFrame(() => {
+		const sPeriod = document.getElementById("sPeriod");
+		if (sPeriod && periodText)
+			sPeriod.textContent = periodText;
+	});
 }
 /* ═══════════════════════════════════════════
    OWNER & SHARE SYSTEM
@@ -1647,7 +1651,10 @@ document.addEventListener("keydown", (e) => {
 	if (document.querySelector(".overlay.open, .panel.open")) return;
 	if (
 		e.key !== "Escape" &&
-		(e.target.tagName === "INPUT" || e.target.tagName === "SELECT")
+		(e.target.tagName === "INPUT" ||
+			e.target.tagName === "SELECT" ||
+			e.target.tagName === "TEXTAREA" ||
+			e.target.isContentEditable)
 	)
 		return;
 	if (e.key === "e") expandAll();
@@ -1928,6 +1935,15 @@ _syncChannel.onmessage = (e) => {
 		}, 400);
 	}
 };
+
+let _resizersSetup = false;
+
+function safeSetupResizers() {
+	if (_resizersSetup) return;
+	_resizersSetup = true;
+	setupColResizers();
+	setupResizer();
+}
 
 function setSyncDot(state) {
 	const dot = document.getElementById("syncDot");
@@ -2505,13 +2521,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 		if (typeof window.__gpReady === "function") window.__gpReady();
 	};
 
+	await initI18n();
+	translateDOM();
+	wireStaticEvents();
+	setupSync();
+	safeSetupResizers();
+
 	try {
 		await initI18n();
 		translateDOM();
 		wireStaticEvents();
 		setupSync();
-		setupColResizers();
-		setupResizer();
 
 		// Locale switcher: set initial value and wire change event
 		const langSelect = document.getElementById("langSelect");
@@ -2569,8 +2589,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 		CHART_END = new Date(curProj().endDate);
 		isReadOnly = true;
 		document.body.classList.add("readonly");
-		setupColResizers();
-		setupResizer();
+		safeSetupResizers();
 		updateProjUI();
 		scheduleTasks();
 		recalcProjEnd();

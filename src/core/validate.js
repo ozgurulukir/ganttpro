@@ -100,7 +100,15 @@ export function validateTask(raw) {
       task.date = toDateStr(t.date);
       task.done = !!t.done;
     }
+  } else if (type === 'group') {
+    // no start/end/progress/done properties are assigned to group tasks
   }
+
+  // ffdeps/sfdeps always assign for shape consistency
+  if (!task.deps) task.deps = [];
+  if (!task.sdeps) task.sdeps = [];
+  if (!task.ffdeps) task.ffdeps = [];
+  if (!task.sfdeps) task.sfdeps = [];
 
   return task;
 }
@@ -115,7 +123,42 @@ export function validateProject(raw) {
   const tasks = Array.isArray(p.tasks) ? p.tasks.map(validateTask).filter(Boolean) : [];
 
   // Ensure exactly one root group exists
-  const roots = tasks.filter(t => t.parent === null);
+  let roots = tasks.filter(t => t.parent === null);
+
+  // Guard against cycles where there are NO roots but there are tasks
+  if (roots.length === 0 && tasks.length > 0) {
+    const rootId = Math.max(1, ...tasks.map(t => t.id)) + 1;
+    tasks.unshift({
+      id: rootId,
+      name: toStr(p.name).slice(0, 200) || 'Project',
+      type: 'group',
+      parent: null,
+      color: DEFAULT_COLOR,
+      deps: [], sdeps: [], ffdeps: [], sfdeps: []
+    });
+    // Break any circular reference, orphaned tasks, or pure cycles by tracing parent chains
+    const taskMap = new Map(tasks.map(t => [t.id, t]));
+    tasks.forEach((t, i) => {
+      if (i === 0) return;
+      const seen = new Set();
+      let cur = t;
+      while (cur && cur.parent !== null) {
+        if (seen.has(cur.id)) {
+          t.parent = rootId;
+          break;
+        }
+        seen.add(cur.id);
+        const parent = taskMap.get(cur.parent);
+        if (!parent) {
+          t.parent = rootId;
+          break;
+        }
+        cur = parent;
+      }
+    });
+    roots = tasks.filter(t => t.parent === null);
+  }
+
   if (roots.length !== 1) {
     if (roots.length > 1) {
       // Reparent extra roots to the first one

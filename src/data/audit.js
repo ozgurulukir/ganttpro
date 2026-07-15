@@ -14,8 +14,10 @@ export function logAudit(action, detail = '') {
     });
     if (entries.length > MAX_ENTRIES) entries.splice(0, entries.length - MAX_ENTRIES);
     localStorage.setItem(LS_KEY, JSON.stringify(entries));
-  } catch {
-    /* ignore */
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      console.warn('Audit log: LocalStorage quota exceeded.');
+    }
   }
 }
 

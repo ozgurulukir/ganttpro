@@ -329,6 +329,7 @@ export function submitProject() {
   }
 
   // Default end = start + 12 months for template, 3 months for blank
+  // Note: setUTCMonth has an off-by-one-day edge case on 31st vs 30th, which is fine for default ends
   const startD = new Date(start + 'T00:00:00Z');
   startD.setUTCMonth(startD.getUTCMonth() + (tpl ? 12 : 3));
   const end = startD.toISOString().slice(0, 10);
