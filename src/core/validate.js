@@ -101,11 +101,7 @@ export function validateTask(raw) {
       if (Object.keys(lags).length) task.lags = lags;
     }
   } else if (type === 'group') {
-    // no start/end/progress/done
-    delete task.start;
-    delete task.end;
-    delete task.progress;
-    delete task.done;
+    // no start/end/progress/done properties are assigned to group tasks
   }
 
   // ffdeps/sfdeps always assign for shape consistency
@@ -140,16 +136,26 @@ export function validateProject(raw) {
       color: DEFAULT_COLOR,
       deps: [], sdeps: [], ffdeps: [], sfdeps: []
     });
-    // Break any circular reference or orphaned tasks by reparenting to the synthetic root
+    // Break any circular reference, orphaned tasks, or pure cycles by tracing parent chains
+    const taskMap = new Map(tasks.map(t => [t.id, t]));
     tasks.forEach((t, i) => {
-      if (i > 0 && (t.parent === null || !tasks.some(x => x.id === t.parent))) t.parent = rootId;
+      if (i === 0) return;
+      const seen = new Set();
+      let cur = t;
+      while (cur && cur.parent !== null) {
+        if (seen.has(cur.id)) {
+          t.parent = rootId;
+          break;
+        }
+        seen.add(cur.id);
+        const parent = taskMap.get(cur.parent);
+        if (!parent) {
+          t.parent = rootId;
+          break;
+        }
+        cur = parent;
+      }
     });
-    // In case there is a pure cycle (everyone has a valid parent but it's a loop)
-    // we forcibly break the loop by reparenting the first original task (now at index 1).
-    // Note that we check `tasks.slice(1)` because tasks[0] is the newly added root itself.
-    if (!tasks.slice(1).some(t => t.parent === null || t.parent === rootId)) {
-      tasks[1].parent = rootId;
-    }
     roots = tasks.filter(t => t.parent === null);
   }
 

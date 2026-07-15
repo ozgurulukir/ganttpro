@@ -1398,10 +1398,12 @@ function recalcProjEnd() {
 		CHART_END = new Date(curProj().endDate);
 		persist();
 	}
+	const proj = curProj();
+	const periodText = proj ? `${proj.startDate} ~ ${proj.endDate}` : "";
 	requestAnimationFrame(() => {
 		const sPeriod = document.getElementById("sPeriod");
-		if (sPeriod)
-			sPeriod.textContent = `${curProj().startDate} ~ ${curProj().endDate}`;
+		if (sPeriod && periodText)
+			sPeriod.textContent = periodText;
 	});
 }
 /* ═══════════════════════════════════════════
