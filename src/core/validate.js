@@ -56,7 +56,6 @@ export function validateTask(raw) {
   if (id === null || id <= 0) return null;
 
   const type = TASK_TYPES.has(t.type) ? t.type : 'task';
-  if (t.parent === 0 || t.parent === '0') return null;
   const p = toInt(t.parent, null);
   const parent = p === null || p <= 0 ? null : p;
 
