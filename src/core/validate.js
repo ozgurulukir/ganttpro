@@ -86,7 +86,7 @@ export function validateTask(raw) {
     }
 
     if (t.assignee) {
-      task.assignee = toStr(t.assignee).normalize('NFC').replace(/\p{C}/gu, '').slice(0, 100);
+      task.assignee = toStr(t.assignee).normalize('NFC').replace(/\p{Cc}/gu, '').slice(0, 100);
     }
 
     if (type === 'task') {
