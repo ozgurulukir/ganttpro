@@ -191,7 +191,7 @@ export function validateProject(raw) {
 
   const proj = {
     id,
-    name: toStr(p.name).normalize('NFC').replace(/\p{C}/gu, '').slice(0, 200) || 'Untitled Project',
+    name: toStr(p.name).normalize('NFC').replace(/\p{Cc}/gu, '').slice(0, 200) || 'Untitled Project',
     color: isValidHexColor(p.color) ? p.color : DEFAULT_COLOR,
     startDate,
     endDate,
