@@ -239,7 +239,7 @@ export function validateProject(raw) {
 
   delete proj.shareToken;
 
-  return migrate(proj);
+  return migrate(proj, p.schemaVersion);
 }
 
 export function migrate(proj) {
