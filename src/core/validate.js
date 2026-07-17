@@ -214,7 +214,7 @@ export function validateProject(raw) {
         pruneInvalidDeps(snapshotTasks);
         return {
           id: toStr(v.id),
-          name: toStr(v.name).normalize('NFC').replace(/\p{C}/gu, '').slice(0, 100),
+          name: toStr(v.name).normalize('NFC').replace(/\p{Cc}/gu, '').slice(0, 100),
           snapshot: snapshotTasks
         };
       })
