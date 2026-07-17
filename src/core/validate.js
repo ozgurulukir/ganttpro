@@ -63,7 +63,7 @@ export function validateTask(raw) {
 
   const task = {
     id,
-    name: toStr(t.name).normalize('NFC').replace(/\p{C}/gu, '').slice(0, 200) || 'Untitled',
+    name: toStr(t.name).normalize('NFC').replace(/\p{Cc}/gu, '').slice(0, 200) || 'Untitled',
     type,
     parent,
     color
