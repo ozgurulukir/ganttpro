@@ -282,7 +282,10 @@ export function submitProject() {
     document.getElementById('pName').focus();
     return;
   }
-  const start = document.getElementById('pStart').value;
+  let start = document.getElementById('pStart').value;
+  if (!start) {
+    start = new Date().toISOString().slice(0, 10);
+  }
 
   // 重複名稱提醒
   const dupName = projects.some(p => p.id !== _editingProjId && p.name === name);

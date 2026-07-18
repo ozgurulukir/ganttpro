@@ -158,11 +158,23 @@ import { logAudit } from "./data/audit.js";
 ═══════════════════════════════════════════ */
 let CHART_START = new Date("2026-04-01");
 let CHART_END = new Date("2026-07-31");
-{
-	const _td = document.getElementById("sTodayDisplay");
-	if (_td)
-		_td.textContent = DateUtils.formatDate(Math.floor(Date.now() / 86400000));
+let TODAY_STR = DateUtils.formatDate(Math.floor(Date.now() / 86400000));
+const sTodayDisplay = document.getElementById("sTodayDisplay");
+if (sTodayDisplay) sTodayDisplay.textContent = TODAY_STR;
+function recomputeToday() {
+	const newTodayStr = DateUtils.formatDate(Math.floor(Date.now() / 86400000));
+	if (TODAY_STR !== newTodayStr) {
+		TODAY_STR = newTodayStr;
+		if (sTodayDisplay) sTodayDisplay.textContent = TODAY_STR;
+		render();
+	}
 }
+setInterval(recomputeToday, 60000);
+document.addEventListener('visibilitychange', () => {
+	if (document.visibilityState === 'visible') {
+		recomputeToday();
+	}
+});
 const ROW_H = 36;
 const BAR_H = 20;
 
@@ -1651,7 +1663,10 @@ document.addEventListener("keydown", (e) => {
 	if (document.querySelector(".overlay.open, .panel.open")) return;
 	if (
 		e.key !== "Escape" &&
-		(e.target.tagName === "INPUT" || e.target.tagName === "SELECT")
+		(e.target.tagName === "INPUT" ||
+			e.target.tagName === "SELECT" ||
+			e.target.tagName === "TEXTAREA" ||
+			e.target.isContentEditable)
 	)
 		return;
 	if (e.key === "e") expandAll();
@@ -1700,8 +1715,8 @@ function syncRenderDeps() {
 	D.PPDS = PPDS;
 	D.CHART_START = CHART_START;
 	D.CHART_END = CHART_END;
-	D.TODAY_STR = formatDate(Math.floor(Date.now() / 86400000));
-	D.TODAY = new Date(D.TODAY_STR);
+	D.TODAY_STR = TODAY_STR;
+	D.TODAY = new Date(TODAY_STR);
 	D.ROW_H = ROW_H;
 	D.BAR_H = BAR_H;
 	D.MS_ROW_H = MS_ROW_H;
@@ -1887,15 +1902,7 @@ const _pendingCloudWrites = new Set();
 let currentUser = null;
 let _guestMode = false;
 let _appInitialized = false;
-let _resizersSetup = false;
 let _initAppPromise = null;
-
-function safeSetupResizers() {
-	if (_resizersSetup) return;
-	_resizersSetup = true;
-	setupColResizers();
-	setupResizer();
-}
 
 const _syncChannel = new BroadcastChannel("gantt_sync");
 let _syncReloadTimer = null;
@@ -1940,6 +1947,15 @@ _syncChannel.onmessage = (e) => {
 		}, 400);
 	}
 };
+
+let _resizersSetup = false;
+
+function safeSetupResizers() {
+	if (_resizersSetup) return;
+	_resizersSetup = true;
+	setupColResizers();
+	setupResizer();
+}
 
 function setSyncDot(state) {
 	const dot = document.getElementById("syncDot");
@@ -2517,12 +2533,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 		if (typeof window.__gpReady === "function") window.__gpReady();
 	};
 
+	await initI18n();
+	translateDOM();
+	wireStaticEvents();
+	setupSync();
+	safeSetupResizers();
+
 	try {
 		await initI18n();
 		translateDOM();
 		wireStaticEvents();
 		setupSync();
-		safeSetupResizers();
 
 		// Locale switcher: set initial value and wire change event
 		const langSelect = document.getElementById("langSelect");

@@ -119,7 +119,8 @@ src/
 │   ├── deps.js              Dependency parsing + cycle detection
 │   ├── schedule.js          Forward-pass scheduler (FS/SS/FF/SF + lag)
 │   ├── critical-path.js     CPM backward-pass float → critical path
-│   └── format.js            Formatting helpers (dateToX, colors, XSS escaping)
+│   ├── format.js            Formatting helpers (dateToX, colors, XSS escaping)
+│   └── validate.js          Input sanitization: bounds, shape, cycle repair, migration
 │
 ├── render/                  DOM rendering (consumes shared D object)
 │   ├── deps.js              Shared mutable D object (state bridge)
@@ -136,13 +137,16 @@ src/
 ├── ui/                      UI controllers
 │   ├── modal.js             Task create/edit/delete modal, inline editors
 │   ├── project.js           Project CRUD, template selection, project menu
-│   └── settings.js          Settings, zoom, dark mode, baseline, versions
+│   ├── settings.js          Settings, zoom, dark mode, baseline, versions
+│   ├── worktime.js          Custom work days and holiday configuration
+│   └── context-menu.js      Right-click context menu for task rows
 │
 ├── data/                    Persistence layer (pure I/O, no app state)
 │   ├── firebase.js          Firebase init (app, auth, firestore)
 │   ├── remote.js            Firestore CRUD: user data, shares, allowed users
 │   ├── local.js             LocalStorage save/load (offline + guest mode)
-│   └── share.js             Share-link encoding + Firestore share-doc I/O
+│   ├── share.js             Share-link encoding + Firestore share-doc I/O
+│   └── audit.js             Audit logging (QuotaExceededError, etc.)
 │
 ├── i18n/                    Localization
 │   ├── index.js             i18next setup, t(), setLocale(), translateDOM()
@@ -167,10 +171,11 @@ tests/
 ├── deps.test.js             Dependency parsing, cycle detection
 ├── schedule.test.js         Forward-pass scheduler (all 4 dep types + lag)
 ├── critical-path.test.js    CPM backward pass, float, critical set
-└── format.test.js           dateToX, colors, initials, XSS escaping
+├── format.test.js           dateToX, colors, initials, XSS escaping
+└── validate.test.js         Input sanitization, bounds, migration
 ```
 
-Currently **93 tests** cover only `core/` modules. There are no tests for render, UI, data, or feature modules.
+Currently **130 tests** cover only `core/` modules. There are no tests for render, UI, data, or feature modules.
 
 ---
 
@@ -204,7 +209,23 @@ This avoids the UTC/local `Date` frame-mixing bugs that existed in earlier code.
 
 ### 5.4 Lazy loading
 
-`src/admin.js` and `src/export.js` are loaded with dynamic `import()` only when the user opens the admin panel or export functionality.
+`src/admin.js`, `src/export.js`, and `src/ui/worktime.js` are loaded with dynamic `import()` only when the user opens the admin panel, export functionality, or work-time settings.
+
+### 5.5 Export module (`src/export.js`)
+
+The export module provides five output formats, all triggered from the export dropdown menu:
+
+| Format | Function | Implementation |
+|--------|----------|----------------|
+| **PNG** | `exportPNG()` | Renders the full Gantt chart (task panel + Gantt area) onto an off-screen `<canvas>` using 2D context drawing. Supports milestone view, baseline overlay, critical path highlight, and today line. Downloads via `canvas.toBlob()`. |
+| **CSV** | `exportCSV()` | Walks the task tree recursively and produces a UTF-8 BOM-prefixed CSV with columns: `#`, Task Name, Type, Assignee, Start Date, End Date, Workdays, Progress, Dependencies, Done. Group tasks show computed bounds. Downloads via `Blob` + object URL. |
+| **PDF** | `exportPDF()` | Uses the browser's native `window.print()` with a print stylesheet. Temporarily removes dark mode for clean white-background output. |
+| **Print Settings** | `openPrintSettings()` | Opens a modal overlay for paper size (A4/A3) and orientation (landscape/portrait) selection, then injects a `@page` CSS rule and calls `window.print()`. |
+| **iCalendar** | `exportICalendar()` | Generates an `.ics` file with `VEVENT` entries for each task/milestone (skipping groups). Includes start/end dates, summary, assignee, and progress in the description. Downloads via `Blob`. |
+
+The PNG export is the most complex — it manually draws the task table header, row backgrounds, task bars with progress fills, baseline bars, critical path borders, milestone diamonds, group bars, month grid lines, and the today indicator. It reuses pure formatting helpers from `src/core/format.js` (e.g., `darkenColor`, `dateToX`).
+
+All export functions read state from the shared `D` object (see §5.2) and are fully self-contained — they do not depend on the live DOM for rendering.
 
 ### 5.5 Event handling
 
