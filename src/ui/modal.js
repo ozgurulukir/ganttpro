@@ -290,7 +290,7 @@ export function openNameEditor(task, cell, isNew = false) {
 }
 
 export function addTaskInline(refTaskId) {
-  const { isReadOnly, tasks, taskById, TODAY_STR, pushHistory, render, consumeNextId } = D;
+  const { isReadOnly, tasks, taskById, TODAY_STR, pushHistory, render, consumeNextId, scheduleTasks, recalcProjEnd } = D;
   if (isReadOnly) return;
   const ref = taskById(refTaskId);
   if (!ref) return;
@@ -327,6 +327,8 @@ export function addTaskInline(refTaskId) {
   }
   pushHistory();
   tasks.splice(insertIdx + 1, 0, newTask);
+  scheduleTasks();
+  recalcProjEnd();
   render();
   D.persist();
   requestAnimationFrame(() => {

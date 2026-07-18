@@ -192,10 +192,12 @@ export function scheduleTasks(tasks, projStart) {
 		candidates
 			.filter((t) => !scheduled.has(t.id))
 			.forEach((t) => {
-				(t.deps || []).forEach((depId) => {
-					if (wouldCreateCycle(tasks, t.id, depId)) {
-						console.warn(`Cycle detected between ${t.id} and ${depId}`);
-					}
+				["deps", "sdeps", "ffdeps", "sfdeps"].forEach((depProp) => {
+					(t[depProp] || []).forEach((depId) => {
+						if (wouldCreateCycle(tasks, t.id, depId)) {
+							console.warn(`Cycle detected between ${t.id} and ${depId}`);
+						}
+					});
 				});
 			});
 	}
@@ -242,8 +244,9 @@ export function autoScheduleFromDeps(tasks, task) {
 	});
 	if (!candidateStart) return;
 	const wdays =
-		task.wday ||
-		(task.start && task.end ? countWorkingDays(task.start, task.end) : 1);
+		task.wday !== undefined
+			? task.wday
+			: (task.start && task.end ? countWorkingDays(task.start, task.end) : 1);
 	if (candidateStart > (task.start || "")) {
 		task.start = candidateStart;
 		task.end = addWorkingDays(task.start, wdays);

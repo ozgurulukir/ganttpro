@@ -93,7 +93,7 @@ export function dateKey(d) {
     ? d.toISOString().slice(0, 10)
     : typeof d === 'number'
       ? formatDate(d)
-      : String(d);
+      : String(d); // Coerce fallback to string for non-Date/non-number inputs
 }
 export function getHoliday(d) {
   return TW_HOLIDAYS[dateKey(d)] || null;
@@ -141,6 +141,10 @@ export function isNonWorkday(s) {
   return !_workdays.has(dayOfWeek(s));
 }
 
+/**
+ * Subtracts N working days.
+ * Note: unlike addWorkingDays, this is non-inclusive of the start day (count starts at 0).
+ */
 export function subtractWorkingDays(endStr, days) {
   let dn = parseDate(endStr);
   while (isNonWorkday(formatDate(dn))) dn--;
@@ -152,6 +156,10 @@ export function subtractWorkingDays(endStr, days) {
   return formatDate(dn);
 }
 
+/**
+ * Adds N working days.
+ * Note: unlike subtractWorkingDays, this is inclusive (start is day 1).
+ */
 export function addWorkingDays(startStr, days) {
   let dn = parseDate(startStr);
   while (isNonWorkday(formatDate(dn))) dn++;
@@ -178,7 +186,7 @@ export function shiftWorkingDays(dateStr, days) {
 export function countWorkingDays(startStr, endStr) {
   let dn = parseDate(startStr);
   const endDn = parseDate(endStr);
-  if (dn > endDn) return -1;
+  if (dn > endDn) throw new Error("start cannot be after end");
   let count = 0;
   while (dn <= endDn) {
     if (!isNonWorkday(formatDate(dn))) count++;

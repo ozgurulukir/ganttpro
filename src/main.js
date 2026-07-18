@@ -139,7 +139,7 @@ import {
 	addShare,
 	removeShare,
 } from "./collab.js";
-import { auth, googleProvider } from "./data/firebase.js";
+import { auth, db, googleProvider, firebaseError } from "./data/firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import * as Local from "./data/local.js";
 import * as Share from "./data/share.js";
@@ -158,9 +158,11 @@ import { logAudit } from "./data/audit.js";
 ═══════════════════════════════════════════ */
 let CHART_START = new Date("2026-04-01");
 let CHART_END = new Date("2026-07-31");
-document.getElementById("sTodayDisplay").textContent = formatDate(
-	Math.floor(Date.now() / 86400000),
-);
+{
+	const _td = document.getElementById("sTodayDisplay");
+	if (_td)
+		_td.textContent = DateUtils.formatDate(Math.floor(Date.now() / 86400000));
+}
 const ROW_H = 36;
 const BAR_H = 20;
 
@@ -1062,10 +1064,24 @@ function pushHistory() {
 	h.push({
 		tasks: JSON.parse(JSON.stringify(tasks)),
 		nextId,
+		currentProjId,
+		collapsed: Array.from(collapsed),
+		viewMode,
+		showCriticalPath,
+		showWBS,
+		isDark,
+		CHART_START: curProj().startDate,
+		CHART_END: curProj().endDate,
+		milestoneView,
+		workloadView,
+		showBarDates,
+		showBaseline,
 		startDate: curProj().startDate,
 		endDate: curProj().endDate,
 		name: curProj().name,
 		color: curProj().color,
+		versions: curProj().versions ? JSON.parse(JSON.stringify(curProj().versions)) : [],
+		baseline: curProj().baseline ? JSON.parse(JSON.stringify(curProj().baseline)) : null,
 	});
 	if (h.length > MAX_HISTORY) h.shift();
 	const btn = document.getElementById("undoBtn");
@@ -1076,20 +1092,74 @@ function undo() {
 	const h = getHistory();
 	if (!h.length || !curProj()) return;
 	const snap = h.pop();
-	curProj().tasks = snap.tasks;
+
+	curProj().tasks.length = 0;
+	curProj().tasks.push(...snap.tasks);
 	curProj().nextId = snap.nextId;
 	curProj().startDate = snap.startDate;
 	curProj().endDate = snap.endDate;
 	curProj().name = snap.name;
 	curProj().color = snap.color;
-	tasks = curProj().tasks;
+	curProj().versions = snap.versions ? JSON.parse(JSON.stringify(snap.versions)) : [];
+	curProj().baseline = snap.baseline ? JSON.parse(JSON.stringify(snap.baseline)) : null;
+
 	nextId = curProj().nextId;
-	CHART_START = new Date(curProj().startDate);
-	CHART_END = new Date(curProj().endDate);
+
+	collapsed.clear();
+	if (snap.collapsed) {
+		snap.collapsed.forEach(id => collapsed.add(id));
+	}
+
+	if (snap.viewMode) {
+		viewMode = snap.viewMode;
+		PPD = PPDS[snap.viewMode];
+		document.querySelectorAll('#viewBtns .btn').forEach((b) => {
+			b.classList.toggle('active', b.dataset.v === snap.viewMode);
+		});
+	}
+
+	showCriticalPath = snap.showCriticalPath;
+	showWBS = snap.showWBS;
+	isDark = snap.isDark;
+	CHART_START = new Date(snap.CHART_START);
+	CHART_END = new Date(snap.CHART_END);
+	milestoneView = snap.milestoneView;
+	workloadView = snap.workloadView;
+	showBarDates = snap.showBarDates;
+	showBaseline = snap.showBaseline;
+
+	// UI sync
+	document.body.classList.toggle('ms-view', milestoneView);
+	document.body.classList.toggle('show-wbs', showWBS);
+	document.body.classList.toggle('dark', isDark);
+
+	const darkBtn = document.getElementById('darkBtn');
+	if (darkBtn) darkBtn.textContent = isDark ? '☀️' : '🌙';
+
+	const bd = document.getElementById('settingBarDates');
+	if (bd) bd.checked = showBarDates;
+	const bl = document.getElementById('settingBaseline');
+	if (bl) bl.checked = showBaseline;
+
+	const cv = milestoneView ? 'milestone' : workloadView ? 'workload' : 'gantt';
+	document.querySelectorAll('#chartViewBtns .btn').forEach((b) => {
+		b.classList.toggle('active', b.dataset.cv === cv);
+	});
+
+	const cpBtn = document.getElementById('cpBtn');
+	if (cpBtn) cpBtn.classList.toggle('active', showCriticalPath);
+	if (showCriticalPath) criticalTaskIds = computeCriticalPath();
+	else criticalTaskIds = new Set();
+	const wbsBtn = document.getElementById('wbsBtn');
+	if (wbsBtn) wbsBtn.classList.toggle('active', showWBS);
+
+	updateProjUI();
+	renderVersionList();
+
 	scheduleTasks();
 	recalcProjEnd();
 	render();
-	const btn = document.getElementById("undoBtn");
+	const btn = document.getElementById('undoBtn');
 	if (btn) btn.disabled = getHistory().length === 0;
 }
 
@@ -1257,6 +1327,7 @@ function reorderTask(srcId, targetId, insertBefore) {
 	const targetIdx = tasks.indexOf(target);
 	tasks.splice(insertBefore ? targetIdx : targetIdx + 1, 0, src);
 
+	scheduleTasks();
 	recalcProjEnd();
 	render();
 }
@@ -1387,6 +1458,7 @@ function recalcProjEnd() {
 		const e = t.type === "task" ? t.end : t.date;
 		if (e > maxEnd) maxEnd = e;
 	});
+	let changed = false;
 	if (maxEnd && maxEnd > curProj().endDate) {
 		curProj().endDate = maxEnd;
 		CHART_END = new Date(maxEnd);
@@ -1396,11 +1468,23 @@ function recalcProjEnd() {
 		const newStr = formatDate(Math.floor(d.getTime() / 86400000));
 		if (newStr > curProj().endDate) curProj().endDate = newStr;
 		CHART_END = new Date(curProj().endDate);
+		changed = true;
+	} else if (!maxEnd && !curProj().endDate) {
+		// Edge case: empty project and no end date, set a default
+		curProj().endDate = curProj().startDate;
+		CHART_END = new Date(curProj().startDate);
+		changed = true;
+	}
+	if (changed) {
 		persist();
 	}
-	const sPeriod = document.getElementById("sPeriod");
-	if (sPeriod)
-		sPeriod.textContent = `${curProj().startDate} ~ ${curProj().endDate}`;
+	const proj = curProj();
+	const periodText = proj ? `${proj.startDate} ~ ${proj.endDate}` : "";
+	requestAnimationFrame(() => {
+		const sPeriod = document.getElementById("sPeriod");
+		if (sPeriod && periodText)
+			sPeriod.textContent = periodText;
+	});
 }
 /* ═══════════════════════════════════════════
    OWNER & SHARE SYSTEM
@@ -1462,6 +1546,8 @@ function stripSharedFlags(proj) {
 	delete p._isShared;
 	delete p._permission;
 	delete p._ownerId;
+	delete p.ownerId;
+	delete p._history;
 	delete p.shareToken;
 	return p;
 }
@@ -1502,18 +1588,22 @@ async function loadSharedProjects() {
 }
 
 function setupSharedRealtime(ownerIds) {
+	if (!db) return;
 	_sharedChannels.forEach((unsub) => unsub());
 	_sharedChannels = [];
 
 	ownerIds.forEach((ownerId) => {
 		let skipFirst = true;
-		const unsub = Remote.watchUserData(ownerId, async () => {
+		const unsub = Remote.watchUserData(ownerId, async (snap) => {
 			if (skipFirst) {
 				skipFirst = false;
 				return;
 			}
+			// Skip if we are currently saving to avoid clobbering in-flight writes
 			if (_pendingCloudWrites.size > 0) return;
-			const ownerData = await Remote.readUserData(ownerId);
+			if (snap && snap.id !== ownerId) return;
+
+			const ownerData = snap ? snap.data()?.data || null : await Remote.readUserData(ownerId);
 			if (!ownerData?.projects) return;
 			projects = projects.map((p) => {
 				if (p.ownerId === ownerId) {
@@ -1610,7 +1700,8 @@ function syncRenderDeps() {
 	D.PPDS = PPDS;
 	D.CHART_START = CHART_START;
 	D.CHART_END = CHART_END;
-	D.TODAY = new Date(formatDate(Math.floor(Date.now() / 86400000)));
+	D.TODAY_STR = formatDate(Math.floor(Date.now() / 86400000));
+	D.TODAY = new Date(D.TODAY_STR);
 	D.ROW_H = ROW_H;
 	D.BAR_H = BAR_H;
 	D.MS_ROW_H = MS_ROW_H;
@@ -1685,7 +1776,10 @@ function syncRenderDeps() {
 		CHART_START = new Date(proj.startDate);
 		CHART_END = new Date(proj.endDate);
 		collapsed.clear();
-		_history = [];
+
+		const btn = document.getElementById("undoBtn");
+		if (btn) btn.disabled = getHistory().length === 0;
+
 		D.currentProjId = currentProjId;
 		D.tasks = tasks;
 		D.nextId = nextId;
@@ -1793,6 +1887,59 @@ const _pendingCloudWrites = new Set();
 let currentUser = null;
 let _guestMode = false;
 let _appInitialized = false;
+let _resizersSetup = false;
+let _initAppPromise = null;
+
+function safeSetupResizers() {
+	if (_resizersSetup) return;
+	_resizersSetup = true;
+	setupColResizers();
+	setupResizer();
+}
+
+const _syncChannel = new BroadcastChannel("gantt_sync");
+let _syncReloadTimer = null;
+
+/* Offline queue: saveToCloud always pushes full state, so we only need
+   a flag to know a push is pending. Flush on reconnect or next init. */
+function setOfflinePending() {
+	const q = JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]");
+	if (!q.includes("pending")) {
+		q.push("pending");
+		localStorage.setItem("gantt_offline_queue", JSON.stringify(q));
+	}
+}
+
+function clearOfflinePending() {
+	localStorage.removeItem("gantt_offline_queue");
+}
+
+function hasOfflinePending() {
+	return JSON.parse(localStorage.getItem("gantt_offline_queue") || "[]").length > 0;
+}
+
+_syncChannel.onmessage = (e) => {
+	if (e.data?.type === "save") {
+		if (_pendingCloudWrites.size > 0 || modalOpen || _dirtySinceCloud) return;
+		// Debounce: another tab saved. Wait briefly in case the user
+		// is also editing, then reload. Prevents clobbering unsaved work.
+		clearTimeout(_syncReloadTimer);
+		_syncReloadTimer = setTimeout(async () => {
+			if (_dirtySinceCloud || _pendingCloudWrites.size > 0) return;
+			const ok = await loadFromCloud();
+			if (ok) {
+				if (projects.length) {
+					scheduleTasks();
+					recalcProjEnd();
+				}
+				saveToLS();
+				updateProjUI();
+				render();
+				showSyncToast();
+			}
+		}, 400);
+	}
+};
 
 function setSyncDot(state) {
 	const dot = document.getElementById("syncDot");
@@ -1808,60 +1955,73 @@ function setSyncDot(state) {
 		}[state] || t("status.syncDefault");
 }
 
+async function _saveToCloudInner() {
+	if (curProj()) curProj().nextId = nextId;
+	const cp = curProj();
+
+	if (!cp) {
+		await Remote.writeUserData(currentUser.uid, {
+			projects: [],
+			currentProjId: null,
+			nextProjId,
+		});
+		setSyncDot("ok");
+		_dirtySinceCloud = false;
+	} else if (
+		isSharedProject(cp) &&
+		getSharePermission(cp.ownerId, cp.id) === "edit"
+	) {
+		await Remote.updateSharedProjectAtomic(cp.ownerId, stripSharedFlags(cp));
+		setSyncDot("ok");
+		_dirtySinceCloud = false;
+	} else if (!isSharedProject(cp)) {
+		const ownProjects = projects
+			.filter((p) => !isSharedProject(p))
+			.map(stripSharedFlags);
+		await Remote.writeUserData(currentUser.uid, {
+			projects: ownProjects,
+			currentProjId,
+			nextProjId,
+		});
+		setSyncDot("ok");
+		_dirtySinceCloud = false;
+	}
+}
+
 async function saveToCloud() {
 	if (!currentUser) return;
 	setSyncDot("saving");
 	const token = ++_cloudSaveSeq;
-	_pendingCloudWrites.add(token);
-	try {
-		if (curProj()) curProj().nextId = nextId;
-		const cp = curProj();
 
-		if (!cp) {
-			await Remote.writeUserData(currentUser.uid, {
-				projects: [],
-				currentProjId: null,
-				nextProjId,
-			});
-			setSyncDot("ok");
-			_dirtySinceCloud = false;
-		} else if (
-			isSharedProject(cp) &&
-			getSharePermission(cp.ownerId, cp.id) === "edit"
-		) {
-			const ownerData = await Remote.readUserData(cp.ownerId);
-			if (!ownerData?.projects) {
-				setSyncDot("err");
-				return;
-			}
-			const ownerProjects = ownerData.projects.map((p) =>
-				p.id === cp.id ? stripSharedFlags(cp) : p,
-			);
-			await Remote.updateUserData(cp.ownerId, {
-				...ownerData,
-				projects: ownerProjects,
-			});
-			setSyncDot("ok");
-			_dirtySinceCloud = false;
-		} else if (!isSharedProject(cp)) {
-			const ownProjects = projects
-				.filter((p) => !isSharedProject(p))
-				.map(stripSharedFlags);
-			await Remote.writeUserData(currentUser.uid, {
-				projects: ownProjects,
-				currentProjId,
-				nextProjId,
-			});
-			setSyncDot("ok");
-			_dirtySinceCloud = false;
-		}
+	if (!navigator.onLine) {
+		setOfflinePending();
+		setSyncDot("err");
+		return;
+	}
+
+	const savePromise = _saveToCloudInner();
+	_pendingCloudWrites.add(savePromise);
+
+	try {
+		await savePromise;
+		_syncChannel.postMessage({ type: "save" });
 	} catch (e) {
 		console.error("saveToCloud failed", e);
 		setSyncDot("err");
+		if (e.message && e.message.includes("offline")) {
+			setOfflinePending();
+		}
 	} finally {
-		_pendingCloudWrites.delete(token);
+		_pendingCloudWrites.delete(savePromise);
 	}
 }
+
+window.addEventListener("online", () => {
+	if (hasOfflinePending()) {
+		clearOfflinePending();
+		saveToCloud();
+	}
+});
 
 async function loadFromCloud() {
 	if (!currentUser) return false;
@@ -1920,7 +2080,7 @@ function cleanupRealtime() {
 }
 
 function setupRealtime() {
-	if (!currentUser) return;
+	if (!currentUser || !db) return;
 	if (_realtimeUnsub) _realtimeUnsub();
 	let skipFirst = true;
 	_realtimeUnsub = Remote.watchUserData(currentUser.uid, async () => {
@@ -1971,6 +2131,9 @@ function saveToLS() {
 		Local.saveToLS({ projects: ownProjects, currentProjId, nextProjId });
 	} catch (e) {
 		console.error("saveToLS:", e);
+		if (e.name === "QuotaExceededError") {
+			showStatus(t("status.quotaExceeded"));
+		}
 	}
 }
 
@@ -1998,6 +2161,7 @@ function showApp() {
 	document.getElementById("loginScreen").style.display = "none";
 	document.getElementById("appToolbar").style.display = "flex";
 	document.getElementById("main").style.display = "flex";
+	if (typeof window.__gpReady === "function") window.__gpReady();
 }
 
 function isSafeAvatarUrl(url) {
@@ -2025,36 +2189,55 @@ function updateUserDisplay() {
 
 async function initApp() {
 	if (_appInitialized) return;
-	_appInitialized = true;
-	// Clear header immediately before showing app, preventing cached name flash
-	const _nameEl = document.getElementById("projSelectorName");
-	if (_nameEl) _nameEl.textContent = "";
-	showApp();
-	updateUserDisplay();
-	// Clear hardcoded demo data before cloud load to prevent flash
-	projects = [];
-	currentProjId = null;
-	tasks = [];
-	const cloudOk = await loadFromCloud();
-	if (!cloudOk) loadFromLS();
-	await loadSharedProjects();
-	setupRealtime();
-	updateProjUI();
-	if (projects.length) {
-		scheduleTasks();
-		recalcProjEnd();
+	if (_initAppPromise) {
+		await _initAppPromise;
+		return;
 	}
-	render();
-	setSyncDot(cloudOk ? "ok" : _guestMode ? "off" : "err");
-	setTimeout(scrollToToday, 120);
-	const adminBtn = document.getElementById("adminBtn");
-	if (adminBtn) adminBtn.style.display = isAdmin() ? "" : "none";
-	if (_guestMode) {
-		const el = document.getElementById("userDisplay");
-		if (el)
-			el.innerHTML = `<div title="Guest mode (local)" style="width:26px;height:26px;border-radius:50%;background:var(--t4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">G</div>`;
-		document.getElementById("signOutBtn").style.display = "";
-	}
+	_initAppPromise = (async () => {
+		try {
+			// Clear header immediately before showing app, preventing cached name flash
+			const _nameEl = document.getElementById("projSelectorName");
+			if (_nameEl) _nameEl.textContent = "";
+			showApp();
+			updateUserDisplay();
+			// Clear hardcoded demo data before cloud load to prevent flash
+			projects = [];
+			currentProjId = null;
+			tasks = [];
+
+			if (navigator.onLine && hasOfflinePending()) {
+				clearOfflinePending();
+				// If we had pending offline writes, load from local storage first, then save to cloud
+				loadFromLS();
+				saveToCloud();
+			}
+
+			const cloudOk = await loadFromCloud();
+			if (!cloudOk) loadFromLS();
+			await loadSharedProjects();
+			setupRealtime();
+			updateProjUI();
+			if (projects.length) {
+				scheduleTasks();
+				recalcProjEnd();
+			}
+			render();
+			setSyncDot(cloudOk ? "ok" : _guestMode ? "off" : "err");
+			setTimeout(scrollToToday, 120);
+			const adminBtn = document.getElementById("adminBtn");
+			if (adminBtn) adminBtn.style.display = isAdmin() ? "" : "none";
+			if (_guestMode) {
+				const el = document.getElementById("userDisplay");
+				if (el)
+					el.innerHTML = `<div title="Guest mode (local)" style="width:26px;height:26px;border-radius:50%;background:var(--t4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">G</div>`;
+				document.getElementById("signOutBtn").style.display = "";
+			}
+			_appInitialized = true;
+		} finally {
+			_initAppPromise = null;
+		}
+	})();
+	await _initAppPromise;
 }
 
 /* ═══════════════════════════════════════════
@@ -2165,7 +2348,17 @@ function wireStaticEvents() {
 		closeSettings();
 	});
 	clk("adminBtn", () => import("./admin.js").then((m) => m.openAdminPanel()));
-	clk("signOutBtn", signOut);
+	clk("signOutBtn", async () => {
+		if (_pendingCloudWrites.size > 0) {
+			setSyncDot("saving");
+			try {
+				await Promise.allSettled(_pendingCloudWrites);
+			} catch (e) {
+				console.error("Error waiting for pending writes before signout", e);
+			}
+		}
+		signOut();
+	});
 
 	// ── Version panel ──
 	clk("verBackdrop", closeVersionPanel);
@@ -2307,31 +2500,53 @@ function wireStaticEvents() {
 /* ═══════════════════════════════════════════
    INIT
 ══════════════════════════════════════════ */
+// Diagnostic flag: confirms module evaluated successfully (all imports resolved).
+window.__gpModuleLoaded = true;
+
 document.addEventListener("DOMContentLoaded", async () => {
-	await initI18n();
-	translateDOM();
-	wireStaticEvents();
-	setupSync();
-	setupColResizers();
-	setupResizer();
+	// Define revealLogin early so it's available even if later setup throws.
+	const revealLogin = () => {
+		const chk = document.getElementById("authChecking");
+		const panel = document.getElementById("loginPanel");
+		if (chk) chk.style.display = "none";
+		if (
+			panel &&
+			document.getElementById("registerPanel").style.display === "none"
+		)
+			panel.style.display = "flex";
+		if (typeof window.__gpReady === "function") window.__gpReady();
+	};
 
-	// Locale switcher: set initial value and wire change event
-	const langSelect = document.getElementById("langSelect");
-	if (langSelect) {
-		langSelect.value = getLocale();
-		langSelect.addEventListener("change", () => {
-			setLocale(langSelect.value);
-			render();
-		});
+	try {
+		await initI18n();
+		translateDOM();
+		wireStaticEvents();
+		setupSync();
+		safeSetupResizers();
+
+		// Locale switcher: set initial value and wire change event
+		const langSelect = document.getElementById("langSelect");
+		if (langSelect) {
+			langSelect.value = getLocale();
+			langSelect.addEventListener("change", () => {
+				setLocale(langSelect.value);
+				render();
+			});
+		}
+
+		// Restore WBS toggle state
+		showWBS = localStorage.getItem("gp_showWBS") === "1";
+		if (showWBS) document.body.classList.add("show-wbs");
+
+		initContextMenu();
+		syncRenderDeps();
+		// Diagnostic flag: confirms all setup completed without throwing.
+		window.__gpSetupDone = true;
+	} catch (e) {
+		console.error("Setup failed:", e);
+		revealLogin();
+		return;
 	}
-
-	// Restore WBS toggle state
-	showWBS = localStorage.getItem("gp_showWBS") === "1";
-	if (showWBS) document.body.classList.add("show-wbs");
-
-	initContextMenu();
-
-	syncRenderDeps();
 	const urlParams = new URLSearchParams(location.search);
 	const shareToken = urlParams.get("share");
 
@@ -2365,8 +2580,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 		CHART_END = new Date(curProj().endDate);
 		isReadOnly = true;
 		document.body.classList.add("readonly");
-		setupColResizers();
-		setupResizer();
+		safeSetupResizers();
 		updateProjUI();
 		scheduleTasks();
 		recalcProjEnd();
@@ -2377,16 +2591,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 	}
 
 	// Auth-required mode
-	const revealLogin = () => {
-		const chk = document.getElementById("authChecking");
-		const panel = document.getElementById("loginPanel");
-		if (chk) chk.style.display = "none";
-		if (
-			panel &&
-			document.getElementById("registerPanel").style.display === "none"
-		)
-			panel.style.display = "flex";
-	};
+	// If Firebase itself failed to initialise (no auth object), skip straight
+	// to the login panel — the user can still use guest/local mode.
+	if (firebaseError || !auth) {
+		console.error("Firebase unavailable:", firebaseError);
+		revealLogin();
+		return;
+	}
+
 	// 保險：Firebase 無回應（離線、被擋）時 4 秒後仍顯示登入按鈕
 	const authFallback = setTimeout(() => {
 		if (!_appInitialized) revealLogin();
@@ -2398,8 +2610,28 @@ document.addEventListener("DOMContentLoaded", async () => {
 		if (user) {
 			// 既有 session：直接進入 app，不顯示登入按鈕
 			currentUser = user;
-			const authorized = await checkAuthorized();
-			if (authorized) await initApp();
+			try {
+				const authorized = await Promise.race([
+					checkAuthorized(),
+					new Promise((_, reject) =>
+						setTimeout(
+							() => reject(new Error("checkAuthorized timeout")),
+							5000,
+						),
+					),
+				]);
+				if (authorized) {
+					await Promise.race([
+						initApp(),
+						new Promise((_, reject) =>
+							setTimeout(() => reject(new Error("initApp timeout")), 10000),
+						),
+					]);
+				}
+			} catch (e) {
+				console.error("Auth check failed:", e);
+				revealLogin();
+			}
 			// 未授權時 checkAuthorized 已切換到註冊面板，這裡只需把檢查中提示收掉
 			if (!_appInitialized) {
 				const chk = document.getElementById("authChecking");
@@ -2409,4 +2641,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 			revealLogin();
 		}
 	});
+
+	// Global error handlers: if anything uncaught happens before init completes,
+	// make sure the user is not stuck on the spinner forever.
+	window.addEventListener("error", (event) => {
+		console.error("Global error:", event.error);
+		if (!_appInitialized) revealLogin();
+	});
+	window.addEventListener("unhandledrejection", (event) => {
+		console.error("Unhandled rejection:", event.reason);
+		if (!_appInitialized) revealLogin();
+	});
+
+	D.revealLogin = revealLogin;
 });
