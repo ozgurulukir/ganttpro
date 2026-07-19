@@ -251,7 +251,6 @@ export function migrate(proj) {
   // Guard: if data from a newer client has a higher schemaVersion,
   // clamp to current so this client doesn't silently drop fields.
   if (proj.schemaVersion > CURRENT_SCHEMA) {
-    console.warn(`Project ${proj.id} has newer schema version ${proj.schemaVersion}. Clamping down to ${CURRENT_SCHEMA} to avoid dropping fields.`);
     proj.schemaVersion = CURRENT_SCHEMA;
   }
   // Future migrations:
