@@ -2214,21 +2214,20 @@ async function initApp() {
 /* ═══════════════════════════════════════════
    EVENT WIRING — replaces all inline onclick/onchange/onkeydown
 ═══════════════════════════════════════════ */
-function wireStaticEvents() {
-  const $ = id => document.getElementById(id);
-  const clk = (id, fn) => {
-    const el = $(id);
-    if (el) el.addEventListener('click', fn);
-  };
-  const overlayClose = (id, fn) => {
-    const el = $(id);
-    if (el)
-      el.addEventListener('click', e => {
-        if (e.target === el) fn();
-      });
-  };
+const $ = id => document.getElementById(id);
+const clk = (id, fn) => {
+  const el = $(id);
+  if (el) el.addEventListener('click', fn);
+};
+const overlayClose = (id, fn) => {
+  const el = $(id);
+  if (el)
+    el.addEventListener('click', e => {
+      if (e.target === el) fn();
+    });
+};
 
-  // ── Login ──
+function wireLoginEvents() {
   clk('loginGoogleBtn', signInWithGoogle);
   const guestBtn = $('loginGuestBtn');
   if (guestBtn) {
@@ -2242,8 +2241,9 @@ function wireStaticEvents() {
       if (e.key === 'Enter') submitRegister();
     });
   clk('registerSubmitBtn', submitRegister);
+}
 
-  // ── Toolbar ──
+function wireToolbarEvents() {
   const projSel = $('projSelector');
   if (projSel)
     projSel.addEventListener('click', e => {
@@ -2315,8 +2315,9 @@ function wireStaticEvents() {
     }
     signOut();
   });
+}
 
-  // ── Version panel ──
+function wireVersionPanelEvents() {
   clk('verBackdrop', closeVersionPanel);
   clk('verCloseBtn', closeVersionPanel);
   const verName = $('verNameInput');
@@ -2325,13 +2326,15 @@ function wireStaticEvents() {
       if (e.key === 'Enter') createVersion();
     });
   clk('createVersionBtn', createVersion);
+}
 
-  // ── Share modal ──
+function wireShareModalEvents() {
   overlayClose('shareOverlay', closeShareModal);
   clk('shareCloseBtn', closeShareModal);
   clk('copyShareLinkBtn', copyShareLink);
+}
 
-  // ── Collab modal ──
+function wireCollabModalEvents() {
   overlayClose('collabOverlay', closeCollabModal);
   const cProj = $('collabProjSelect');
   if (cProj) cProj.addEventListener('change', onCollabProjChange);
@@ -2342,16 +2345,19 @@ function wireStaticEvents() {
     });
   clk('addShareBtn', addShare);
   clk('closeCollabBtn', closeCollabModal);
+}
 
-  // ── Admin panel ──
+function wireAdminPanelEvents() {
   overlayClose('adminOverlay', () => import('./admin.js').then(m => m.closeAdminPanel()));
   clk('closeAdminBtn', () => import('./admin.js').then(m => m.closeAdminPanel()));
+}
 
-  // ── Delete modal ──
+function wireDeleteModalEvents() {
   overlayClose('deleteOverlay', () => closeDeleteModal());
   clk('deleteCancelBtn', () => closeDeleteModal());
+}
 
-  // ── Task modal ──
+function wireTaskModalEvents() {
   overlayClose('overlay', () => closeModal());
   clk('taskModalCloseBtn', () => closeModal());
   const fType = $('fType');
@@ -2382,8 +2388,9 @@ function wireStaticEvents() {
     advToggle.addEventListener('click', () =>
       document.getElementById('modalAdvanced')?.classList.toggle('collapsed')
     );
+}
 
-  // ── Arrow style selector ──
+function wireArrowStyleEvents() {
   const arrowSel = document.getElementById('settingArrowStyle');
   if (arrowSel) {
     arrowSel.value = D.arrowStyle;
@@ -2393,16 +2400,18 @@ function wireStaticEvents() {
       render();
     });
   }
+}
 
-  // ── Project modal ──
+function wireProjectModalEvents() {
   overlayClose('projOverlay', () => closeProjModal());
   clk('projModalCloseBtn', () => closeProjModal());
   const pTpl = $('pTemplate');
   if (pTpl) pTpl.addEventListener('change', onTemplateChange);
   clk('projCancelBtn', () => closeProjModal());
   clk('projSubmitBtn', submitProject);
+}
 
-  // ── Dynamic delegation ──
+function wireDelegationEvents() {
   const verList = $('verList');
   if (verList)
     verList.addEventListener('click', e => {
@@ -2443,6 +2452,20 @@ function wireStaticEvents() {
       if (!btn) return;
       import('./admin.js').then(m => m.deleteUser(btn.dataset.email));
     });
+}
+
+function wireStaticEvents() {
+  wireLoginEvents();
+  wireToolbarEvents();
+  wireVersionPanelEvents();
+  wireShareModalEvents();
+  wireCollabModalEvents();
+  wireAdminPanelEvents();
+  wireDeleteModalEvents();
+  wireTaskModalEvents();
+  wireArrowStyleEvents();
+  wireProjectModalEvents();
+  wireDelegationEvents();
 }
 
 /* ═══════════════════════════════════════════
