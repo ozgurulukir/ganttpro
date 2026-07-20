@@ -29,10 +29,6 @@ export function getAuditLog() {
   }
 }
 
-export function clearAuditLog() {
-  localStorage.removeItem(LS_KEY);
-}
-
 const ACTION_LABELS = {
   taskCreated: () => t('audit.taskCreated'),
   taskEdited: () => t('audit.taskEdited'),

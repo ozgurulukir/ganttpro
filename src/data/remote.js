@@ -55,10 +55,6 @@ export async function writeUserData(uid, data) {
   );
 }
 
-export async function updateUserData(uid, data) {
-  await updateDoc(doc(db, 'gantt_user_data', uid), { data, updated_at: new Date().toISOString() });
-}
-
 export function watchUserData(uid, callback) {
   return onSnapshot(doc(db, 'gantt_user_data', uid), callback);
 }

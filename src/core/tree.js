@@ -15,34 +15,6 @@ export function taskById(tasks, id) {
   return tasks.find(t => t.id === id);
 }
 
-/** Tree-guide-line type per ancestor column for the row at `idx`. */
-export function getTreeLines(rows, idx) {
-  const d = rows[idx].depth;
-  if (d === 0) return [];
-  const types = [];
-  for (let col = 0; col < d - 1; col++) {
-    let hasPipe = false;
-    for (let j = idx + 1; j < rows.length; j++) {
-      if (rows[j].depth <= col) break;
-      if (rows[j].depth === col + 1) {
-        hasPipe = true;
-        break;
-      }
-    }
-    types.push(hasPipe ? 'pipe' : 'space');
-  }
-  let isLast = true;
-  for (let j = idx + 1; j < rows.length; j++) {
-    if (rows[j].depth < d) break;
-    if (rows[j].depth === d) {
-      isLast = false;
-      break;
-    }
-  }
-  types.push(isLast ? 'last' : 'fork');
-  return types;
-}
-
 /** Does `id` (transitively, through groups) have a milestone descendant? */
 export function hasMilestoneDescendant(tasks, id, visited = new Set()) {
   if (visited.has(id)) return false;

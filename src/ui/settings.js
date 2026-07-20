@@ -2,7 +2,7 @@
 import { D } from '../render/deps.js';
 import { esc } from '../core/format.js';
 import { t } from '../i18n/index.js';
-import { logAudit, renderAuditLog, clearAuditLog } from '../data/audit.js';
+import { logAudit, renderAuditLog } from '../data/audit.js';
 
 export function onSettingBarDatesChange() {
   const { setShowBarDates, render } = D;

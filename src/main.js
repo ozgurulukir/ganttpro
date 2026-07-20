@@ -1169,7 +1169,6 @@ function totalW() {
 
 /* tree-query adapters: pure logic in core/tree.js; bind global state.
    Removed when state.js lands (Phase 2.x). */
-const { getTreeLines } = Tree;
 function taskById(id) {
   return Tree.taskById(tasks, id);
 }

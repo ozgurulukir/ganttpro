@@ -4,7 +4,6 @@ import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import {
   taskById,
-  getTreeLines,
   hasMilestoneDescendant,
   getRowNum,
   getTaskByRowNum,
@@ -186,19 +185,6 @@ test('hasMilestoneDescendant — group with milestone descendant is true', () =>
   assert.equal(hasMilestoneDescendant(TASKS, 'g2'), true); // direct child m1
   assert.equal(hasMilestoneDescendant(TASKS, 'root1'), true); // via g2
   assert.equal(hasMilestoneDescendant(TASKS, 't1'), false); // leaf
-});
-
-test('getTreeLines — guide-line types per ancestor column', () => {
-  const rows = [
-    { task: { id: 'A' }, depth: 0 },
-    { task: { id: 'B' }, depth: 1 },
-    { task: { id: 'C' }, depth: 2 },
-    { task: { id: 'D' }, depth: 1 }
-  ];
-  assert.deepEqual(getTreeLines(rows, 0), []); // root
-  assert.deepEqual(getTreeLines(rows, 1), ['fork']); // B: D follows at same depth
-  assert.deepEqual(getTreeLines(rows, 2), ['pipe', 'last']); // C: pipe col0, last in branch
-  assert.deepEqual(getTreeLines(rows, 3), ['last']); // D: final sibling
 });
 
 test('getWBSCode — dot-separated 1-based sibling indices from root', () => {
