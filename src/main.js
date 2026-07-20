@@ -13,7 +13,8 @@ import * as CPM from './core/critical-path.js';
 import * as Schedule from './core/schedule.js';
 import * as Format from './core/format.js';
 import * as DateUtils from './core/date.js';
-import { validateProject, validateProjects } from './core/validate.js';
+import { validateProject } from './core/validate.js';
+import * as Sync from './sync.js';
 import { D } from './render/deps.js';
 import {
   highlightRow,
@@ -33,7 +34,6 @@ import { renderChartHeader } from './render/chart-header.js';
 import { renderChartBody } from './render/chart-body.js';
 import { renderTaskPanel } from './render/task-panel.js';
 import {
-  modalOpen,
   populateModal,
   syncWday,
   syncEndFromWday,
@@ -122,11 +122,9 @@ import {
   addShare,
   removeShare
 } from './collab.js';
-import { auth, db, googleProvider, firebaseError } from './data/firebase.js';
+import { auth, googleProvider, firebaseError } from './data/firebase.js';
 import { onAuthStateChanged } from 'firebase/auth';
 import * as Local from './data/local.js';
-import * as Share from './data/share.js';
-import * as Remote from './data/remote.js';
 import { initI18n, translateDOM, t, setLocale, getLocale } from './i18n/index.js';
 import { initContextMenu, showContextMenu } from './ui/context-menu.js';
 import { logAudit } from './data/audit.js';
@@ -1368,12 +1366,12 @@ let _isShareLinkMode = false;
 function updateReadOnly() {
   const cp = curProj();
   // Use !! to ensure boolean (avoid undefined causing toggle() to act as actual toggle)
-  isReadOnly = !!(_isShareLinkMode || isReadOnlyShared(cp));
+  isReadOnly = !!(_isShareLinkMode || Sync.isReadOnlyShared(cp));
   document.body.classList.toggle('readonly', isReadOnly);
   const badge = document.querySelector('.readonly-badge');
   if (badge) badge.style.display = isReadOnly ? 'flex' : 'none';
   // shareBtn and collabBtn only for own projects
-  const isOwnProj = !_isShareLinkMode && !isSharedProject(cp);
+  const isOwnProj = !_isShareLinkMode && !Sync.isSharedProject(cp);
   ['shareBtn', 'collabBtn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = isOwnProj ? '' : 'none';
@@ -1382,124 +1380,6 @@ function updateReadOnly() {
 
 function getOwnerId() {
   return Local.getOwnerId();
-}
-
-/* ═══════════════════════════════════════════
-   COLLABORATION — SHARED PROJECTS
-═══════════════════════════════════════════ */
-let _sharedChannels = [];
-const _shareMap = new Map();
-
-function shareKey(ownerId, projectId) {
-  return `${ownerId}:${projectId}`;
-}
-function recordShare(ownerId, projectId, permission) {
-  _shareMap.set(shareKey(ownerId, projectId), permission);
-}
-function getSharePermission(ownerId, projectId) {
-  return _shareMap.get(shareKey(ownerId, projectId));
-}
-function isSharedProject(proj) {
-  return (
-    proj &&
-    proj.ownerId &&
-    currentUser &&
-    proj.ownerId !== currentUser.uid &&
-    _shareMap.has(shareKey(proj.ownerId, proj.id))
-  );
-}
-function isReadOnlyShared(proj) {
-  return isSharedProject(proj) && getSharePermission(proj.ownerId, proj.id) === 'read';
-}
-function stripSharedFlags(proj) {
-  const p = { ...proj };
-  delete p._isShared;
-  delete p._permission;
-  delete p._ownerId;
-  delete p.ownerId;
-  delete p._history;
-  delete p.shareToken;
-  return p;
-}
-
-async function loadSharedProjects() {
-  if (!currentUser) return;
-  try {
-    const shares = await Remote.getProjectSharesForEmail(currentUser.email);
-    if (!shares.length) return;
-
-    const byOwner = {};
-    shares.forEach(s => {
-      if (!byOwner[s.owner_id]) byOwner[s.owner_id] = [];
-      byOwner[s.owner_id].push(s);
-    });
-
-    for (const [ownerId, ownerShares] of Object.entries(byOwner)) {
-      const ownerData = await Remote.readUserData(ownerId);
-      if (!ownerData?.projects) continue;
-
-      ownerShares.forEach(share => {
-        const raw = ownerData.projects.find(p => p.id == share.project_id);
-        if (!raw) return;
-        recordShare(ownerId, share.project_id, share.permission);
-        if (projects.find(p => p.id === raw.id && p.ownerId === ownerId)) return;
-        const proj = validateProject(raw);
-        if (!proj) return;
-        proj.ownerId = ownerId;
-        projects.push(proj);
-      });
-    }
-
-    setupSharedRealtime(Object.keys(byOwner));
-  } catch (e) {
-    console.error('loadSharedProjects:', e);
-  }
-}
-
-function setupSharedRealtime(ownerIds) {
-  if (!db) return;
-  _sharedChannels.forEach(unsub => unsub());
-  _sharedChannels = [];
-
-  ownerIds.forEach(ownerId => {
-    let skipFirst = true;
-    const unsub = Remote.watchUserData(ownerId, async snap => {
-      if (skipFirst) {
-        skipFirst = false;
-        return;
-      }
-      // Skip if we are currently saving to avoid clobbering in-flight writes
-      if (_pendingCloudWrites.size > 0) return;
-      if (snap && snap.id !== ownerId) return;
-
-      const ownerData = snap ? snap.data()?.data || null : await Remote.readUserData(ownerId);
-      if (!ownerData?.projects) return;
-      projects = projects.map(p => {
-        if (p.ownerId === ownerId) {
-          const raw = ownerData.projects.find(op => op.id === p.id);
-          if (raw) {
-            const fresh = validateProject(raw);
-            if (fresh) {
-              fresh.ownerId = ownerId;
-              return fresh;
-            }
-          }
-        }
-        return p;
-      });
-      if (curProj()?.ownerId === ownerId) {
-        tasks = curProj().tasks;
-        nextId = curProj().nextId;
-        scheduleTasks();
-        recalcProjEnd();
-      }
-      saveToLS();
-      updateProjUI();
-      render();
-      showSyncToast();
-    });
-    _sharedChannels.push(unsub);
-  });
 }
 
 /* ═══════════════════════════════════════════
@@ -1652,11 +1532,11 @@ function syncRenderDeps() {
   D.render = render;
   D.scheduleTasks = scheduleTasks;
   D.recalcProjEnd = recalcProjEnd;
-  D.saveToLS = saveToLS;
-  D.saveToCloud = saveToCloud;
+  D.saveToLS = Sync.saveToLS;
+  D.saveToCloud = Sync.saveToCloud;
   D.persist = persist;
-  D.isSharedProject = isSharedProject;
-  D.isReadOnlyShared = isReadOnlyShared;
+  D.isSharedProject = Sync.isSharedProject;
+  D.isReadOnlyShared = Sync.isReadOnlyShared;
   D.showStatus = showStatus;
   D.scrollToToday = scrollToToday;
   D.getNextGroupColor = getNextGroupColor;
@@ -1752,11 +1632,10 @@ function syncRenderDeps() {
   };
   D.IsGuestMode = () => _guestMode;
   D.initApp = initApp;
-  D.cleanupRealtime = cleanupRealtime;
-  D.setSyncDot = setSyncDot;
+  D.cleanupRealtime = Sync.cleanupRealtime;
+  D.setSyncDot = Sync.setSyncDot;
 }
 
-let _saveTimer = null;
 function render() {
   syncRenderDeps();
   renderTaskPanel();
@@ -1766,72 +1645,14 @@ function render() {
   if (undoBtn) undoBtn.disabled = _getHistory(curProj()).length === 0;
 }
 
-function debounceSaveToCloud() {
-  if (!currentUser) return;
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => saveToCloud(), 600);
-}
-
 function persist() {
-  _dirtySinceCloud = true;
-  saveToLS();
-  debounceSaveToCloud();
+  Sync.persist();
 }
 
-/* ═══════════════════════════════════════════
-   CLOUD SYNC STATE (Firebase init in src/data/firebase.js)
-═══════════════════════════════════════════ */
-let _cloudSaveSeq = 0;
-let _dirtySinceCloud = false;
-const _pendingCloudWrites = new Set();
 let currentUser = null;
 let _guestMode = false;
 let _appInitialized = false;
 let _initAppPromise = null;
-
-const _syncChannel = new BroadcastChannel('gantt_sync');
-let _syncReloadTimer = null;
-
-/* Offline queue: saveToCloud always pushes full state, so we only need
-   a flag to know a push is pending. Flush on reconnect or next init. */
-function setOfflinePending() {
-  const q = JSON.parse(localStorage.getItem('gantt_offline_queue') || '[]');
-  if (!q.includes('pending')) {
-    q.push('pending');
-    localStorage.setItem('gantt_offline_queue', JSON.stringify(q));
-  }
-}
-
-function clearOfflinePending() {
-  localStorage.removeItem('gantt_offline_queue');
-}
-
-function hasOfflinePending() {
-  return JSON.parse(localStorage.getItem('gantt_offline_queue') || '[]').length > 0;
-}
-
-_syncChannel.onmessage = e => {
-  if (e.data?.type === 'save') {
-    if (_pendingCloudWrites.size > 0 || modalOpen || _dirtySinceCloud) return;
-    // Debounce: another tab saved. Wait briefly in case the user
-    // is also editing, then reload. Prevents clobbering unsaved work.
-    clearTimeout(_syncReloadTimer);
-    _syncReloadTimer = setTimeout(async () => {
-      if (_dirtySinceCloud || _pendingCloudWrites.size > 0) return;
-      const ok = await loadFromCloud();
-      if (ok) {
-        if (projects.length) {
-          scheduleTasks();
-          recalcProjEnd();
-        }
-        saveToLS();
-        updateProjUI();
-        render();
-        showSyncToast();
-      }
-    }, 400);
-  }
-};
 
 let _resizersSetup = false;
 
@@ -1840,215 +1661,6 @@ function safeSetupResizers() {
   _resizersSetup = true;
   setupColResizers();
   setupResizer();
-}
-
-function setSyncDot(state) {
-  const dot = document.getElementById('syncDot');
-  if (!dot) return;
-  dot.className = 'sync-dot' + (state ? ' ' + state : '');
-  dot.title =
-    {
-      saving: t('status.syncSaving'),
-      ok: t('status.syncOk'),
-      err: t('status.syncErr'),
-      off: t('status.syncOff'),
-      local: t('status.syncLocal')
-    }[state] || t('status.syncDefault');
-}
-
-async function _saveToCloudInner() {
-  if (curProj()) curProj().nextId = nextId;
-  const cp = curProj();
-
-  if (!cp) {
-    await Remote.writeUserData(currentUser.uid, {
-      projects: [],
-      currentProjId: null,
-      nextProjId
-    });
-    setSyncDot('ok');
-    _dirtySinceCloud = false;
-  } else if (isSharedProject(cp) && getSharePermission(cp.ownerId, cp.id) === 'edit') {
-    await Remote.updateSharedProjectAtomic(cp.ownerId, stripSharedFlags(cp));
-    setSyncDot('ok');
-    _dirtySinceCloud = false;
-  } else if (!isSharedProject(cp)) {
-    const ownProjects = projects.filter(p => !isSharedProject(p)).map(stripSharedFlags);
-    await Remote.writeUserData(currentUser.uid, {
-      projects: ownProjects,
-      currentProjId,
-      nextProjId
-    });
-    setSyncDot('ok');
-    _dirtySinceCloud = false;
-  }
-}
-
-async function saveToCloud() {
-  if (!currentUser) return;
-  setSyncDot('saving');
-  const token = ++_cloudSaveSeq;
-
-  if (!navigator.onLine) {
-    setOfflinePending();
-    setSyncDot('err');
-    return;
-  }
-
-  const savePromise = _saveToCloudInner();
-  _pendingCloudWrites.add(savePromise);
-
-  try {
-    await savePromise;
-    _syncChannel.postMessage({ type: 'save' });
-  } catch (e) {
-    console.error('saveToCloud failed', e);
-    setSyncDot('err');
-    if (e.message && e.message.includes('offline')) {
-      setOfflinePending();
-    }
-  } finally {
-    _pendingCloudWrites.delete(savePromise);
-  }
-}
-
-window.addEventListener('online', () => {
-  if (hasOfflinePending()) {
-    clearOfflinePending();
-    saveToCloud();
-  }
-});
-
-async function loadFromCloud() {
-  if (!currentUser) return false;
-  try {
-    const s = await Remote.readUserData(currentUser.uid);
-    if (!s) return false;
-    projects = validateProjects(s.projects || []);
-    nextProjId = s.nextProjId ?? 1;
-    if (!projects.length) {
-      // User intentionally cleared all projects
-      currentProjId = null;
-      tasks = [];
-      nextId = 1;
-      return true;
-    }
-    currentProjId =
-      s.currentProjId && projects.find(p => p.id === Number(s.currentProjId))
-        ? Number(s.currentProjId)
-        : projects[0].id;
-    tasks = curProj().tasks;
-    nextId = curProj().nextId;
-    CHART_START = new Date(curProj().startDate);
-    CHART_END = new Date(curProj().endDate);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-async function loadShareFromCloud(token) {
-  const hashMatch = location.hash.match(/[#&]d=([^&]*)/);
-  const hashData = hashMatch ? hashMatch[1] : null;
-  if (hashData) {
-    const obj = Share.decodeData(hashData);
-    if (obj) return obj;
-  }
-  try {
-    return await Share.loadShareDoc(token);
-  } catch (e) {
-    return null;
-  }
-}
-
-let _realtimeUnsub = null;
-
-function cleanupRealtime() {
-  if (_realtimeUnsub) {
-    _realtimeUnsub();
-    _realtimeUnsub = null;
-  }
-  _sharedChannels.forEach(unsub => unsub());
-  _sharedChannels = [];
-  _shareMap.clear();
-  clearTimeout(_saveTimer);
-  _saveTimer = null;
-}
-
-function setupRealtime() {
-  if (!currentUser || !db) return;
-  if (_realtimeUnsub) _realtimeUnsub();
-  let skipFirst = true;
-  _realtimeUnsub = Remote.watchUserData(currentUser.uid, async () => {
-    if (skipFirst) {
-      skipFirst = false;
-      return;
-    }
-    if (_pendingCloudWrites.size > 0) return;
-    if (_dirtySinceCloud) return;
-    if (modalOpen) return;
-    const ok = await loadFromCloud();
-    if (ok) {
-      if (projects.length) {
-        scheduleTasks();
-        recalcProjEnd();
-      }
-      saveToLS();
-      updateProjUI();
-      render();
-      showSyncToast();
-    }
-  });
-}
-
-function showSyncToast() {
-  let el = document.getElementById('syncToast');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'syncToast';
-    el.style.cssText =
-      'position:fixed;bottom:20px;right:20px;background:var(--t1);color:var(--surface);padding:8px 14px;border-radius:8px;font-size:12px;z-index:9999;opacity:0;transition:opacity .3s';
-    document.body.appendChild(el);
-  }
-  el.textContent = '📡 ' + t('status.dataUpdated');
-  el.style.opacity = '1';
-  setTimeout(() => (el.style.opacity = '0'), 2500);
-}
-
-/* ═══════════════════════════════════════════
-   LOCALSTORAGE
-═══════════════════════════════════════════ */
-function saveToLS() {
-  try {
-    if (curProj()) curProj().nextId = nextId;
-    const ownProjects = projects.filter(p => !isSharedProject(p)).map(stripSharedFlags);
-    Local.saveToLS({ projects: ownProjects, currentProjId, nextProjId });
-  } catch (e) {
-    console.error('saveToLS:', e);
-    if (e.name === 'QuotaExceededError') {
-      showStatus(t('status.quotaExceeded'));
-    }
-  }
-}
-
-function loadFromLS() {
-  try {
-    const d = Local.loadFromLS();
-    if (!d?.projects?.length) return false;
-    projects = validateProjects(d.projects);
-    nextProjId = d.nextProjId ?? projects.length + 1;
-    currentProjId =
-      d.currentProjId && projects.find(p => p.id === Number(d.currentProjId))
-        ? Number(d.currentProjId)
-        : projects[0].id;
-    tasks = curProj().tasks;
-    nextId = curProj().nextId;
-    CHART_START = new Date(curProj().startDate);
-    CHART_END = new Date(curProj().endDate);
-    return true;
-  } catch (e) {
-    return false;
-  }
 }
 
 function showApp() {
@@ -2097,24 +1709,24 @@ async function initApp() {
       currentProjId = null;
       tasks = [];
 
-      if (navigator.onLine && hasOfflinePending()) {
-        clearOfflinePending();
+      if (navigator.onLine && Sync.hasOfflinePending()) {
+        Sync.clearOfflinePending();
         // If we had pending offline writes, load from local storage first, then save to cloud
-        loadFromLS();
-        saveToCloud();
+        Sync.loadFromLS();
+        Sync.saveToCloud();
       }
 
-      const cloudOk = await loadFromCloud();
-      if (!cloudOk) loadFromLS();
-      await loadSharedProjects();
-      setupRealtime();
+      const cloudOk = await Sync.loadFromCloud();
+      if (!cloudOk) Sync.loadFromLS();
+      await Sync.loadSharedProjects();
+      Sync.setupRealtime();
       updateProjUI();
       if (projects.length) {
         scheduleTasks();
         recalcProjEnd();
       }
       render();
-      setSyncDot(cloudOk ? 'ok' : _guestMode ? 'off' : 'err');
+      Sync.setSyncDot(cloudOk ? 'ok' : _guestMode ? 'off' : 'err');
       setTimeout(scrollToToday, 120);
       const adminBtn = document.getElementById('adminBtn');
       if (adminBtn) adminBtn.style.display = isAdmin() ? '' : 'none';
@@ -2226,10 +1838,11 @@ function wireToolbarEvents() {
   });
   clk('adminBtn', () => import('./admin.js').then(m => m.openAdminPanel()));
   clk('signOutBtn', async () => {
-    if (_pendingCloudWrites.size > 0) {
-      setSyncDot('saving');
+    const pending = Sync.getPendingCloudWrites();
+    if (pending.size > 0) {
+      Sync.setSyncDot('saving');
       try {
-        await Promise.allSettled(_pendingCloudWrites);
+        await Promise.allSettled(pending);
       } catch (e) {
         console.error('Error waiting for pending writes before signout', e);
       }
@@ -2406,11 +2019,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof window.__gpReady === 'function') window.__gpReady();
   };
 
-  await initI18n();
-  translateDOM();
-  wireStaticEvents();
-  setupSync();
   safeSetupResizers();
+
+  // Initialize sync module with context
+  Sync.initSync({
+    getCurrentUser: () => currentUser,
+    getCurProj,
+    getProjects: () => projects,
+    getCurrentProjId: () => currentProjId,
+    getNextId: () => nextId,
+    getNextProjId: () => nextProjId,
+    getChartStart: () => CHART_START,
+    getChartEnd: () => CHART_END,
+    setProjects: arr => {
+      projects = arr;
+    },
+    setCurrentProjId: id => {
+      currentProjId = id;
+    },
+    setTasks: arr => {
+      tasks = arr;
+    },
+    setNextId: v => {
+      nextId = v;
+    },
+    setNextProjId: v => {
+      nextProjId = v;
+    },
+    setChartStart: d => {
+      CHART_START = d;
+    },
+    setChartEnd: d => {
+      CHART_END = d;
+    },
+    scheduleTasks,
+    recalcProjEnd,
+    render,
+    updateProjUI,
+    showStatus
+  });
 
   try {
     await initI18n();
@@ -2448,7 +2095,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Read-only share mode: load from gantt_shares table (no auth needed)
     _isShareLinkMode = true;
     showApp();
-    const projData = await loadShareFromCloud(shareToken);
+    const projData = await Sync.loadShareFromCloud(shareToken);
     if (!projData) {
       document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;flex-direction:column;gap:12px;color:#555">
         <div style="font-size:48px">🔗</div>
@@ -2479,7 +2126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     scheduleTasks();
     recalcProjEnd();
     render();
-    setSyncDot('off');
+    Sync.setSyncDot('off');
     setTimeout(scrollToToday, 120);
     return;
   }
