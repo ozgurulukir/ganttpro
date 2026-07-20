@@ -1806,7 +1806,7 @@ function wireToolbarEvents() {
   document.querySelectorAll('[data-export]').forEach(b =>
     b.addEventListener('click', async () => {
       const { exportPNG, exportPDF, exportCSV, exportICalendar, openPrintSettings } =
-        await import('./export.js');
+        await import('./export/index.js');
       const fmt = b.dataset.export;
       if (fmt === 'png') exportPNG();
       else if (fmt === 'pdf') exportPDF();
