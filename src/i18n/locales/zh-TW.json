@@ -353,6 +353,7 @@
     "workdays": "工作日",
     "customHolidays": "自訂非工作日",
     "addHoliday": "新增假日",
+    "loadHoliday": "載入假日",
     "holidayDate": "日期",
     "holidayLabel": "標籤（選填）",
     "noHolidays": "尚無自訂假日",

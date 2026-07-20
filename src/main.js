@@ -5,7 +5,8 @@ import {
   addWorkingDays,
   nextWorkingDay,
   shiftWorkingDays,
-  countWorkingDays
+  countWorkingDays,
+  loadHolidaysFromJSON
 } from './core/calendar.js';
 import * as Tree from './core/tree.js';
 import * as Deps from './core/deps.js';
@@ -1719,6 +1720,15 @@ async function initApp() {
       if (!cloudOk) Sync.loadFromLS();
       await Sync.loadSharedProjects();
       Sync.setupRealtime();
+      try {
+        const res = await fetch('/holidays/tw.json');
+        if (res.ok) {
+          const data = await res.json();
+          loadHolidaysFromJSON(data);
+        }
+      } catch {
+        // Holidays remain unloaded; app continues without built-in non-workdays.
+      }
       updateProjUI();
       if (projects.length) {
         scheduleTasks();

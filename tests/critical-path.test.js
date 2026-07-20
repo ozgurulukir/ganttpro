@@ -2,6 +2,7 @@
    Dates use 2026-05 where May 4=Mon, 8=Fri, 11=Mon (no holidays in range).
    Forward pass (ES/EF = start/end) is pre-supplied — we test only the backward
    pass + float classification that computeCriticalPath owns. */
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import {
@@ -9,6 +10,12 @@ import {
   computeCriticalPath,
   getCriticalPredTaskIds
 } from '../src/core/critical-path.js';
+import { loadHolidaysFromJSON } from '../src/core/calendar.js';
+
+const holidayData = JSON.parse(
+  readFileSync(new URL('../public/holidays/tw.json', import.meta.url), 'utf-8')
+);
+loadHolidaysFromJSON(holidayData);
 
 /* ── prevWorkingDay ── */
 

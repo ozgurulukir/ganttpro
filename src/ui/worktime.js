@@ -1,6 +1,6 @@
 import { t } from '../i18n/index.js';
 import { parseDate, formatDate, dayOfWeek } from '../core/date.js';
-import { setWorkDays, setCustomHolidays } from '../core/calendar.js';
+import { setWorkDays, setCustomHolidays, loadHolidaysFromJSON } from '../core/calendar.js';
 
 const LS_WORKDAYS = 'gp_workdays';
 const LS_HOLIDAYS = 'gp_customHolidays';
@@ -51,7 +51,7 @@ export function openWorkTimeModal() {
       <button class='modal-close' onclick='document.getElementById("worktimeOverlay").classList.remove("open")'>✕</button>
       <div class='modal-title'>🗓 ${t('worktime.title')}</div>
       <div class='worktime-section'><h4>${t('worktime.workdays')}</h4><div class='worktime-day-chips' id='wtDayChips'></div></div>
-      <div class='worktime-section'><h4>${t('worktime.customHolidays')}</h4><div id='wtHolidayList'></div><div style='display:flex;gap:8px;margin-top:8px'><input type='date' id='wtHolidayDate' style='padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px'><input id='wtHolidayLabel' placeholder='${t('worktime.holidayLabel')}' style='padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;flex:1'><button class='btn btn-primary' id='wtAddHoliday' style='font-size:12px'>${t('worktime.addHoliday')}</button></div></div>
+      <div class='worktime-section'><h4>${t('worktime.customHolidays')}</h4><div id='wtHolidayList'></div><div style='display:flex;gap:8px;margin-top:8px'><input type='date' id='wtHolidayDate' style='padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px'><input id='wtHolidayLabel' placeholder='${t('worktime.holidayLabel')}' style='padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;flex:1'><button class='btn btn-primary' id='wtAddHoliday' style='font-size:12px'>${t('worktime.addHoliday')}</button><button class='btn' id='wtLoadHoliday' style='font-size:12px'>${t('worktime.loadHoliday')}</button></div></div>
       <div class='modal-footer'><button class='btn' onclick='document.getElementById("worktimeOverlay").classList.remove("open")'>${t('common.cancel')}</button><button class='btn btn-primary' id='wtSaveBtn'>${t('worktime.save')}</button></div>
     </div>`;
     el.addEventListener('click', e => {
@@ -132,6 +132,29 @@ export function openWorkTimeModal() {
     setWorkDays(workdays);
     setCustomHolidays(holidays.map(h => h.date));
     el.classList.remove('open');
+  };
+
+  el.querySelector('#wtLoadHoliday').onclick = async () => {
+    try {
+      const res = await fetch('/holidays/tw.json');
+      if (!res.ok) return;
+      const data = await res.json();
+      loadHolidaysFromJSON(data);
+      const entries = Array.isArray(data) ? data : [data];
+      for (const entry of entries) {
+        if (entry.holidays) {
+          for (const [date, label] of Object.entries(entry.holidays)) {
+            if (!holidays.find(h => h.date === date)) {
+              holidays.push({ date, label });
+            }
+          }
+        }
+      }
+      holidays.sort((a, b) => a.date.localeCompare(b.date));
+      renderHolidays();
+    } catch {
+      // Silently ignore load failures.
+    }
   };
 
   el.classList.add('open');

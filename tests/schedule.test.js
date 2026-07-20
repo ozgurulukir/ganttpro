@@ -2,6 +2,7 @@
    Dates use 2026-04/05 where Apr 29=Wed, 30=Thu, May 1=Labour Day (holiday),
    May 4=Mon, 6=Wed, 7=Thu, 8=Fri.  scheduleTasks MUTATES tasks in place —
    we assert the resulting start/end/date values. */
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import {
@@ -9,6 +10,12 @@ import {
   scheduleTasks,
   autoScheduleFromDeps
 } from '../src/core/schedule.js';
+import { loadHolidaysFromJSON } from '../src/core/calendar.js';
+
+const holidayData = JSON.parse(
+  readFileSync(new URL('../public/holidays/tw.json', import.meta.url), 'utf-8')
+);
+loadHolidaysFromJSON(holidayData);
 
 /* ── allGroupMembersScheduled ── */
 

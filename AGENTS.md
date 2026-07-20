@@ -1,8 +1,8 @@
 # GanttPro — Agent Guide
 
-GanttPro is a Gantt chart project management tool. It is a single-page web application built with vanilla ES modules and Vite, backed by Firebase Auth + Firestore, and localized for Traditional Chinese (`zh-TW`) with English support.
+GanttPro is a single-page Gantt chart project management tool built with vanilla ES modules, Vite, Firebase Auth + Firestore, and localized for Traditional Chinese (`zh-TW`) with English support.
 
-This guide is written for AI coding agents who need to understand the project quickly. It reflects the actual code and configuration as of the latest commit.
+This guide helps AI coding agents understand the project quickly and reflects the actual code and configuration as of the latest commit.
 
 ---
 
@@ -10,10 +10,10 @@ This guide is written for AI coding agents who need to understand the project qu
 
 - **Name:** `ganttpro` (private project)
 - **What it does:** Interactive Gantt charts with task scheduling, dependency arrows, critical path analysis, milestones, workload heatmaps, project sharing, collaboration, version history, baseline comparison, and export (PNG / CSV / PDF / iCalendar).
-- **Primary UI language:** Traditional Chinese (`zh-TW`). English (`en`) is a secondary locale.
+- **Primary UI language:** Traditional Chinese (`zh-TW`). English (`en`) is secondary.
 - **Documentation and code comments:** English.
 - **Entry point for development:** `index.html` → `src/main.js`
-- **Legacy standalone file:** `gantt.html` exists as a self-contained Chinese-language variant with inline scripts and Firebase compat CDN scripts. It is **not** part of the Vite build.
+- **Legacy standalone file:** `gantt.html` is a self-contained Chinese-language variant with inline scripts and Firebase compat CDN scripts. It is **not** part of the Vite build.
 
 ---
 
@@ -185,7 +185,7 @@ tests/
 └── validate.test.js         Input sanitization, bounds, migration
 ```
 
-Currently **129 tests** cover only `core/` modules. There are no tests for render, UI, data, or feature modules.
+129 tests cover `core/` only; no tests exist for render, UI, data, or feature modules.
 
 ---
 
@@ -204,7 +204,7 @@ Currently **129 tests** cover only `core/` modules. There are no tests for rende
 export const D = { dragSrcId: null };
 ```
 
-`main.js` repopulates `D` via `syncRenderDeps()` before each render cycle. Render modules destructure from `D` to access app state and helper functions. This is the project's state bridge between the shell and the render layer.
+`main.js` repopulates `D` via `syncRenderDeps()` before each render cycle. Render modules destructure from `D` to access app state and helpers. This is the state bridge between the shell and render layer.
 
 Extracted modules (`task-ops.js`, `history.js`, `sync.js`) are wired through the D object via wrapper closures that capture current state at call time, avoiding circular imports.
 
@@ -217,11 +217,11 @@ parseDate('2026-07-06'); // days since 1970-01-01
 formatDate(dayNum); // 'YYYY-MM-DD'
 ```
 
-This avoids the UTC/local `Date` frame-mixing bugs that existed in earlier code. Tests are expected to pass identically in any timezone.
+This avoids UTC/local `Date` frame-mixing bugs from earlier code. Tests pass identically in any timezone.
 
 ### 5.4 Lazy loading
 
-`src/admin.js`, `src/export/` (barrel), and `src/ui/worktime.js` are loaded with dynamic `import()` only when the user opens the admin panel, export functionality, or work-time settings.
+`src/admin.js`, `src/export/` (barrel), and `src/ui/worktime.js` load via dynamic `import()` only when the user opens the admin panel, export functionality, or work-time settings.
 
 ### 5.5 Extracted modules
 
@@ -253,8 +253,8 @@ All export functions read state from the shared `D` object (see §5.2) and are f
 
 ### 5.7 Event wiring
 
-- `wireStaticEvents()` in `main.js` is a thin orchestrator that delegates to 11 focused handler functions: `wireLoginEvents`, `wireToolbarEvents`, `wireVersionPanelEvents`, `wireShareModalEvents`, `wireCollabModalEvents`, `wireAdminPanelEvents`, `wireDeleteModalEvents`, `wireTaskModalEvents`, `wireArrowStyleEvents`, `wireProjectModalEvents`, `wireDelegationEvents`.
-- Three DOM utility helpers (`$`, `clk`, `overlayClose`) are hoisted to module scope for reuse across all handlers.
+- `wireStaticEvents()` in `main.js` delegates to 11 focused handlers: `wireLoginEvents`, `wireToolbarEvents`, `wireVersionPanelEvents`, `wireShareModalEvents`, `wireCollabModalEvents`, `wireAdminPanelEvents`, `wireDeleteModalEvents`, `wireTaskModalEvents`, `wireArrowStyleEvents`, `wireProjectModalEvents`, `wireDelegationEvents`.
+- Three DOM helpers (`$`, `clk`, `overlayClose`) are hoisted to module scope for reuse across handlers.
 - `index.html` uses `id` attributes and event delegation in `main.js` / `interactions.js`.
 - `gantt.html` (legacy) uses inline `onclick` handlers. Do not copy that pattern into the Vite codebase.
 
@@ -282,12 +282,12 @@ All export functions read state from the shared `D` object (see §5.2) and are f
 
 - Add new user-facing strings to both `src/i18n/locales/en.json` and `src/i18n/locales/zh-TW.json`.
 - Use `data-i18n`, `data-i18n-title`, or `data-i18n-placeholder` attributes in HTML.
-- Call `translateDOM()` after locale changes or dynamic DOM updates that contain new translatable elements.
+- Call `translateDOM()` after locale changes or dynamic DOM updates containing new translatable elements.
 
 ### 6.4 Comments
 
 - Prefer concise explanatory comments in English.
-- Do not add `TODO` / `FIXME` comments as a substitute for tracked issues; use GitHub issues instead.
+- Do not add `TODO` / `FIXME` comments; use GitHub issues instead.
 
 ---
 
@@ -304,8 +304,8 @@ npm test
 
 ### When changing code
 
-- If you modify `core/`, update or add tests in `tests/`.
-- If you modify render/UI/data/feature modules, there is currently no test coverage; manual browser verification is required.
+- Modify `core/` → update or add tests in `tests/`.
+- Modify render/UI/data/feature modules → no test coverage exists; verify manually in the browser.
 
 ---
 
@@ -359,7 +359,7 @@ The Vite build output in `dist/` is intended for static hosting (Firebase Hostin
 
 ## 9. Security Considerations
 
-- **Firebase config:** Configured via `VITE_FIREBASE_*` variables in `.env`. Defaults to the original project (`ganttpro-819d1`). To use your own Firebase project, set these variables before starting the dev server.
+- **Firebase config:** Configured via `VITE_FIREBASE_*` variables in `.env`. Defaults to `ganttpro-819d1`. To use your own Firebase project, set these before starting the dev server.
 - **Admin email:** Configured via `VITE_ADMIN_EMAIL` in `.env` and enforced in `firestore.rules` (generated from `firestore.rules.template`). After changing `.env`, run `npm run build:rules` then redeploy rules.
 - **Cross-document writes:** Any registered user may write another user's `gantt_user_data` doc. Collaboration relies on the allowlist, not per-project ACLs in rules.
 - **Share links never expire:** Tokens persist indefinitely in `gantt_shares`.
@@ -371,8 +371,8 @@ The Vite build output in `dist/` is intended for static hosting (Firebase Hostin
 ## 10. Known Limitations and Gotchas
 
 - `gantt.html` is a parallel legacy implementation. Changes to `index.html` / `src/` are **not** automatically reflected in `gantt.html`.
-- There is no test coverage for DOM rendering, UI controllers, Firebase integration, or export modules.
-- The build emits a chunk-size warning because the main bundle is >500 kB after minification. Dynamic imports for admin/export already exist; further code-splitting would require additional work.
+- No test coverage for DOM rendering, UI controllers, Firebase integration, or export modules.
+- The build emits a chunk-size warning because the main bundle exceeds 500 kB after minification. Dynamic imports for admin/export already exist; further code-splitting requires additional work.
 - Taiwan holidays are hardcoded for 2025–2027 in `src/core/calendar.js`.
 - Default chart range (`CHART_START` / `CHART_END`) and demo project data are hardcoded in `src/main.js`.
 

@@ -1,5 +1,6 @@
 /* calendar.test.js — characterization tests for the working-day calendar.
    Timezone-safe: uses integer day numbers from date.js (no Date object). */
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import {
@@ -11,8 +12,14 @@ import {
   addWorkingDays,
   nextWorkingDay,
   shiftWorkingDays,
-  countWorkingDays
+  countWorkingDays,
+  loadHolidaysFromJSON
 } from '../src/core/calendar.js';
+
+const holidayData = JSON.parse(
+  readFileSync(new URL('../public/holidays/tw.json', import.meta.url), 'utf-8')
+);
+loadHolidaysFromJSON(holidayData);
 
 test('isWeekend — Saturday and Sunday are weekends', () => {
   assert.equal(isWeekend('2026-07-04'), true); // Sat

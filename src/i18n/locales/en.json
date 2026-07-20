@@ -340,6 +340,7 @@
     "workdays": "Workdays",
     "customHolidays": "Custom Non-Work Days",
     "addHoliday": "Add Holiday",
+    "loadHoliday": "Load Holiday",
     "holidayDate": "Date",
     "holidayLabel": "Label (optional)",
     "noHolidays": "No custom holidays yet",
