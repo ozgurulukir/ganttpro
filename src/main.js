@@ -2033,7 +2033,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize sync module with context
   Sync.initSync({
     getCurrentUser: () => currentUser,
-    getCurProj,
+    getCurProj: () => projects.find(p => p.id === currentProjId),
     getProjects: () => projects,
     getCurrentProjId: () => currentProjId,
     getNextId: () => nextId,
