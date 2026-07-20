@@ -17,7 +17,7 @@ Vite + Firebase.
 - **Workload view**: per-assignee daily load heatmap
 - **Collaboration**: share projects by email with read/edit permissions
 - **Share links**: generate read-only public URLs (no auth required)
-- **Export**: PNG, CSV, PDF (print)
+- **Export**: PNG, CSV, PDF (print), iCalendar
 - **Version history**: save and restore project snapshots
 - **Baseline comparison**: overlay planned vs actual dates
 - **Dark mode**, zoom controls (day/week/month granularity)
@@ -62,7 +62,7 @@ npm run preview  # preview built output
 ### Tests
 
 ```bash
-npm test                            # run all 105 tests
+npm test                            # run all 129 tests
 TZ=America/Los_Angeles npm test     # verify timezone independence
 ```
 
@@ -70,7 +70,11 @@ TZ=America/Los_Angeles npm test     # verify timezone independence
 
 ```
 src/
-├── main.js                  App entry: state, render loop, event wiring, sync
+├── main.js                  App entry: state, render loop, event wiring
+│
+├── task-ops.js              Tree manipulation: indent, outdent, reorder tasks
+├── history.js               Undo/redo: pushHistory, undo with state snapshots
+├── sync.js                  Cloud sync, local persistence, realtime listeners
 │
 ├── core/                    Pure logic (no DOM, no globals, unit-tested)
 │   ├── date.js              Timezone-safe date arithmetic (integer day numbers)
@@ -96,18 +100,32 @@ src/
 ├── ui/                      UI controllers
 │   ├── modal.js             Task create/edit/delete modal, inline editors
 │   ├── project.js           Project CRUD, template selection, project menu
-│   └── settings.js          Settings, zoom, dark mode, baseline, versions
+│   ├── settings.js          Settings, zoom, dark mode, baseline, versions
+│   └── context-menu.js      Right-click context menu for task rows
+│
+├── export/                  Export formats (lazy-loaded)
+│   ├── index.js             Barrel re-export
+│   ├── png.js               PNG canvas rendering
+│   ├── csv.js               CSV generation
+│   ├── pdf.js               PDF / print settings
+│   └── ical.js              iCalendar (.ics) generation
 │
 ├── data/                    Persistence layer (pure I/O, no app state)
 │   ├── firebase.js          Firebase init (app, auth, firestore)
 │   ├── remote.js            Firestore CRUD: user data, shares, allowed users
 │   ├── local.js             LocalStorage save/load (offline + guest mode)
-│   └── share.js             Share-link encoding + Firestore share-doc I/O
+│   ├── share.js             Share-link encoding + Firestore share-doc I/O
+│   └── audit.js             Audit logging
+│
+├── i18n/                    Localization
+│   ├── index.js             i18next setup, t(), setLocale(), translateDOM()
+│   └── locales/
+│       ├── en.json
+│       └── zh-TW.json
 │
 ├── auth.js                  Google sign-in, guest mode, registration, admin gate
-├── collab.js                Share & collaboration modal (add/remove editors)
-├── admin.js                 Admin user-management panel (lazy-loaded)
-├── export.js                PNG / CSV / PDF export (lazy-loaded)
+├── collab.js                Share & collaboration modal
+├── admin.js                 Admin panel (lazy-loaded)
 └── interactions.js          DOM setup: scroll sync, column/panel resizers
 ```
 
@@ -117,10 +135,16 @@ src/
   unit-tested. `main.js` + `ui/` + `render/` form the imperative shell.
 - **Shared `D` object**: `render/deps.js` exports a mutable object that
   `main.js` repopulates (`syncRenderDeps()`) before each render cycle.
+- **Extracted modules**: `task-ops.js` (tree manipulation), `history.js`
+  (undo/redo), and `sync.js` (cloud sync + local persistence) are wired
+  via the D-object wrapper pattern to avoid circular imports.
 - **Timezone-safe dates**: All calendar math uses integer day numbers
   (`core/date.js`), eliminating UTC/local Date frame-mixing. Tests pass
   identically in any timezone.
-- **Lazy loading**: `export.js` and `admin.js` are dynamically `import()`ed.
+- **Lazy loading**: `export/`, `admin.js`, and `ui/worktime.js` are
+  dynamically `import()`ed.
+- **Event wiring**: `wireStaticEvents()` in `main.js` delegates to 11
+  focused handler functions (login, toolbar, modals, delegation, etc.).
 - **Event delegation**: Dynamic content uses `data-action` attributes +
   delegation instead of inline `onclick`.
 
@@ -156,7 +180,7 @@ See `_pm/Projects/ganttpro-security/done.md` for design decisions.
 
 ## Testing
 
-Tests cover the `core/` pure-logic modules (105 tests):
+Tests cover the `core/` pure-logic modules (129 tests):
 
 ```
 tests/
@@ -166,7 +190,8 @@ tests/
 ├── deps.test.js             Dependency parsing, cycle detection
 ├── schedule.test.js         Forward-pass scheduler (all 4 dep types + lag)
 ├── critical-path.test.js    CPM backward pass, float, critical set
-└── format.test.js           dateToX, colors, initials, XSS escaping
+├── format.test.js           dateToX, colors, initials, XSS escaping
+└── validate.test.js         Input sanitization, bounds, migration
 ```
 
 ## Known Limitations

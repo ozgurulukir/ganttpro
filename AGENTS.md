@@ -9,7 +9,7 @@ This guide is written for AI coding agents who need to understand the project qu
 ## 1. Project Overview
 
 - **Name:** `ganttpro` (private project)
-- **What it does:** Interactive Gantt charts with task scheduling, dependency arrows, critical path analysis, milestones, workload heatmaps, project sharing, collaboration, version history, baseline comparison, and export (PNG / CSV / PDF).
+- **What it does:** Interactive Gantt charts with task scheduling, dependency arrows, critical path analysis, milestones, workload heatmaps, project sharing, collaboration, version history, baseline comparison, and export (PNG / CSV / PDF / iCalendar).
 - **Primary UI language:** Traditional Chinese (`zh-TW`). English (`en`) is a secondary locale.
 - **Documentation and code comments:** English.
 - **Entry point for development:** `index.html` → `src/main.js`
@@ -110,7 +110,11 @@ Source code lives in `src/`. The project follows a **pure core / imperative shel
 
 ```
 src/
-├── main.js                  App entry: state, render loop, event wiring, sync
+├── main.js                  App entry: state, render loop, event wiring
+│
+├── task-ops.js              Tree manipulation: indent, outdent, reorder tasks
+├── history.js               Undo/redo: pushHistory, undo with state snapshots
+├── sync.js                  Cloud sync, local persistence, realtime listeners
 │
 ├── core/                    Pure domain logic (no DOM, no globals, unit-tested)
 │   ├── date.js              Timezone-safe date arithmetic (integer day numbers)
@@ -141,12 +145,19 @@ src/
 │   ├── worktime.js          Custom work days and holiday configuration
 │   └── context-menu.js      Right-click context menu for task rows
 │
+├── export/                  Export formats (lazy-loaded via dynamic import)
+│   ├── index.js             Barrel re-export
+│   ├── png.js               PNG canvas rendering
+│   ├── csv.js               CSV generation
+│   ├── pdf.js               PDF / print settings
+│   └── ical.js              iCalendar (.ics) generation
+│
 ├── data/                    Persistence layer (pure I/O, no app state)
 │   ├── firebase.js          Firebase init (app, auth, firestore)
 │   ├── remote.js            Firestore CRUD: user data, shares, allowed users
 │   ├── local.js             LocalStorage save/load (offline + guest mode)
 │   ├── share.js             Share-link encoding + Firestore share-doc I/O
-│   └── audit.js             Audit logging (QuotaExceededError, etc.)
+│   └── audit.js             Audit logging
 │
 ├── i18n/                    Localization
 │   ├── index.js             i18next setup, t(), setLocale(), translateDOM()
@@ -157,7 +168,6 @@ src/
 ├── auth.js                  Google sign-in, guest mode, registration, admin gate
 ├── collab.js                Share & collaboration modal (add/remove editors)
 ├── admin.js                 Admin user-management panel (lazy-loaded)
-├── export.js                PNG / CSV / PDF export (lazy-loaded)
 └── interactions.js          DOM setup: scroll sync, column/panel resizers
 ```
 
@@ -175,7 +185,7 @@ tests/
 └── validate.test.js         Input sanitization, bounds, migration
 ```
 
-Currently **130 tests** cover only `core/` modules. There are no tests for render, UI, data, or feature modules.
+Currently **129 tests** cover only `core/` modules. There are no tests for render, UI, data, or feature modules.
 
 ---
 
@@ -196,6 +206,8 @@ export const D = { dragSrcId: null };
 
 `main.js` repopulates `D` via `syncRenderDeps()` before each render cycle. Render modules destructure from `D` to access app state and helper functions. This is the project's state bridge between the shell and the render layer.
 
+Extracted modules (`task-ops.js`, `history.js`, `sync.js`) are wired through the D object via wrapper closures that capture current state at call time, avoiding circular imports.
+
 ### 5.3 Timezone-safe dates
 
 All calendar math uses integer day numbers in `src/core/date.js`:
@@ -209,9 +221,21 @@ This avoids the UTC/local `Date` frame-mixing bugs that existed in earlier code.
 
 ### 5.4 Lazy loading
 
-`src/admin.js`, `src/export.js`, and `src/ui/worktime.js` are loaded with dynamic `import()` only when the user opens the admin panel, export functionality, or work-time settings.
+`src/admin.js`, `src/export/` (barrel), and `src/ui/worktime.js` are loaded with dynamic `import()` only when the user opens the admin panel, export functionality, or work-time settings.
 
-### 5.5 Export module (`src/export.js`)
+### 5.5 Extracted modules
+
+Three feature clusters were extracted from `main.js` to reduce its size and cognitive complexity:
+
+| Module            | Purpose                                                      | Pattern                                                 |
+| ----------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
+| `src/task-ops.js` | `indentTask`, `outdentTask`, `reorderTask`, `collectSubtree` | Receives `tasks` array + `deps` object as params        |
+| `src/history.js`  | `getHistory`, `pushHistory`, `undo`                          | Receives `state` object with getters/setters + `deps`   |
+| `src/sync.js`     | Cloud save/load, local persistence, realtime, offline queue  | Uses `initSync(ctx)` to receive context getters/setters |
+
+All three avoid importing from `main.js` (no circular deps). They are wired via D-object wrapper closures in `syncRenderDeps()`.
+
+### 5.6 Export module (`src/export/`)
 
 The export module provides five output formats, all triggered from the export dropdown menu:
 
@@ -227,8 +251,10 @@ The PNG export is the most complex — it manually draws the task table header, 
 
 All export functions read state from the shared `D` object (see §5.2) and are fully self-contained — they do not depend on the live DOM for rendering.
 
-### 5.5 Event handling
+### 5.7 Event wiring
 
+- `wireStaticEvents()` in `main.js` is a thin orchestrator that delegates to 11 focused handler functions: `wireLoginEvents`, `wireToolbarEvents`, `wireVersionPanelEvents`, `wireShareModalEvents`, `wireCollabModalEvents`, `wireAdminPanelEvents`, `wireDeleteModalEvents`, `wireTaskModalEvents`, `wireArrowStyleEvents`, `wireProjectModalEvents`, `wireDelegationEvents`.
+- Three DOM utility helpers (`$`, `clk`, `overlayClose`) are hoisted to module scope for reuse across all handlers.
 - `index.html` uses `id` attributes and event delegation in `main.js` / `interactions.js`.
 - `gantt.html` (legacy) uses inline `onclick` handlers. Do not copy that pattern into the Vite codebase.
 
