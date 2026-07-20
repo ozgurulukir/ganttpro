@@ -167,7 +167,15 @@ test('autoScheduleFromDeps — task with no deps is a no-op', () => {
 test('autoScheduleFromDeps — prioritizes task.wday when scheduling', () => {
   const tasks = [
     { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
-    { id: 'B', parent: null, type: 'task', start: '2026-04-29', end: '2026-04-29', deps: ['A'], wday: 3 }
+    {
+      id: 'B',
+      parent: null,
+      type: 'task',
+      start: '2026-04-29',
+      end: '2026-04-29',
+      deps: ['A'],
+      wday: 3
+    }
   ];
   autoScheduleFromDeps(tasks, tasks[1]);
   // A ends May 4 -> B starts May 5, duration 3 -> ends May 7

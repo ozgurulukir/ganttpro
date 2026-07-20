@@ -134,7 +134,10 @@ export function validateProject(raw) {
       type: 'group',
       parent: null,
       color: DEFAULT_COLOR,
-      deps: [], sdeps: [], ffdeps: [], sfdeps: []
+      deps: [],
+      sdeps: [],
+      ffdeps: [],
+      sfdeps: []
     });
     // Break any circular reference, orphaned tasks, or pure cycles by tracing parent chains
     const taskMap = new Map(tasks.map(t => [t.id, t]));

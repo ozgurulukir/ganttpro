@@ -215,13 +215,13 @@ This avoids the UTC/local `Date` frame-mixing bugs that existed in earlier code.
 
 The export module provides five output formats, all triggered from the export dropdown menu:
 
-| Format | Function | Implementation |
-|--------|----------|----------------|
-| **PNG** | `exportPNG()` | Renders the full Gantt chart (task panel + Gantt area) onto an off-screen `<canvas>` using 2D context drawing. Supports milestone view, baseline overlay, critical path highlight, and today line. Downloads via `canvas.toBlob()`. |
-| **CSV** | `exportCSV()` | Walks the task tree recursively and produces a UTF-8 BOM-prefixed CSV with columns: `#`, Task Name, Type, Assignee, Start Date, End Date, Workdays, Progress, Dependencies, Done. Group tasks show computed bounds. Downloads via `Blob` + object URL. |
-| **PDF** | `exportPDF()` | Uses the browser's native `window.print()` with a print stylesheet. Temporarily removes dark mode for clean white-background output. |
-| **Print Settings** | `openPrintSettings()` | Opens a modal overlay for paper size (A4/A3) and orientation (landscape/portrait) selection, then injects a `@page` CSS rule and calls `window.print()`. |
-| **iCalendar** | `exportICalendar()` | Generates an `.ics` file with `VEVENT` entries for each task/milestone (skipping groups). Includes start/end dates, summary, assignee, and progress in the description. Downloads via `Blob`. |
+| Format             | Function              | Implementation                                                                                                                                                                                                                                         |
+| ------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **PNG**            | `exportPNG()`         | Renders the full Gantt chart (task panel + Gantt area) onto an off-screen `<canvas>` using 2D context drawing. Supports milestone view, baseline overlay, critical path highlight, and today line. Downloads via `canvas.toBlob()`.                    |
+| **CSV**            | `exportCSV()`         | Walks the task tree recursively and produces a UTF-8 BOM-prefixed CSV with columns: `#`, Task Name, Type, Assignee, Start Date, End Date, Workdays, Progress, Dependencies, Done. Group tasks show computed bounds. Downloads via `Blob` + object URL. |
+| **PDF**            | `exportPDF()`         | Uses the browser's native `window.print()` with a print stylesheet. Temporarily removes dark mode for clean white-background output.                                                                                                                   |
+| **Print Settings** | `openPrintSettings()` | Opens a modal overlay for paper size (A4/A3) and orientation (landscape/portrait) selection, then injects a `@page` CSS rule and calls `window.print()`.                                                                                               |
+| **iCalendar**      | `exportICalendar()`   | Generates an `.ics` file with `VEVENT` entries for each task/milestone (skipping groups). Includes start/end dates, summary, assignee, and progress in the description. Downloads via `Blob`.                                                          |
 
 The PNG export is the most complex — it manually draws the task table header, row backgrounds, task bars with progress fills, baseline bars, critical path borders, milestone diamonds, group bars, month grid lines, and the today indicator. It reuses pure formatting helpers from `src/core/format.js` (e.g., `darkenColor`, `dateToX`).
 

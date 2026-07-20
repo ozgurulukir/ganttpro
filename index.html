@@ -1098,9 +1098,13 @@
               'position:fixed;bottom:10px;left:10px;right:10px;background:#1a1a2e;color:#e94560;padding:12px 16px;border-radius:8px;font-size:12px;font-family:monospace;z-index:99999;white-space:pre-wrap;max-height:300px;overflow:auto;border:1px solid #e94560';
             var msg = '⚠ Module loaded: ' + loaded + '\nSetup done: ' + setup;
             if (errors.length) {
-              msg += '\n\nErrors:\n' + errors.map(function (e) {
-                return (e && e.stack) ? e.stack : String(e);
-              }).join('\n---\n');
+              msg +=
+                '\n\nErrors:\n' +
+                errors
+                  .map(function (e) {
+                    return e && e.stack ? e.stack : String(e);
+                  })
+                  .join('\n---\n');
             }
             d.textContent = msg;
             document.body.appendChild(d);

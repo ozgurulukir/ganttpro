@@ -77,7 +77,7 @@ export function populateModal(
 export function syncWday() {
   const s = document.getElementById('fStart').value;
   const e = document.getElementById('fEnd').value;
-  if (s && e) document.getElementById('fWday').value = countWorkingDays(s, e);
+  if (s && e && s <= e) document.getElementById('fWday').value = countWorkingDays(s, e);
 }
 export function syncEndFromWday() {
   const s = document.getElementById('fStart').value;
@@ -290,7 +290,17 @@ export function openNameEditor(task, cell, isNew = false) {
 }
 
 export function addTaskInline(refTaskId) {
-  const { isReadOnly, tasks, taskById, TODAY_STR, pushHistory, render, consumeNextId, scheduleTasks, recalcProjEnd } = D;
+  const {
+    isReadOnly,
+    tasks,
+    taskById,
+    TODAY_STR,
+    pushHistory,
+    render,
+    consumeNextId,
+    scheduleTasks,
+    recalcProjEnd
+  } = D;
   if (isReadOnly) return;
   const ref = taskById(refTaskId);
   if (!ref) return;
@@ -662,7 +672,7 @@ export function openStartEditor(task, cell) {
     if (val && val !== task.start) {
       pushHistory();
       if (val > (task.end || '')) task.end = val;
-      task.wday = countWorkingDays(val, task.end);
+      if (val <= (task.end || '')) task.wday = countWorkingDays(val, task.end);
       task.start = val;
       task.pinStart = true;
     }
@@ -701,7 +711,7 @@ export function openEndEditor(task, cell) {
       if (val < (task.start || '')) {
         task.start = val;
         task.wday = 1;
-      } else {
+      } else if (val >= (task.start || '')) {
         task.wday = countWorkingDays(task.start, val);
       }
       task.end = val;

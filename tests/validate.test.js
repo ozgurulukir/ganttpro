@@ -266,8 +266,9 @@ describe('Issue #7 specific validation rules', () => {
 
   it('validates lags keys and bounds values to -365..365', () => {
     const t = validateTask({
-      id: 1, type: 'task',
-      lags: { 'FS2': 10, 'SS3': -500, 'badkey': 5, 'FF4': 400 }
+      id: 1,
+      type: 'task',
+      lags: { FS2: 10, SS3: -500, badkey: 5, FF4: 400 }
     });
     assert.equal(t.lags['FS2'], 10);
     assert.equal(t.lags['SS3'], -365);

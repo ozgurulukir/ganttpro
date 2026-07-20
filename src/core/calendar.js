@@ -186,7 +186,7 @@ export function shiftWorkingDays(dateStr, days) {
 export function countWorkingDays(startStr, endStr) {
   let dn = parseDate(startStr);
   const endDn = parseDate(endStr);
-  if (dn > endDn) throw new Error("start cannot be after end");
+  if (dn > endDn) throw new Error('start cannot be after end');
   let count = 0;
   while (dn <= endDn) {
     if (!isNonWorkday(formatDate(dn))) count++;

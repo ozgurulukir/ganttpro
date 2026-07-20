@@ -73,7 +73,7 @@ export function computeCriticalPath(tasks) {
 
   // 專案結束日 = 所有任務中最晚的 EF
   const projEnd = nodes.reduce((mx, t) => {
-    const e = t.type === 'task' ? t.end : (t.type === 'milestone' ? t.date : null);
+    const e = t.type === 'task' ? t.end : t.type === 'milestone' ? t.date : null;
     return e && e > mx ? e : mx;
   }, '');
   if (!projEnd) return new Set();
@@ -107,7 +107,8 @@ export function computeCriticalPath(tasks) {
               // succ.LS = succ.LF - succ_duration + 1;
               // so t.LF = succ.LF - succ_duration
               if (succLF) {
-                const succLS = succ.type === 'task' ? subtractWorkingDays(succLF, wdur(succ) - 1) : succLF;
+                const succLS =
+                  succ.type === 'task' ? subtractWorkingDays(succLF, wdur(succ) - 1) : succLF;
                 c = prevWorkingDay(succLS);
               } else {
                 c = prevWorkingDay(getS(succ));
@@ -119,7 +120,8 @@ export function computeCriticalPath(tasks) {
               // t.LF = t.LS + t_duration - 1 = succ.LS + t_duration - 1
               // succ.LS = succ.LF - succ_duration + 1（已知 succLF 時）
               if (succLF) {
-                const succLS = succ.type === 'task' ? subtractWorkingDays(succLF, wdur(succ) - 1) : succLF;
+                const succLS =
+                  succ.type === 'task' ? subtractWorkingDays(succLF, wdur(succ) - 1) : succLF;
                 c = t.type === 'task' ? addWorkingDays(succLS, wdur(t) - 1) : succLS;
               } else {
                 c = t.type === 'task' ? addWorkingDays(getS(succ), wdur(t) - 1) : getS(succ);
