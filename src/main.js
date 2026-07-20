@@ -130,6 +130,11 @@ import * as Remote from './data/remote.js';
 import { initI18n, translateDOM, t, setLocale, getLocale } from './i18n/index.js';
 import { initContextMenu, showContextMenu } from './ui/context-menu.js';
 import { logAudit } from './data/audit.js';
+import {
+  indentTask as _indentTask,
+  outdentTask as _outdentTask,
+  reorderTask as _reorderTask
+} from './task-ops.js';
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
@@ -1290,89 +1295,6 @@ function scheduleTasks() {
   return p ? Schedule.scheduleTasks(tasks, p.startDate) : [];
 }
 
-function reorderTask(srcId, targetId, insertBefore) {
-  const src = taskById(srcId);
-  const target = taskById(targetId);
-  if (!src || !target) return;
-  if (isDescendant(srcId, targetId)) return; // prevent cycle
-
-  pushHistory();
-
-  // New parent: dropping on a group row → child of that group
-  //             dropping on task/milestone → sibling of target
-  src.parent = target.type === 'group' && !insertBefore ? target.id : target.parent;
-
-  // Reorder in tasks array
-  const srcIdx = tasks.indexOf(src);
-  tasks.splice(srcIdx, 1);
-  const targetIdx = tasks.indexOf(target);
-  tasks.splice(insertBefore ? targetIdx : targetIdx + 1, 0, src);
-
-  scheduleTasks();
-  recalcProjEnd();
-  render();
-}
-
-function outdentTask(id) {
-  const task = taskById(id);
-  if (!task) {
-    showStatus(t('modal.outdentLimit'));
-    return;
-  }
-  if (task.parent === null) {
-    showStatus(t('modal.outdentLimit'));
-    return;
-  }
-  const parent = taskById(task.parent);
-  if (!parent || parent.parent === null) {
-    showStatus(t('modal.outdentLimit'));
-    return;
-  }
-
-  pushHistory();
-
-  // Collect task + all its descendants (preserve order)
-  const subtreeIds = new Set();
-  function collectSubtree(tid) {
-    subtreeIds.add(tid);
-    tasks.filter(c => c.parent === tid).forEach(c => collectSubtree(c.id));
-  }
-  collectSubtree(id);
-  const subtree = tasks.filter(t => subtreeIds.has(t.id));
-
-  // Remove subtree from main array
-  const _remaining = tasks.filter(t => !subtreeIds.has(t.id));
-  tasks.length = 0;
-  tasks.push(..._remaining);
-
-  // Find insertion point: after last descendant of parent in remaining tasks.
-  // Build a Set of all descendants of `parent` first, then a single linear scan.
-  const parentDescendants = new Set();
-  const stack = [parent.id];
-  while (stack.length) {
-    const pid = stack.pop();
-    for (const c of tasks) {
-      if (c.parent === pid) {
-        parentDescendants.add(c.id);
-        stack.push(c.id);
-      }
-    }
-  }
-  const parentIdx = tasks.findIndex(t => t.id === parent.id);
-  let insertIdx = parentIdx;
-  for (let i = parentIdx + 1; i < tasks.length; i++) {
-    if (parentDescendants.has(tasks[i].id)) insertIdx = i;
-  }
-
-  // Update parent and reinsert after parent's subtree
-  task.parent = parent.parent;
-  tasks.splice(insertIdx + 1, 0, ...subtree);
-
-  scheduleTasks();
-  recalcProjEnd();
-  render();
-}
-
 function showStatus(msg) {
   let el = document.getElementById('statusToast');
   if (!el) {
@@ -1386,35 +1308,6 @@ function showStatus(msg) {
   el.style.opacity = '1';
   clearTimeout(el._t);
   el._t = setTimeout(() => (el.style.opacity = '0'), 2000);
-}
-
-function indentTask(id) {
-  const task = tasks.find(t => t.id === id);
-  if (!task) {
-    showStatus(t('modal.indentNoPrev'));
-    return;
-  }
-  const myIdx = tasks.findIndex(t => t.id === id);
-  let prevSibling = null;
-  for (let i = myIdx - 1; i >= 0; i--) {
-    if (tasks[i].parent === task.parent) {
-      prevSibling = tasks[i];
-      break;
-    }
-  }
-  if (!prevSibling) {
-    showStatus(t('modal.indentNoPrev'));
-    return;
-  }
-  if (getTaskDepth(prevSibling.id) + 1 >= 5) {
-    showStatus(t('modal.indentLimit'));
-    return;
-  }
-  pushHistory();
-  task.parent = prevSibling.id;
-  scheduleTasks();
-  recalcProjEnd();
-  render();
 }
 
 function updateChartStart() {
@@ -1718,15 +1611,43 @@ function syncRenderDeps() {
   D.openAllDepsEditor = openAllDepsEditor;
   D.openEditModal = openEditModal;
   D.addTaskInline = addTaskInline;
-  D.indentTask = indentTask;
-  D.outdentTask = outdentTask;
+  // Task-ops wrappers that capture current state
+  const _taskOpsDeps = {
+    get taskById() {
+      return taskById;
+    },
+    get isDescendant() {
+      return isDescendant;
+    },
+    get getTaskDepth() {
+      return getTaskDepth;
+    },
+    get pushHistory() {
+      return pushHistory;
+    },
+    get scheduleTasks() {
+      return scheduleTasks;
+    },
+    get recalcProjEnd() {
+      return recalcProjEnd;
+    },
+    get render() {
+      return render;
+    },
+    get showStatus() {
+      return showStatus;
+    }
+  };
+  D.indentTask = id => _indentTask(id, tasks, _taskOpsDeps);
+  D.outdentTask = id => _outdentTask(id, tasks, _taskOpsDeps);
+  D.reorderTask = (srcId, targetId, insertBefore) =>
+    _reorderTask(srcId, targetId, insertBefore, tasks, _taskOpsDeps);
   D.confirmDeleteTask = confirmDeleteTask;
   D.toggleCollapse = toggleCollapse;
   D.toggleProjMenu = toggleProjMenu;
   D.closeProjMenuOnly = closeProjMenuOnly;
   D.renderProjMenu = renderProjMenu;
   D.switchProject = switchProject;
-  D.reorderTask = reorderTask;
   D.pushHistory = pushHistory;
   D.render = render;
   D.scheduleTasks = scheduleTasks;
