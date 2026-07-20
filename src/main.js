@@ -135,6 +135,11 @@ import {
   outdentTask as _outdentTask,
   reorderTask as _reorderTask
 } from './task-ops.js';
+import {
+  getHistory as _getHistory,
+  pushHistory as _pushHistory,
+  undo as _undo
+} from './history.js';
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
@@ -1037,120 +1042,115 @@ function curProj() {
 let collapsed = new Set();
 let isDark = false;
 
-/* ─── UNDO HISTORY ─── */
-const MAX_HISTORY = 50;
+/* ─── UNDO HISTORY (extracted to src/history.js) ─── */
 
-function getHistory() {
-  if (!curProj()) return [];
-  if (!curProj()._history) curProj()._history = [];
-  return curProj()._history;
+function historyState() {
+  return {
+    curProj: curProj(),
+    get tasks() {
+      return tasks;
+    },
+    set tasks(v) {
+      tasks = v;
+    },
+    get nextId() {
+      return nextId;
+    },
+    set nextId(v) {
+      nextId = v;
+    },
+    get currentProjId() {
+      return currentProjId;
+    },
+    get collapsed() {
+      return collapsed;
+    },
+    get viewMode() {
+      return viewMode;
+    },
+    set viewMode(v) {
+      viewMode = v;
+    },
+    get PPD() {
+      return PPD;
+    },
+    set PPD(v) {
+      PPD = v;
+    },
+    PPDS,
+    get showCriticalPath() {
+      return showCriticalPath;
+    },
+    set showCriticalPath(v) {
+      showCriticalPath = v;
+    },
+    get criticalTaskIds() {
+      return criticalTaskIds;
+    },
+    set criticalTaskIds(v) {
+      criticalTaskIds = v;
+    },
+    get showWBS() {
+      return showWBS;
+    },
+    set showWBS(v) {
+      showWBS = v;
+    },
+    get isDark() {
+      return isDark;
+    },
+    set isDark(v) {
+      isDark = v;
+    },
+    get CHART_START() {
+      return CHART_START;
+    },
+    set CHART_START(v) {
+      CHART_START = v;
+    },
+    get CHART_END() {
+      return CHART_END;
+    },
+    set CHART_END(v) {
+      CHART_END = v;
+    },
+    get milestoneView() {
+      return milestoneView;
+    },
+    set milestoneView(v) {
+      milestoneView = v;
+    },
+    get workloadView() {
+      return workloadView;
+    },
+    set workloadView(v) {
+      workloadView = v;
+    },
+    get showBarDates() {
+      return showBarDates;
+    },
+    set showBarDates(v) {
+      showBarDates = v;
+    },
+    get showBaseline() {
+      return showBaseline;
+    },
+    set showBaseline(v) {
+      showBaseline = v;
+    }
+  };
 }
 
-function pushHistory() {
-  if (!curProj()) return;
-  const h = getHistory();
-  // Deep clone tasks and metadata
-  h.push({
-    tasks: JSON.parse(JSON.stringify(tasks)),
-    nextId,
-    currentProjId,
-    collapsed: Array.from(collapsed),
-    viewMode,
-    showCriticalPath,
-    showWBS,
-    isDark,
-    CHART_START: curProj().startDate,
-    CHART_END: curProj().endDate,
-    milestoneView,
-    workloadView,
-    showBarDates,
-    showBaseline,
-    startDate: curProj().startDate,
-    endDate: curProj().endDate,
-    name: curProj().name,
-    color: curProj().color,
-    versions: curProj().versions ? JSON.parse(JSON.stringify(curProj().versions)) : [],
-    baseline: curProj().baseline ? JSON.parse(JSON.stringify(curProj().baseline)) : null
+const boundUndo = () =>
+  _undo(historyState(), {
+    getHistory: proj => _getHistory(proj),
+    computeCriticalPath,
+    scheduleTasks,
+    recalcProjEnd,
+    render,
+    updateProjUI,
+    renderVersionList
   });
-  if (h.length > MAX_HISTORY) h.shift();
-  const btn = document.getElementById('undoBtn');
-  if (btn) btn.disabled = false;
-}
-
-function undo() {
-  const h = getHistory();
-  if (!h.length || !curProj()) return;
-  const snap = h.pop();
-
-  curProj().tasks.length = 0;
-  curProj().tasks.push(...snap.tasks);
-  curProj().nextId = snap.nextId;
-  curProj().startDate = snap.startDate;
-  curProj().endDate = snap.endDate;
-  curProj().name = snap.name;
-  curProj().color = snap.color;
-  curProj().versions = snap.versions ? JSON.parse(JSON.stringify(snap.versions)) : [];
-  curProj().baseline = snap.baseline ? JSON.parse(JSON.stringify(snap.baseline)) : null;
-
-  nextId = curProj().nextId;
-
-  collapsed.clear();
-  if (snap.collapsed) {
-    snap.collapsed.forEach(id => collapsed.add(id));
-  }
-
-  if (snap.viewMode) {
-    viewMode = snap.viewMode;
-    PPD = PPDS[snap.viewMode];
-    document.querySelectorAll('#viewBtns .btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.v === snap.viewMode);
-    });
-  }
-
-  showCriticalPath = snap.showCriticalPath;
-  showWBS = snap.showWBS;
-  isDark = snap.isDark;
-  CHART_START = new Date(snap.CHART_START);
-  CHART_END = new Date(snap.CHART_END);
-  milestoneView = snap.milestoneView;
-  workloadView = snap.workloadView;
-  showBarDates = snap.showBarDates;
-  showBaseline = snap.showBaseline;
-
-  // UI sync
-  document.body.classList.toggle('ms-view', milestoneView);
-  document.body.classList.toggle('show-wbs', showWBS);
-  document.body.classList.toggle('dark', isDark);
-
-  const darkBtn = document.getElementById('darkBtn');
-  if (darkBtn) darkBtn.textContent = isDark ? '☀️' : '🌙';
-
-  const bd = document.getElementById('settingBarDates');
-  if (bd) bd.checked = showBarDates;
-  const bl = document.getElementById('settingBaseline');
-  if (bl) bl.checked = showBaseline;
-
-  const cv = milestoneView ? 'milestone' : workloadView ? 'workload' : 'gantt';
-  document.querySelectorAll('#chartViewBtns .btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.cv === cv);
-  });
-
-  const cpBtn = document.getElementById('cpBtn');
-  if (cpBtn) cpBtn.classList.toggle('active', showCriticalPath);
-  if (showCriticalPath) criticalTaskIds = computeCriticalPath();
-  else criticalTaskIds = new Set();
-  const wbsBtn = document.getElementById('wbsBtn');
-  if (wbsBtn) wbsBtn.classList.toggle('active', showWBS);
-
-  updateProjUI();
-  renderVersionList();
-
-  scheduleTasks();
-  recalcProjEnd();
-  render();
-  const btn = document.getElementById('undoBtn');
-  if (btn) btn.disabled = getHistory().length === 0;
-}
 
 /* ═══════════════════════════════════════════
    UTILS
@@ -1514,7 +1514,7 @@ function toggleShortcutsOverlay() {
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
     e.preventDefault();
-    undo();
+    boundUndo();
     return;
   }
   if (document.querySelector('.overlay.open, .panel.open')) return;
@@ -1623,7 +1623,7 @@ function syncRenderDeps() {
       return getTaskDepth;
     },
     get pushHistory() {
-      return pushHistory;
+      return () => _pushHistory(historyState());
     },
     get scheduleTasks() {
       return scheduleTasks;
@@ -1648,7 +1648,7 @@ function syncRenderDeps() {
   D.closeProjMenuOnly = closeProjMenuOnly;
   D.renderProjMenu = renderProjMenu;
   D.switchProject = switchProject;
-  D.pushHistory = pushHistory;
+  D.pushHistory = () => _pushHistory(historyState());
   D.render = render;
   D.scheduleTasks = scheduleTasks;
   D.recalcProjEnd = recalcProjEnd;
@@ -1678,7 +1678,7 @@ function syncRenderDeps() {
     collapsed.clear();
 
     const btn = document.getElementById('undoBtn');
-    if (btn) btn.disabled = getHistory().length === 0;
+    if (btn) btn.disabled = _getHistory(curProj()).length === 0;
 
     D.currentProjId = currentProjId;
     D.tasks = tasks;
@@ -1763,7 +1763,7 @@ function render() {
   renderChartHeader();
   renderChartBody();
   const undoBtn = document.getElementById('undoBtn');
-  if (undoBtn) undoBtn.disabled = getHistory().length === 0;
+  if (undoBtn) undoBtn.disabled = _getHistory(curProj()).length === 0;
 }
 
 function debounceSaveToCloud() {
@@ -2172,7 +2172,7 @@ function wireToolbarEvents() {
     });
   clk('shareBtn', openCollabModal);
   clk('addTaskBtn', openModal);
-  clk('undoBtn', undo);
+  clk('undoBtn', boundUndo);
   clk('todayBtn', scrollToToday);
   clk('expandAllBtn', expandAll);
   clk('collapseAllBtn', collapseAll);
