@@ -165,6 +165,8 @@
         id="shareBtn"
         title="Share this project"
         data-i18n-title="toolbar.share"
+        aria-label="Share this project"
+        data-i18n-aria-label="toolbar.share"
       >
         🔗
       </button>
@@ -217,10 +219,19 @@
         data-zoom="out"
         title="Zoom out"
         data-i18n-title="toolbar.zoomOut"
+        aria-label="Zoom out"
+        data-i18n-aria-label="toolbar.zoomOut"
       >
         -
       </button>
-      <button class="btn zoom-btn" data-zoom="in" title="Zoom in" data-i18n-title="toolbar.zoomIn">
+      <button
+        class="btn zoom-btn"
+        data-zoom="in"
+        title="Zoom in"
+        data-i18n-title="toolbar.zoomIn"
+        aria-label="Zoom in"
+        data-i18n-aria-label="toolbar.zoomIn"
+      >
         +
       </button>
       <button
@@ -228,6 +239,8 @@
         id="fitBtn"
         title="Fit to window"
         data-i18n-title="toolbar.fitToWindow"
+        aria-label="Fit to window"
+        data-i18n-aria-label="toolbar.fitToWindow"
       >
         <svg
           width="13"
@@ -298,7 +311,14 @@
       >
         👥 Collaborate
       </button>
-      <button class="btn" id="darkBtn" title="Dark mode" data-i18n-title="toolbar.darkMode">
+      <button
+        class="btn"
+        id="darkBtn"
+        title="Dark mode"
+        data-i18n-title="toolbar.darkMode"
+        aria-label="Dark mode"
+        data-i18n-aria-label="toolbar.darkMode"
+      >
         🌙
       </button>
       <select
@@ -403,7 +423,7 @@
           🕐
           <span data-i18n="settings.versionHistory">Version History</span>
         </span>
-        <button class="ver-close" id="verCloseBtn">✕</button>
+        <button class="ver-close" id="verCloseBtn" aria-label="Close" data-i18n-aria-label="common.close">✕</button>
       </div>
       <div class="ver-tabs" id="verTabs">
         <button class="ver-tab active" data-tab="versions" data-i18n="settings.versionHistory">
@@ -427,7 +447,7 @@
     <!-- SHARE MODAL -->
     <div class="overlay" id="shareOverlay">
       <div class="modal share-modal" id="shareModalBox">
-        <button class="modal-close" id="shareCloseBtn">✕</button>
+        <button class="modal-close" id="shareCloseBtn" aria-label="Close" data-i18n-aria-label="common.close">✕</button>
         <div class="modal-title">
           🔗
           <span data-i18n="share.title">Share Project:</span>
@@ -669,6 +689,8 @@
           id="taskModalCloseBtn"
           title="Close"
           data-i18n-title="common.close"
+          aria-label="Close"
+          data-i18n-aria-label="common.close"
         >
           ✕
         </button>
@@ -822,6 +844,8 @@
           id="projModalCloseBtn"
           title="Close"
           data-i18n-title="common.close"
+          aria-label="Close"
+          data-i18n-aria-label="common.close"
         >
           ✕
         </button>

@@ -64,10 +64,11 @@ export function getLocale() {
 
 /**
  * Walk the DOM and translate all elements with data-i18n attributes.
- * Supports three attributes:
+ * Supports four attributes:
  *   data-i18n="key"             → sets textContent
  *   data-i18n-title="key"       → sets title
  *   data-i18n-placeholder="key" → sets placeholder
+ *   data-i18n-aria-label="key"  → sets aria-label
  *
  * Safe to call multiple times (idempotent).
  */
@@ -80,5 +81,8 @@ export function translateDOM() {
   });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+    el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel));
   });
 }

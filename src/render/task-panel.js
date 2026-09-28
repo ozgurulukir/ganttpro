@@ -342,6 +342,8 @@ export function renderTaskPanel() {
     outBtn.className = 'row-action-btn';
     outBtn.textContent = '←';
     outBtn.title = t('taskPanel.outdent');
+    outBtn.setAttribute('aria-label', t('taskPanel.outdent'));
+    outBtn.setAttribute('role', 'button');
     if (canOutdent)
       outBtn.onclick = e => {
         e.stopPropagation();
@@ -354,6 +356,8 @@ export function renderTaskPanel() {
     inBtn.className = 'row-action-btn';
     inBtn.textContent = '→';
     inBtn.title = t('taskPanel.indent');
+    inBtn.setAttribute('aria-label', t('taskPanel.indent'));
+    inBtn.setAttribute('role', 'button');
     if (canIndent)
       inBtn.onclick = e => {
         e.stopPropagation();
@@ -366,6 +370,8 @@ export function renderTaskPanel() {
     addBtn.className = 'row-action-btn add';
     addBtn.textContent = '+';
     addBtn.title = t('taskPanel.addSubtask');
+    addBtn.setAttribute('aria-label', t('taskPanel.addSubtask'));
+    addBtn.setAttribute('role', 'button');
     addBtn.onclick = e => {
       e.stopPropagation();
       addTaskInline(task.id);
@@ -376,6 +382,8 @@ export function renderTaskPanel() {
     delBtn.className = 'row-action-btn del';
     delBtn.textContent = '✕';
     delBtn.title = t('taskPanel.deleteTask');
+    delBtn.setAttribute('aria-label', t('taskPanel.deleteTask'));
+    delBtn.setAttribute('role', 'button');
     delBtn.onclick = e => {
       e.stopPropagation();
       confirmDeleteTask(task.id);
