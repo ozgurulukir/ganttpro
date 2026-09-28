@@ -1,6 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { validateProject, validateTask, validateProjects, migrate } from '../src/core/validate.js';
+import {
+  validateProject,
+  validateTask,
+  validateProjects,
+  migrate,
+  TASK_FIELDS
+} from '../src/core/validate.js';
 
 describe('validateTask', () => {
   it('returns a sanitized task for valid input', () => {
@@ -310,5 +316,148 @@ describe('migrate', () => {
   it('validateProject includes schemaVersion in output', () => {
     const p = validateProject({ id: 1, tasks: [{ id: 1, type: 'group', parent: null }] });
     assert.equal(p.schemaVersion, 1);
+  });
+});
+
+describe('extended task fields (pinStart/link/approval/evidence)', () => {
+  // The task modal writes these fields (src/ui/modal.js submitTask); they must
+  // survive every validateTask/validateProject round-trip (cloud reload,
+  // realtime snapshot, share link) or they are silently lost.
+  const extended = {
+    pinStart: true,
+    link: 'https://example.com/spec',
+    approval: 'pending',
+    evidence: 'SPEC-123'
+  };
+
+  it('preserves extended fields through validateTask for a task', () => {
+    const t = validateTask({
+      id: 1,
+      name: 'x',
+      type: 'task',
+      start: '2026-04-01',
+      end: '2026-04-02',
+      ...extended
+    });
+    assert.equal(t.pinStart, true);
+    assert.equal(t.link, 'https://example.com/spec');
+    assert.equal(t.approval, 'pending');
+    assert.equal(t.evidence, 'SPEC-123');
+  });
+
+  it('preserves extended fields through validateTask for a milestone and a group', () => {
+    const m = validateTask({
+      id: 1,
+      name: 'm',
+      type: 'milestone',
+      date: '2026-05-01',
+      ...extended
+    });
+    assert.equal(m.pinStart, true);
+    assert.equal(m.link, extended.link);
+    assert.equal(m.approval, 'pending');
+    const g = validateTask({ id: 2, name: 'g', type: 'group', parent: null, ...extended });
+    assert.equal(g.link, extended.link);
+    assert.equal(g.approval, 'pending');
+    assert.equal(g.evidence, extended.evidence);
+    assert.equal(g.pinStart, undefined);
+    assert.equal(g.assignee, undefined);
+  });
+
+  it('preserves extended fields through a full validateProject round-trip', () => {
+    const p = validateProject({
+      id: 1,
+      name: 'P',
+      tasks: [
+        { id: 1, name: 'root', type: 'group', parent: null },
+        {
+          id: 2,
+          name: 'Design',
+          type: 'task',
+          parent: 1,
+          start: '2026-04-01',
+          end: '2026-04-05',
+          wday: 3,
+          progress: 40,
+          ...extended
+        }
+      ]
+    });
+    const t = p.tasks.find(x => x.id === 2);
+    assert.equal(t.pinStart, true);
+    assert.equal(t.link, 'https://example.com/spec');
+    assert.equal(t.approval, 'pending');
+    assert.equal(t.evidence, 'SPEC-123');
+  });
+
+  it('sanitizes extended fields', () => {
+    const t = validateTask({
+      id: 1,
+      name: 'x',
+      type: 'task',
+      start: '2026-04-01',
+      end: '2026-04-02',
+      pinStart: 'yes',
+      link: 12345,
+      approval: 'hacked',
+      evidence: 'ev\x1Fid',
+      assignee: ''
+    });
+    assert.equal(t.pinStart, true);
+    assert.equal(t.link, '12345');
+    assert.equal(t.approval, undefined);
+    assert.equal(t.evidence, 'evid');
+    assert.equal(t.assignee, undefined);
+  });
+
+  it('omits extended fields that are absent from input', () => {
+    const t = validateTask({
+      id: 1,
+      name: 'x',
+      type: 'task',
+      start: '2026-04-01',
+      end: '2026-04-02'
+    });
+    assert.equal(t.pinStart, undefined);
+    assert.equal(t.link, undefined);
+    assert.equal(t.approval, undefined);
+    assert.equal(t.evidence, undefined);
+  });
+
+  it('schema covers every extended field the modal writes', () => {
+    for (const f of ['pinStart', 'link', 'approval', 'evidence']) {
+      assert.ok(TASK_FIELDS[f], `TASK_FIELDS is missing "${f}"`);
+    }
+  });
+});
+
+describe('validateTask output shape', () => {
+  it('does not leave explicit undefined own-properties', () => {
+    // Firestore setDoc throws on nested undefined values, so absent optional
+    // fields must be omitted, not assigned as undefined.
+    const t = validateTask({
+      id: 1,
+      name: 'x',
+      type: 'task',
+      start: '2026-04-01',
+      end: '2026-04-02'
+    });
+    for (const f of ['assignee', 'lags', 'link', 'approval', 'evidence', 'pinStart', 'date']) {
+      assert.equal(Object.hasOwn(t, f), false, `"${f}" should be omitted`);
+    }
+    const m = validateTask({ id: 2, name: 'm', type: 'milestone', date: 'bad' });
+    for (const f of [
+      'assignee',
+      'link',
+      'approval',
+      'evidence',
+      'pinStart',
+      'start',
+      'end',
+      'progress',
+      'wday'
+    ]) {
+      assert.equal(Object.hasOwn(m, f), false, `"${f}" should be omitted`);
+    }
   });
 });

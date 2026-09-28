@@ -48,6 +48,58 @@ function pruneInvalidDeps(tasks) {
   });
 }
 
+const APPROVAL_STATES = new Set(['pending', 'approved', 'rejected']);
+
+// Field sanitizers. Shape fields (dep arrays, dates, wday, progress, done)
+// always return a value so the output object keeps a consistent shape; the
+// rest return undefined for absent/invalid input and the field is omitted.
+function cleanText(max) {
+  return v => {
+    const s = toStr(v).normalize('NFC').replace(/\p{C}/gu, '').slice(0, max);
+    return s || undefined;
+  };
+}
+
+function sanitizeLags(v) {
+  if (!v || typeof v !== 'object') return undefined;
+  const lags = {};
+  for (const [k, val] of Object.entries(v)) {
+    if (/^(FS|SS|FF|SF)\d+$/.test(k)) {
+      const n = Math.max(-365, Math.min(365, toInt(val, 0)));
+      if (Number.isFinite(n)) lags[k] = n;
+    }
+  }
+  return Object.keys(lags).length ? lags : undefined;
+}
+
+// Task-field schema: the single source of truth for which fields survive a
+// validateTask/validateProject round-trip (cloud reload, realtime snapshot,
+// share link). The task modal (src/ui/modal.js submitTask) writes exactly
+// these fields — a field missing here is silently stripped on the next
+// round-trip. When adding a field in the modal, add it here AND to the
+// round-trip tests in tests/validate.test.js.
+export const TASK_FIELDS = {
+  deps: { types: ['task', 'milestone'], sanitize: v => toIdArray(v) },
+  sdeps: { types: ['task', 'milestone'], sanitize: v => toIdArray(v) },
+  ffdeps: { types: ['task', 'milestone'], sanitize: v => toIdArray(v) },
+  sfdeps: { types: ['task', 'milestone'], sanitize: v => toIdArray(v) },
+  lags: { types: ['task', 'milestone'], sanitize: sanitizeLags },
+  assignee: { types: ['task', 'milestone'], sanitize: cleanText(100) },
+  link: { types: ['task', 'milestone', 'group'], sanitize: cleanText(2000) },
+  approval: {
+    types: ['task', 'milestone', 'group'],
+    sanitize: v => (APPROVAL_STATES.has(v) ? v : undefined)
+  },
+  evidence: { types: ['task', 'milestone', 'group'], sanitize: cleanText(2000) },
+  start: { types: ['task'], sanitize: toDateStr },
+  end: { types: ['task'], sanitize: toDateStr },
+  wday: { types: ['task'], sanitize: v => Math.min(3650, Math.max(1, toInt(v, 1))) },
+  progress: { types: ['task'], sanitize: v => Math.max(0, Math.min(100, toInt(v, 0))) },
+  done: { types: ['task', 'milestone'], sanitize: v => !!v },
+  date: { types: ['milestone'], sanitize: toDateStr },
+  pinStart: { types: ['task', 'milestone'], sanitize: v => (v ? true : undefined) }
+};
+
 export function validateTask(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const t = { ...raw };
@@ -60,51 +112,23 @@ export function validateTask(raw) {
   const p = toInt(t.parent, null);
   const parent = p === null || p <= 0 ? null : p;
 
-  const color = isValidHexColor(t.color) ? t.color : DEFAULT_COLOR;
-
   const task = {
     id,
     name: toStr(t.name).normalize('NFC').replace(/\p{C}/gu, '').slice(0, 200) || 'Untitled',
     type,
     parent,
-    color
+    color: isValidHexColor(t.color) ? t.color : DEFAULT_COLOR
   };
 
-  if (type === 'task' || type === 'milestone') {
-    task.deps = toIdArray(t.deps);
-    task.sdeps = toIdArray(t.sdeps);
-    task.ffdeps = toIdArray(t.ffdeps);
-    task.sfdeps = toIdArray(t.sfdeps);
-    if (t.lags && typeof t.lags === 'object') {
-      const lags = {};
-      for (const [k, v] of Object.entries(t.lags)) {
-        if (/^(FS|SS|FF|SF)\d+$/.test(k)) {
-          const n = Math.max(-365, Math.min(365, toInt(v, 0)));
-          if (Number.isFinite(n)) lags[k] = n;
-        }
-      }
-      if (Object.keys(lags).length) task.lags = lags;
-    }
-
-    if (t.assignee) {
-      task.assignee = toStr(t.assignee).normalize('NFC').replace(/\p{C}/gu, '').slice(0, 100);
-    }
-
-    if (type === 'task') {
-      task.start = toDateStr(t.start);
-      task.end = toDateStr(t.end);
-      task.wday = Math.min(3650, Math.max(1, toInt(t.wday, 1)));
-      task.done = !!t.done;
-      task.progress = Math.max(0, Math.min(100, toInt(t.progress, 0)));
-    } else {
-      task.date = toDateStr(t.date);
-      task.done = !!t.done;
-    }
-  } else if (type === 'group') {
-    // no start/end/progress/done properties are assigned to group tasks
+  for (const [field, spec] of Object.entries(TASK_FIELDS)) {
+    if (!spec.types.includes(type)) continue;
+    const value = spec.sanitize(t[field]);
+    // Omit absent/invalid optional fields entirely — an explicit undefined
+    // own-property makes Firestore setDoc throw on the next cloud save.
+    if (value !== undefined) task[field] = value;
   }
 
-  // ffdeps/sfdeps always assign for shape consistency
+  // dep arrays keep their shape for every type
   if (!task.deps) task.deps = [];
   if (!task.sdeps) task.sdeps = [];
   if (!task.ffdeps) task.ffdeps = [];
