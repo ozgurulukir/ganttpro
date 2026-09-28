@@ -98,26 +98,46 @@ export function groupBounds(tasks, id) {
   return { s, e };
 }
 
-/** Group overall progress: average progress of all descendant tasks. */
+/**
+ * Group overall progress: average progress of all descendant tasks.
+ * Direct recursive traversal avoids temporary descendant ID arrays and
+ * per-task taskById lookups (O(N) traversal vs previous O(N^2) allocations).
+ */
 export function groupProgress(tasks, id) {
-  const ts = getAllDescendants(tasks, id)
-    .map(d => taskById(tasks, d))
-    .filter(t => t && t.type === 'task');
-  if (!ts.length) return 0;
-  const sum = ts.reduce((a, t) => a + (t.done ? 100 : t.progress || 0), 0);
-  return Math.round(sum / ts.length);
+  let count = 0;
+  let sum = 0;
+  function collect(parentId) {
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      if (t.parent === parentId) {
+        if (t.type === 'task') {
+          count++;
+          sum += t.done ? 100 : t.progress || 0;
+        } else {
+          // Recurse for group or any non-task container node (exact parity with getAllDescendants)
+          collect(t.id);
+        }
+      }
+    }
+  }
+  collect(id);
+  return count === 0 ? 0 : Math.round(sum / count);
 }
 
-/** All descendant ids of `id` (recursive, pre-order). */
+/**
+ * All descendant ids of `id` (recursive, pre-order).
+ * Uses index loop instead of filter() to avoid array allocations during traversal.
+ */
 export function getAllDescendants(tasks, id) {
   const result = [];
   function collect(parentId) {
-    tasks
-      .filter(t => t.parent === parentId)
-      .forEach(t => {
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      if (t.parent === parentId) {
         result.push(t.id);
         collect(t.id);
-      });
+      }
+    }
   }
   collect(id);
   return result;
