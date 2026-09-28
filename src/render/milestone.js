@@ -1,7 +1,6 @@
 /* Milestone rendering: timeline spine + individual milestone diamonds. */
 import { D } from './deps.js';
-import { isNonWorkday } from '../core/calendar.js';
-import { parseDate, formatDate, addDays } from '../core/date.js';
+import { dragMilestonePatch } from '../core/drag.js';
 import { safeColor } from '../core/format.js';
 import { showTT, moveTT, hideTT } from './tooltip.js';
 import { t } from '../i18n/index.js';
@@ -81,20 +80,7 @@ export function renderMilestoneTimeline(row, groupTask, msList) {
 }
 
 export function renderMilestone(row, task) {
-  const {
-    PPD,
-    dateToX,
-    isReadOnly,
-    showBaseline,
-    curProj,
-    pushHistory,
-    scheduleTasks,
-    recalcProjEnd,
-    render,
-    saveToLS,
-    saveToCloud,
-    currentUser
-  } = D;
+  const { PPD, dateToX, isReadOnly, showBaseline, curProj, render } = D;
   const x = dateToX(task.date) + PPD / 2;
   const d = document.createElement('div');
   d.className = 'milestone-d';
@@ -138,15 +124,7 @@ export function renderMilestone(row, task) {
           render();
           return;
         }
-        pushHistory();
-        let dn = parseDate(task.date) + delta;
-        while (isNonWorkday(formatDate(dn))) dn += delta > 0 ? 1 : -1;
-        task.date = formatDate(dn);
-        task.pinStart = true;
-        scheduleTasks();
-        recalcProjEnd();
-        render();
-        D.persist();
+        D.applyTaskChange(task, dragMilestonePatch(task, delta));
       };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);

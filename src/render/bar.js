@@ -1,8 +1,9 @@
 /* Bar rendering: regular bars, group bars, drag interactions. */
 import { D } from './deps.js';
 import { darkenColor, safeColor } from '../core/format.js';
-import { isNonWorkday, countWorkingDays, addWorkingDays } from '../core/calendar.js';
+import { isNonWorkday } from '../core/calendar.js';
 import { parseDate, formatDate, addDays } from '../core/date.js';
+import { dragTaskPatch } from '../core/drag.js';
 import { showTT, moveTT, hideTT, highlightDeps } from './tooltip.js';
 
 export function getWorkingSegs(startStr, endStr) {
@@ -130,17 +131,7 @@ export function renderBar(row, task) {
 
 /* ── BAR DRAG（拖移整條 / 拖拉左右緣調整起訖）── */
 export function attachBarDrag(bar, task) {
-  const {
-    PPD,
-    pushHistory,
-    scheduleTasks,
-    recalcProjEnd,
-    render,
-    saveToLS,
-    saveToCloud,
-    currentUser,
-    tasks
-  } = D;
+  const { PPD, render, tasks } = D;
   const hasDeps =
     (task.deps || []).length ||
     (task.sdeps || []).length ||
@@ -201,42 +192,7 @@ export function attachBarDrag(bar, task) {
         render();
         return;
       }
-      pushHistory();
-      const shiftCal = (str, days) => addDays(str, days);
-      const snapFwd = str => {
-        let dn = parseDate(str);
-        while (isNonWorkday(formatDate(dn))) dn++;
-        return formatDate(dn);
-      };
-      const snapBack = str => {
-        let dn = parseDate(str);
-        while (isNonWorkday(formatDate(dn))) dn--;
-        return formatDate(dn);
-      };
-      const wd = task.wday || countWorkingDays(task.start, task.end);
-      // 依拖動方向吸附到工作日（往右跳到下個工作日、往左跳回上個工作日）
-      const snapDir = str => (delta > 0 ? snapFwd(str) : snapBack(str));
-
-      if (mode === 'move') {
-        task.start = snapDir(shiftCal(task.start, delta));
-        task.end = addWorkingDays(task.start, wd);
-        task.pinStart = true;
-      } else if (mode === 'r') {
-        let ne = snapDir(shiftCal(task.end, delta));
-        if (ne < task.start) ne = task.start;
-        task.end = ne;
-        task.wday = countWorkingDays(task.start, task.end);
-      } else {
-        let ns = snapDir(shiftCal(task.start, delta));
-        if (ns > task.end) ns = snapBack(task.end);
-        task.start = ns;
-        task.wday = countWorkingDays(task.start, task.end);
-        task.pinStart = true;
-      }
-      scheduleTasks();
-      recalcProjEnd();
-      render();
-      D.persist();
+      D.applyTaskChange(task, dragTaskPatch(task, delta, mode));
     };
 
     document.addEventListener('mousemove', onMove);

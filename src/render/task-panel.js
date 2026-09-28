@@ -34,8 +34,7 @@ export function renderTaskPanel() {
     outdentTask,
     indentTask,
     addTaskInline,
-    confirmDeleteTask,
-    pushHistory
+    confirmDeleteTask
   } = D;
 
   const rows = getVisibleRows();
@@ -299,11 +298,9 @@ export function renderTaskPanel() {
       cb.textContent = task.done ? '✓' : '';
       cb.onclick = e => {
         e.stopPropagation();
-        pushHistory();
-        task.done = !task.done;
-        if (task.done) task.progress = 100;
-        D.render();
-        D.persist();
+        D.applyTaskChange(task, task.done ? { done: false } : { done: true, progress: 100 }, {
+          schedule: false
+        });
       };
       cc.appendChild(cb);
     } else if (task.type === 'milestone') {
@@ -313,10 +310,7 @@ export function renderTaskPanel() {
       mb.title = task.done ? t('taskPanel.markIncomplete') : t('taskPanel.markDone');
       mb.onclick = e => {
         e.stopPropagation();
-        pushHistory();
-        task.done = !task.done;
-        D.render();
-        D.persist();
+        D.applyTaskChange(task, { done: !task.done }, { schedule: false });
       };
       cc.appendChild(mb);
     }

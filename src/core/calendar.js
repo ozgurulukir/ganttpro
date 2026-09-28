@@ -144,3 +144,11 @@ export function countWorkingDays(startStr, endStr) {
   }
   return Math.max(count, 1);
 }
+
+// 將日期吸附到工作日：direction >= 0 時往後找、< 0 往前找；已是工作日則不變
+export function snapToWorkday(dateStr, direction = 1) {
+  let dn = parseDate(dateStr);
+  const step = direction >= 0 ? 1 : -1;
+  while (isNonWorkday(formatDate(dn))) dn += step;
+  return formatDate(dn);
+}

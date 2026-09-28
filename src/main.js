@@ -1535,6 +1535,7 @@ function syncRenderDeps() {
   D.saveToLS = Sync.saveToLS;
   D.saveToCloud = Sync.saveToCloud;
   D.persist = persist;
+  D.applyTaskChange = applyTaskChange;
   D.isSharedProject = Sync.isSharedProject;
   D.isReadOnlyShared = Sync.isReadOnlyShared;
   D.showStatus = showStatus;
@@ -1643,6 +1644,21 @@ function render() {
   renderChartBody();
   const undoBtn = document.getElementById('undoBtn');
   if (undoBtn) undoBtn.disabled = _getHistory(curProj()).length === 0;
+}
+
+// Single seam for mutating an existing task: snapshot undo history, apply the
+// patch, reschedule, then re-render and persist. Interactions (bar drag,
+// milestone drag, panel checkboxes) funnel through here so undo semantics and
+// persistence ordering have exactly one home.
+function applyTaskChange(task, patch, opts = {}) {
+  _pushHistory(historyState());
+  Object.assign(task, patch);
+  if (opts.schedule !== false) {
+    scheduleTasks();
+    recalcProjEnd();
+  }
+  render();
+  persist();
 }
 
 function persist() {
