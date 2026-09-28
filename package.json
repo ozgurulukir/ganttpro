@@ -1,0 +1,27 @@
+{
+  "name": "ganttpro",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "GanttPro — 專案甘特圖管理工具",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:rules": "node scripts/generate-firestore-rules.js",
+    "deploy:rules": "firebase deploy --only firestore:rules",
+    "firebase": "firebase",
+    "test": "node --test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.22.4",
+    "prettier": "^3.9.4",
+    "vite": "^8.1.2"
+  },
+  "dependencies": {
+    "firebase": "^12.15.0",
+    "i18next": "^26.3.4"
+  }
+}
