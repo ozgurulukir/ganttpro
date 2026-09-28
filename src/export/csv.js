@@ -1,4 +1,5 @@
 import { countWorkingDays } from '../core/calendar.js';
+import { csvEsc } from '../core/format.js';
 import { D } from '../render/deps.js';
 import { t } from '../i18n/index.js';
 
@@ -49,10 +50,6 @@ export function exportCSV() {
       });
   };
   walk(null, 0);
-  const csvEsc = v => {
-    v = String(v ?? '');
-    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
-  };
   const csv = '\ufeff' + lines.map(r => r.map(csvEsc).join(',')).join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);

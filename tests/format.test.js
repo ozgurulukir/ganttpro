@@ -2,7 +2,15 @@
    All pure; dateToX and avColor take their config as explicit params. */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { dateToX, toStr, initials, avColor, darkenColor, hexToRgba } from '../src/core/format.js';
+import {
+  dateToX,
+  toStr,
+  initials,
+  avColor,
+  darkenColor,
+  hexToRgba,
+  csvEsc
+} from '../src/core/format.js';
 
 /* ── dateToX ── */
 
@@ -91,4 +99,24 @@ test('hexToRgba — short/invalid hex falls back to indigo', () => {
   assert.equal(hexToRgba('#FF', 0.5), 'rgba(94,106,210,0.5)');
   assert.equal(hexToRgba(null, 0.3), 'rgba(94,106,210,0.3)');
   assert.equal(hexToRgba('', 0.2), 'rgba(94,106,210,0.2)');
+});
+
+/* ── csvEsc ── */
+
+test('csvEsc — escapes formula injection triggers', () => {
+  assert.equal(csvEsc('=SUM(1,2)'), '"\'=SUM(1,2)"');
+  assert.equal(csvEsc('+100'), "'+100");
+  assert.equal(csvEsc('-50'), "'-50");
+  assert.equal(csvEsc('@Admin'), "'@Admin");
+  assert.equal(csvEsc('\tTabPrefix'), "'\tTabPrefix");
+  assert.equal(csvEsc('\rCarriageReturn'), "'\rCarriageReturn");
+});
+
+test('csvEsc — handles standard CSV cell escaping', () => {
+  assert.equal(csvEsc('Normal Task'), 'Normal Task');
+  assert.equal(csvEsc('Task, with comma'), '"Task, with comma"');
+  assert.equal(csvEsc('Task "with quotes"'), '"Task ""with quotes"""');
+  assert.equal(csvEsc('Task\nwith newline'), '"Task\nwith newline"');
+  assert.equal(csvEsc(null), '');
+  assert.equal(csvEsc(123), '123');
 });
