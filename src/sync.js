@@ -6,7 +6,7 @@ import * as Local from './data/local.js';
 import * as Share from './data/share.js';
 import { validateProject, validateProjects } from './core/validate.js';
 import { modalOpen } from './ui/modal.js';
-import { db } from './data/firebase.js';
+import { db } from './data/firebase.js';;
 
 /* ═══════════════════════════════════════════
    INTERNAL STATE
@@ -431,7 +431,7 @@ export function initSync(ctx) {
   };
 
   // Online listener: flush offline queue when connectivity returns
-  window.addEventListener('online', () => {
+  document.addEventListener('online', () => {
     if (hasOfflinePending()) {
       clearOfflinePending();
       saveToCloud();

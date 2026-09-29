@@ -80,6 +80,7 @@ export function setupResizer() {
     tp.style.width = w + 'px';
     tp.style.minWidth = w + 'px';
   }
+
   function onUp() {
     rsz.classList.remove('drag');
     document.removeEventListener('mousemove', onMove);
