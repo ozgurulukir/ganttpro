@@ -343,7 +343,8 @@
     "arrowStyle": "箭頭樣式",
     "bezier": "曲線（Bezier）",
     "elbow": "直角（Elbow）",
-    "straight": "直線（Straight）"
+    "straight": "直線（Straight）",
+    "language": "語言"
   },
   "approval": {
     "none": "無需審批",

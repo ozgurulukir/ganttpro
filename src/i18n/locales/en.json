@@ -202,7 +202,8 @@
     "arrowStyle": "Arrow Style",
     "bezier": "Bezier",
     "elbow": "Elbow",
-    "straight": "Straight"
+    "straight": "Straight",
+    "language": "Language"
   },
   "share": {
     "title": "🔗 Share Project: ",
