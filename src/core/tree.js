@@ -15,16 +15,38 @@ export function taskById(tasks, id) {
   return tasks.find(t => t.id === id);
 }
 
+/**
+ * Parent/child + id indexes over a flat task list, replacing repeated O(n)
+ * filter/find passes with O(1) lookups in the tree hot paths.
+ * The maps alias the task objects: safe to share across a pass that only
+ * mutates task fields; any structural change (add/remove/reparent) invalidates it.
+ * @returns {{ byId: Map<number|string, object>, byParent: Map<number|string|null, object[]> }}
+ */
+export function buildIndex(tasks) {
+  const byId = new Map();
+  const byParent = new Map();
+  for (const t of tasks) {
+    byId.set(t.id, t);
+    const siblings = byParent.get(t.parent);
+    if (siblings) siblings.push(t);
+    else byParent.set(t.parent, [t]);
+  }
+  return { byId, byParent };
+}
+
 /** Does `id` (transitively, through groups) have a milestone descendant? */
 export function hasMilestoneDescendant(tasks, id, visited = new Set()) {
-  if (visited.has(id)) return false;
-  visited.add(id);
-
-  for (const t of tasks.filter(t => t.parent === id)) {
-    if (t.type === 'milestone') return true;
-    if (t.type === 'group' && hasMilestoneDescendant(tasks, t.id, visited)) return true;
+  const { byParent } = buildIndex(tasks);
+  function walk(pid) {
+    if (visited.has(pid)) return false;
+    visited.add(pid);
+    for (const t of byParent.get(pid) || []) {
+      if (t.type === 'milestone') return true;
+      if (t.type === 'group' && walk(t.id)) return true;
+    }
+    return false;
   }
-  return false;
+  return walk(id);
 }
 
 /** 1-based row number of `taskId` within the currently visible rows. */
@@ -52,16 +74,15 @@ export function getVisibleRows(tasks, collapsed, milestoneView) {
       .sort((a, b) => ((a.date || '') < (b.date || '') ? -1 : 1))
       .map(t => ({ task: t, depth: 0 }));
   }
+  const { byParent } = buildIndex(tasks);
   const rows = [];
   function addChildren(parentId, depth) {
-    tasks
-      .filter(t => t.parent === parentId)
-      .forEach(t => {
-        rows.push({ task: t, depth });
-        if (!collapsed.has(t.id) && tasks.some(c => c.parent === t.id)) {
-          addChildren(t.id, depth + 1);
-        }
-      });
+    for (const t of byParent.get(parentId) || []) {
+      rows.push({ task: t, depth });
+      if (!collapsed.has(t.id) && byParent.has(t.id)) {
+        addChildren(t.id, depth + 1);
+      }
+    }
   }
   addChildren(null, 0);
   return rows;
@@ -71,52 +92,45 @@ export function getVisibleRows(tasks, collapsed, milestoneView) {
  * Are all direct task children of group `id` done (≥1 required)?
  * Note: Milestones are intentionally ignored in this calculation.
  */
-export function groupAllDone(tasks, id) {
-  const children = tasks.filter(t => t.parent === id && t.type === 'task');
+export function groupAllDone(tasks, id, index = buildIndex(tasks)) {
+  const children = (index.byParent.get(id) || []).filter(t => t.type === 'task');
   return children.length > 0 && children.every(t => t.done);
 }
 
 /** Earliest start / latest end across a group's descendants (recursive). */
-export function groupBounds(tasks, id) {
+export function groupBounds(tasks, id, index = buildIndex(tasks)) {
   let s = null,
     e = null;
-  tasks
-    .filter(t => t.parent === id)
-    .forEach(t => {
-      if (t.type === 'task') {
-        if (!s || t.start < s) s = t.start;
-        if (!e || t.end > e) e = t.end;
-      } else if (t.type === 'milestone') {
-        if (!s || t.date < s) s = t.date;
-        if (!e || t.date > e) e = t.date;
-      } else if (t.type === 'group') {
-        const b = groupBounds(tasks, t.id);
-        if (b.s && (!s || b.s < s)) s = b.s;
-        if (b.e && (!e || b.e > e)) e = b.e;
-      }
-    });
+  for (const t of index.byParent.get(id) || []) {
+    if (t.type === 'task') {
+      if (!s || t.start < s) s = t.start;
+      if (!e || t.end > e) e = t.end;
+    } else if (t.type === 'milestone') {
+      if (!s || t.date < s) s = t.date;
+      if (!e || t.date > e) e = t.date;
+    } else if (t.type === 'group') {
+      const b = groupBounds(tasks, t.id, index);
+      if (b.s && (!s || b.s < s)) s = b.s;
+      if (b.e && (!e || b.e > e)) e = b.e;
+    }
+  }
   return { s, e };
 }
 
 /**
  * Group overall progress: average progress of all descendant tasks.
- * Direct recursive traversal avoids temporary descendant ID arrays and
- * per-task taskById lookups (O(N) traversal vs previous O(N^2) allocations).
  */
-export function groupProgress(tasks, id) {
+export function groupProgress(tasks, id, index = buildIndex(tasks)) {
   let count = 0;
   let sum = 0;
   function collect(parentId) {
-    for (let i = 0; i < tasks.length; i++) {
-      const t = tasks[i];
-      if (t.parent === parentId) {
-        if (t.type === 'task') {
-          count++;
-          sum += t.done ? 100 : t.progress || 0;
-        } else {
-          // Recurse for group or any non-task container node (exact parity with getAllDescendants)
-          collect(t.id);
-        }
+    for (const t of index.byParent.get(parentId) || []) {
+      if (t.type === 'task') {
+        count++;
+        sum += t.done ? 100 : t.progress || 0;
+      } else {
+        // Recurse for group or any non-task container node (exact parity with getAllDescendants)
+        collect(t.id);
       }
     }
   }
@@ -126,17 +140,14 @@ export function groupProgress(tasks, id) {
 
 /**
  * All descendant ids of `id` (recursive, pre-order).
- * Uses index loop instead of filter() to avoid array allocations during traversal.
  */
 export function getAllDescendants(tasks, id) {
+  const { byParent } = buildIndex(tasks);
   const result = [];
   function collect(parentId) {
-    for (let i = 0; i < tasks.length; i++) {
-      const t = tasks[i];
-      if (t.parent === parentId) {
-        result.push(t.id);
-        collect(t.id);
-      }
+    for (const t of byParent.get(parentId) || []) {
+      result.push(t.id);
+      collect(t.id);
     }
   }
   collect(id);
@@ -167,16 +178,17 @@ export function getTaskDepth(tasks, id) {
 
 /** WBS code for a task: dot-separated path of 1-based sibling indices. */
 export function getWBSCode(tasks, taskId) {
+  const { byId, byParent } = buildIndex(tasks);
   const path = [];
-  let cur = taskById(tasks, taskId);
+  let cur = byId.get(taskId);
   const seen = new Set();
   while (cur) {
     if (seen.has(cur.id)) break;
     seen.add(cur.id);
-    const siblings = tasks.filter(t => t.parent === cur.parent);
+    const siblings = byParent.get(cur.parent) || [];
     const idx = siblings.indexOf(cur) + 1;
     path.unshift(idx);
-    cur = cur.parent !== null ? taskById(tasks, cur.parent) : null;
+    cur = cur.parent !== null ? byId.get(cur.parent) : null;
   }
   return path.join('.');
 }
@@ -190,20 +202,11 @@ export function getWBSCode(tasks, taskId) {
  * 1-based position among siblings in the original `tasks` order.
  */
 export function getWBSMap(tasks) {
-  const byParent = new Map();
-  for (const t of tasks) {
-    const p = t.parent;
-    let arr = byParent.get(p);
-    if (!arr) {
-      arr = [];
-      byParent.set(p, arr);
-    }
-    arr.push(t);
-  }
+  const { byId, byParent } = buildIndex(tasks);
   const map = new Map();
   function walk(id) {
     if (map.has(id)) return map.get(id);
-    const t = taskById(tasks, id);
+    const t = byId.get(id);
     if (!t) return '';
     const siblings = byParent.get(t.parent) || [];
     const idx = siblings.indexOf(t) + 1;

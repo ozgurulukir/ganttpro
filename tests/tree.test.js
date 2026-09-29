@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import {
   taskById,
+  buildIndex,
   hasMilestoneDescendant,
   getRowNum,
   getTaskByRowNum,
@@ -64,6 +65,23 @@ const EMPTY = new Set();
 test('taskById — finds existing and missing', () => {
   assert.equal(taskById(TASKS, 't1').start, '2026-05-01');
   assert.equal(taskById(TASKS, 'nope'), undefined);
+});
+
+test('buildIndex — byId lookup, byParent grouping preserves order, aliases objects', () => {
+  const { byId, byParent } = buildIndex(TASKS);
+  assert.equal(byId.get('t3').start, '2026-05-02');
+  assert.equal(byId.get('nope'), undefined);
+  assert.deepEqual(
+    [...byParent.get('root1')].map(t => t.id),
+    ['t1', 't2', 'g2'] // original tasks order
+  );
+  assert.deepEqual(
+    [...byParent.get(null)].map(t => t.id),
+    ['root1', 'm2']
+  );
+  byId.get('t1').progress = 99; // aliases, not copies
+  assert.equal(TASKS[1].progress, 99);
+  TASKS[1].progress = 50; // restore fixture
 });
 
 test('getTaskDepth — root is 0, child 1, grandchild 2', () => {

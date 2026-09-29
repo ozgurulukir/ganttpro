@@ -22,17 +22,15 @@ import {
   isNonWorkday
 } from './calendar.js';
 import { parseDate, formatDate } from './date.js';
-import { taskById, groupBounds } from './tree.js';
+import { taskById, groupBounds, buildIndex } from './tree.js';
 import { wouldCreateCycle } from './deps.js';
 
 /** Are all (transitively, through sub-groups) children of `groupId` scheduled? */
-export function allGroupMembersScheduled(tasks, groupId, scheduled) {
-  return tasks
-    .filter(t => t.parent === groupId)
-    .every(child => {
-      if (child.type === 'group') return allGroupMembersScheduled(tasks, child.id, scheduled);
-      return scheduled.has(child.id);
-    });
+export function allGroupMembersScheduled(tasks, groupId, scheduled, index = buildIndex(tasks)) {
+  return (index.byParent.get(groupId) || []).every(child => {
+    if (child.type === 'group') return allGroupMembersScheduled(tasks, child.id, scheduled, index);
+    return scheduled.has(child.id);
+  });
 }
 
 /**
@@ -42,6 +40,9 @@ export function allGroupMembersScheduled(tasks, groupId, scheduled) {
  */
 export function scheduleTasks(tasks, projStart) {
   if (!projStart) return;
+  // The task structure is fixed for the whole pass (only start/end fields are
+  // mutated below), so one index serves every dep lookup in the fixpoint loop.
+  const index = buildIndex(tasks);
   // Ensure all tasks have wday
   tasks.forEach(t => {
     if (t.type === 'task' && !t.wday)
@@ -57,22 +58,22 @@ export function scheduleTasks(tasks, projStart) {
     candidates.forEach(task => {
       if (scheduled.has(task.id)) return;
       // FS deps: must be scheduled first
-      const deps = (task.deps || []).map(id => taskById(tasks, id)).filter(Boolean);
+      const deps = (task.deps || []).map(id => index.byId.get(id)).filter(Boolean);
       const unresolvedFs = deps.filter(d => {
-        if (d.type === 'group') return !allGroupMembersScheduled(tasks, d.id, scheduled);
+        if (d.type === 'group') return !allGroupMembersScheduled(tasks, d.id, scheduled, index);
         return !scheduled.has(d.id);
       });
       if (unresolvedFs.length) return;
       // SS deps: must be scheduled first too
-      const sdeps = (task.sdeps || []).map(id => taskById(tasks, id)).filter(Boolean);
+      const sdeps = (task.sdeps || []).map(id => index.byId.get(id)).filter(Boolean);
       const unresolvedSs = sdeps.filter(d => !scheduled.has(d.id));
       if (unresolvedSs.length) return;
       // FF deps: must be scheduled first
-      const ffdeps = (task.ffdeps || []).map(id => taskById(tasks, id)).filter(Boolean);
+      const ffdeps = (task.ffdeps || []).map(id => index.byId.get(id)).filter(Boolean);
       const unresolvedFf = ffdeps.filter(d => !scheduled.has(d.id));
       if (unresolvedFf.length) return;
       // SF deps: must be scheduled first
-      const sfdeps = (task.sfdeps || []).map(id => taskById(tasks, id)).filter(Boolean);
+      const sfdeps = (task.sfdeps || []).map(id => index.byId.get(id)).filter(Boolean);
       const unresolvedSf = sfdeps.filter(d => !scheduled.has(d.id));
       if (unresolvedSf.length) return;
 
@@ -86,7 +87,7 @@ export function scheduleTasks(tasks, projStart) {
             : dep.type === 'milestone'
               ? dep.date
               : dep.type === 'group'
-                ? groupBounds(tasks, dep.id).e
+                ? groupBounds(tasks, dep.id, index).e
                 : null;
         if (!e) return;
         e = shiftWorkingDays(e, depLag('FS', dep.id));
