@@ -1043,101 +1043,40 @@ let isDark = false;
 
 /* ─── UNDO HISTORY (extracted to src/history.js) ─── */
 
+/* ─── STATE MANIFEST — single source of truth for cross-module state access ───
+   historyState(), the Sync.initSync() context and the state refresh in
+   syncRenderDeps() are all derived from this table, so a new state field is
+   registered once here instead of in three parallel accessor layers. */
+const STATE_FIELDS = {
+  tasks: { get: () => tasks, set: v => (tasks = v) },
+  nextId: { get: () => nextId, set: v => (nextId = v) },
+  currentProjId: { get: () => currentProjId, set: v => (currentProjId = v) },
+  collapsed: { get: () => collapsed },
+  viewMode: { get: () => viewMode, set: v => (viewMode = v) },
+  PPD: { get: () => PPD, set: v => (PPD = v) },
+  showCriticalPath: { get: () => showCriticalPath, set: v => (showCriticalPath = v) },
+  criticalTaskIds: { get: () => criticalTaskIds, set: v => (criticalTaskIds = v) },
+  showWBS: { get: () => showWBS, set: v => (showWBS = v) },
+  isDark: { get: () => isDark, set: v => (isDark = v) },
+  CHART_START: { get: () => CHART_START, set: v => (CHART_START = v) },
+  CHART_END: { get: () => CHART_END, set: v => (CHART_END = v) },
+  milestoneView: { get: () => milestoneView, set: v => (milestoneView = v) },
+  workloadView: { get: () => workloadView, set: v => (workloadView = v) },
+  showBarDates: { get: () => showBarDates, set: v => (showBarDates = v) },
+  showBaseline: { get: () => showBaseline, set: v => (showBaseline = v) },
+  projects: { get: () => projects, set: v => (projects = v) },
+  nextProjId: { get: () => nextProjId, set: v => (nextProjId = v) },
+  isReadOnly: { get: () => isReadOnly },
+  currentUser: { get: () => currentUser }
+};
+
+/* Snapshot-style accessor object over the manifest (consumed by history.js). */
 function historyState() {
-  return {
-    curProj: curProj(),
-    get tasks() {
-      return tasks;
-    },
-    set tasks(v) {
-      tasks = v;
-    },
-    get nextId() {
-      return nextId;
-    },
-    set nextId(v) {
-      nextId = v;
-    },
-    get currentProjId() {
-      return currentProjId;
-    },
-    get collapsed() {
-      return collapsed;
-    },
-    get viewMode() {
-      return viewMode;
-    },
-    set viewMode(v) {
-      viewMode = v;
-    },
-    get PPD() {
-      return PPD;
-    },
-    set PPD(v) {
-      PPD = v;
-    },
-    PPDS,
-    get showCriticalPath() {
-      return showCriticalPath;
-    },
-    set showCriticalPath(v) {
-      showCriticalPath = v;
-    },
-    get criticalTaskIds() {
-      return criticalTaskIds;
-    },
-    set criticalTaskIds(v) {
-      criticalTaskIds = v;
-    },
-    get showWBS() {
-      return showWBS;
-    },
-    set showWBS(v) {
-      showWBS = v;
-    },
-    get isDark() {
-      return isDark;
-    },
-    set isDark(v) {
-      isDark = v;
-    },
-    get CHART_START() {
-      return CHART_START;
-    },
-    set CHART_START(v) {
-      CHART_START = v;
-    },
-    get CHART_END() {
-      return CHART_END;
-    },
-    set CHART_END(v) {
-      CHART_END = v;
-    },
-    get milestoneView() {
-      return milestoneView;
-    },
-    set milestoneView(v) {
-      milestoneView = v;
-    },
-    get workloadView() {
-      return workloadView;
-    },
-    set workloadView(v) {
-      workloadView = v;
-    },
-    get showBarDates() {
-      return showBarDates;
-    },
-    set showBarDates(v) {
-      showBarDates = v;
-    },
-    get showBaseline() {
-      return showBaseline;
-    },
-    set showBaseline(v) {
-      showBaseline = v;
-    }
-  };
+  const state = { curProj: curProj(), PPDS };
+  for (const [name, f] of Object.entries(STATE_FIELDS)) {
+    Object.defineProperty(state, name, { get: f.get, set: f.set, enumerable: true });
+  }
+  return state;
 }
 
 const boundUndo = () =>
@@ -1436,31 +1375,14 @@ document.addEventListener('keydown', e => {
 /* Sync app state + function refs to render modules' shared D object.
    Called at startup + before each render cycle. */
 function syncRenderDeps() {
-  // State variables (refreshed each render)
-  D.tasks = tasks;
-  D.collapsed = collapsed;
-  D.milestoneView = milestoneView;
-  D.workloadView = workloadView;
-  D.isReadOnly = isReadOnly;
-  D.showCriticalPath = showCriticalPath;
-  D.criticalTaskIds = criticalTaskIds;
-  D.showBarDates = showBarDates;
-  D.showBaseline = showBaseline;
-  D.showWBS = showWBS;
-  D.isDark = isDark;
-  D.PPD = PPD;
+  // State variables (refreshed each render) — derived from STATE_FIELDS
+  for (const [name, f] of Object.entries(STATE_FIELDS)) D[name] = f.get();
   D.PPDS = PPDS;
-  D.CHART_START = CHART_START;
-  D.CHART_END = CHART_END;
   D.TODAY_STR = TODAY_STR;
   D.TODAY = new Date(TODAY_STR);
   D.ROW_H = ROW_H;
   D.BAR_H = BAR_H;
   D.MS_ROW_H = MS_ROW_H;
-  D.projects = projects;
-  D.currentProjId = currentProjId;
-  D.nextProjId = nextProjId;
-  D.currentUser = currentUser;
   D.TEMPLATES = TEMPLATES;
 
   // Function refs (stable, but harmless to reassign)
@@ -2046,37 +1968,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   safeSetupResizers();
 
-  // Initialize sync module with context
+  // Initialize sync module with context (state accessors from STATE_FIELDS)
   Sync.initSync({
-    getCurrentUser: () => currentUser,
-    getCurProj: () => projects.find(p => p.id === currentProjId),
-    getProjects: () => projects,
-    getCurrentProjId: () => currentProjId,
-    getNextId: () => nextId,
-    getNextProjId: () => nextProjId,
-    getChartStart: () => CHART_START,
-    getChartEnd: () => CHART_END,
-    setProjects: arr => {
-      projects = arr;
-    },
-    setCurrentProjId: id => {
-      currentProjId = id;
-    },
-    setTasks: arr => {
-      tasks = arr;
-    },
-    setNextId: v => {
-      nextId = v;
-    },
-    setNextProjId: v => {
-      nextProjId = v;
-    },
-    setChartStart: d => {
-      CHART_START = d;
-    },
-    setChartEnd: d => {
-      CHART_END = d;
-    },
+    getCurrentUser: STATE_FIELDS.currentUser.get,
+    getCurProj: curProj,
+    getProjects: STATE_FIELDS.projects.get,
+    getCurrentProjId: STATE_FIELDS.currentProjId.get,
+    getNextId: STATE_FIELDS.nextId.get,
+    getNextProjId: STATE_FIELDS.nextProjId.get,
+    getChartStart: STATE_FIELDS.CHART_START.get,
+    getChartEnd: STATE_FIELDS.CHART_END.get,
+    setProjects: STATE_FIELDS.projects.set,
+    setCurrentProjId: STATE_FIELDS.currentProjId.set,
+    setTasks: STATE_FIELDS.tasks.set,
+    setNextId: STATE_FIELDS.nextId.set,
+    setNextProjId: STATE_FIELDS.nextProjId.set,
+    setChartStart: STATE_FIELDS.CHART_START.set,
+    setChartEnd: STATE_FIELDS.CHART_END.set,
     scheduleTasks,
     recalcProjEnd,
     render,
