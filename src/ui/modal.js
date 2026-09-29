@@ -1,7 +1,8 @@
 /* Task editing modal: create/edit/delete tasks, inline cell editors, deps picker. */
 import { D } from '../render/deps.js';
 import { countWorkingDays, addWorkingDays } from '../core/calendar.js';
-import { lagsFromParsed } from '../core/deps.js';
+import { depsFromParsed, startEditPatch, endEditPatch } from '../core/taskform.js';
+import { TASK_FIELDS } from '../core/validate.js';
 import { esc } from '../core/format.js';
 import { t } from '../i18n/index.js';
 import { logAudit } from '../data/audit.js';
@@ -235,7 +236,7 @@ export function openModal(unused, prefillDate) {
 }
 
 export function openNameEditor(task, cell, isNew = false) {
-  const { tasks, pushHistory, recalcProjEnd, render } = D;
+  const { tasks, render } = D;
   const inp = document.createElement('input');
   inp.type = 'text';
   inp.className = 'inline-input';
@@ -252,12 +253,14 @@ export function openNameEditor(task, cell, isNew = false) {
     if (_blockInlineCommit) return;
     if (committed) return;
     committed = true;
-    const name = inp.value.trim();
-    if (!isNew) pushHistory();
-    task.name = name || 'New Task';
-    recalcProjEnd();
-    render();
-    D.persist();
+    D.applyTaskChange(
+      task,
+      { name: inp.value.trim() || 'New Task' },
+      {
+        schedule: false,
+        history: !isNew
+      }
+    );
   }
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e => {
@@ -490,18 +493,7 @@ export function submitTask() {
   const depsRaw = document.getElementById('fDeps').value;
   const parsedDeps = parseDepInput(depsRaw, editingTaskId);
   const hasDepErr = parsedDeps.some(p => p.err);
-  const newDeps = hasDepErr
-    ? null
-    : [...new Set(parsedDeps.filter(p => p.type === 'FS').map(p => p.taskId))];
-  const newSdeps = hasDepErr
-    ? null
-    : [...new Set(parsedDeps.filter(p => p.type === 'SS').map(p => p.taskId))];
-  const newFfdeps = hasDepErr
-    ? null
-    : [...new Set(parsedDeps.filter(p => p.type === 'FF').map(p => p.taskId))];
-  const newSfdeps = hasDepErr
-    ? null
-    : [...new Set(parsedDeps.filter(p => p.type === 'SF').map(p => p.taskId))];
+  const depFields = hasDepErr ? null : depsFromParsed(parsedDeps);
 
   pushHistory();
   if (editingTaskId !== null) {
@@ -514,14 +506,11 @@ export function submitTask() {
       t.parent = parentId;
       t.color = parent ? parent.color : t.color;
       if (!hasDepErr) {
-        t.deps = newDeps;
-        t.sdeps = newSdeps;
-        if (newFfdeps.length) t.ffdeps = newFfdeps;
-        else delete t.ffdeps;
-        if (newSfdeps.length) t.sfdeps = newSfdeps;
-        else delete t.sfdeps;
-        const newLags = lagsFromParsed(parsedDeps);
-        if (Object.keys(newLags).length) t.lags = newLags;
+        t.deps = depFields.deps;
+        t.sdeps = depFields.sdeps;
+        t.ffdeps = depFields.ffdeps;
+        t.sfdeps = depFields.sfdeps;
+        if (depFields.lags) t.lags = depFields.lags;
         else delete t.lags;
       }
       if (type === 'task') {
@@ -532,7 +521,7 @@ export function submitTask() {
         delete t.date;
         t.progress = done
           ? 100
-          : Math.max(0, Math.min(100, parseInt(document.getElementById('fProgress').value) || 0));
+          : TASK_FIELDS.progress.sanitize(document.getElementById('fProgress').value);
       } else if (type === 'milestone') {
         t.date = start;
         t.pinStart = true;
@@ -566,15 +555,12 @@ export function submitTask() {
       type,
       parent: parentId,
       color: autoColor,
-      deps: newDeps || [],
-      sdeps: newSdeps || []
+      deps: [],
+      sdeps: [],
+      ffdeps: [],
+      sfdeps: [],
+      ...(depFields || {})
     };
-    if (newFfdeps?.length) t.ffdeps = newFfdeps;
-    if (newSfdeps?.length) t.sfdeps = newSfdeps;
-    if (!hasDepErr) {
-      const newLags = lagsFromParsed(parsedDeps);
-      if (Object.keys(newLags).length) t.lags = newLags;
-    }
     if (type === 'task') {
       t.start = start;
       t.end = end;
@@ -582,7 +568,7 @@ export function submitTask() {
       t.pinStart = true;
       t.progress = done
         ? 100
-        : Math.max(0, Math.min(100, parseInt(document.getElementById('fProgress').value) || 0));
+        : TASK_FIELDS.progress.sanitize(document.getElementById('fProgress').value);
     } else if (type === 'milestone') {
       t.date = start;
       t.pinStart = true;
@@ -608,42 +594,8 @@ export function submitTask() {
   D.persist();
 }
 
-export function openDateEditor(task, field, cell) {
-  const { recalcProjEnd, render } = D;
-  const inp = document.createElement('input');
-  inp.type = 'date';
-  inp.className = 'inline-input';
-  inp.value = field === 'start' ? task.start || '' : task.end || '';
-  cell.innerHTML = '';
-  cell.appendChild(inp);
-  inp.focus();
-  function commit() {
-    if (_blockInlineCommit) return;
-    if (!inp.value) {
-      render();
-      return;
-    }
-    if (field === 'start') {
-      task.start = inp.value;
-      if (task.end && task.end < task.start) task.end = task.start;
-    } else {
-      task.end = inp.value;
-      if (task.start && task.start >= task.end) task.start = task.end; // keep start behind end
-    }
-    recalcProjEnd();
-    render();
-    D.persist();
-  }
-  inp.addEventListener('change', commit);
-  inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => {
-    if (e.key === 'Escape') render();
-  });
-}
-
 export function openStartEditor(task, cell) {
-  const { pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser } =
-    D;
+  const { render } = D;
   const inp = document.createElement('input');
   inp.type = 'date';
   inp.className = 'inline-input';
@@ -657,17 +609,8 @@ export function openStartEditor(task, cell) {
   function commit() {
     if (_blockInlineCommit) return;
     const val = inp.value;
-    if (val && val !== task.start) {
-      pushHistory();
-      if (val > (task.end || '')) task.end = val;
-      if (val <= (task.end || '')) task.wday = countWorkingDays(val, task.end);
-      task.start = val;
-      task.pinStart = true;
-    }
-    scheduleTasks();
-    recalcProjEnd();
-    render();
-    D.persist();
+    if (val && val !== task.start) D.applyTaskChange(task, startEditPatch(task, val));
+    else render();
   }
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e => {
@@ -679,8 +622,7 @@ export function openStartEditor(task, cell) {
 }
 
 export function openEndEditor(task, cell) {
-  const { pushHistory, scheduleTasks, recalcProjEnd, render, saveToLS, saveToCloud, currentUser } =
-    D;
+  const { render } = D;
   const inp = document.createElement('input');
   inp.type = 'date';
   inp.className = 'inline-input';
@@ -694,21 +636,8 @@ export function openEndEditor(task, cell) {
   function commit() {
     if (_blockInlineCommit) return;
     const val = inp.value;
-    if (val && val !== task.end) {
-      pushHistory();
-      if (val < (task.start || '')) {
-        task.start = val;
-        task.wday = 1;
-      } else if (val >= (task.start || '')) {
-        task.wday = countWorkingDays(task.start, val);
-      }
-      task.end = val;
-      task.pinStart = true;
-    }
-    scheduleTasks();
-    recalcProjEnd();
-    render();
-    D.persist();
+    if (val && val !== task.end) D.applyTaskChange(task, endEditPatch(task, val));
+    else render();
   }
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e => {
@@ -718,7 +647,7 @@ export function openEndEditor(task, cell) {
 }
 
 export function openWdayEditor(task, cell) {
-  const { pushHistory, scheduleTasks, recalcProjEnd, render } = D;
+  const { render } = D;
   const inp = document.createElement('input');
   inp.type = 'number';
   inp.min = '1';
@@ -732,16 +661,8 @@ export function openWdayEditor(task, cell) {
   function commit() {
     if (_blockInlineCommit) return;
     const days = parseInt(inp.value);
-    if (!isNaN(days) && days >= 1) {
-      pushHistory();
-      task.wday = days;
-      scheduleTasks();
-      recalcProjEnd();
-      render();
-      D.persist();
-    } else {
-      render();
-    }
+    if (!isNaN(days) && days >= 1) D.applyTaskChange(task, { wday: days });
+    else render();
   }
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e => {
@@ -752,18 +673,7 @@ export function openWdayEditor(task, cell) {
 
 /* ── DEPS CELL INLINE EDITOR ── */
 export function openAllDepsEditor(task, cell) {
-  const {
-    parseDepInput,
-    taskById,
-    buildDepsText,
-    pushHistory,
-    scheduleTasks,
-    recalcProjEnd,
-    render,
-    saveToLS,
-    saveToCloud,
-    currentUser
-  } = D;
+  const { parseDepInput, taskById, buildDepsText, render } = D;
   const wrap = document.createElement('div');
   wrap.className = 'deps-edit-wrap';
 
@@ -824,21 +734,9 @@ export function openAllDepsEditor(task, cell) {
     committed = true;
     const parsed = parseDepInput(inp.value, task.id);
     const hasErr = parsed.some(p => p.err);
-    if (!hasErr) {
-      pushHistory();
-      task.deps = [...new Set(parsed.filter(p => p.type === 'FS').map(p => p.taskId))];
-      task.sdeps = [...new Set(parsed.filter(p => p.type === 'SS').map(p => p.taskId))];
-      task.ffdeps = [...new Set(parsed.filter(p => p.type === 'FF').map(p => p.taskId))];
-      task.sfdeps = [...new Set(parsed.filter(p => p.type === 'SF').map(p => p.taskId))];
-      const newLags = lagsFromParsed(parsed);
-      if (Object.keys(newLags).length) task.lags = newLags;
-      else delete task.lags;
-      scheduleTasks();
-      recalcProjEnd();
-    }
     tip.remove();
-    render();
-    D.persist();
+    if (!hasErr) D.applyTaskChange(task, depsFromParsed(parsed));
+    else render();
   }
 
   inp.addEventListener('blur', commit);

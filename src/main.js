@@ -46,7 +46,6 @@ import {
   openEditModal,
   closeModal,
   openNameEditor,
-  openDateEditor,
   openStartEditor,
   openEndEditor,
   openWdayEditor,
@@ -1565,7 +1564,7 @@ function render() {
 // milestone drag, panel checkboxes) funnel through here so undo semantics and
 // persistence ordering have exactly one home.
 function applyTaskChange(task, patch, opts = {}) {
-  _pushHistory(historyState());
+  if (opts.history !== false) _pushHistory(historyState());
   Object.assign(task, patch);
   if (opts.schedule !== false) {
     scheduleTasks();
