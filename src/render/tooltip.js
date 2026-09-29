@@ -1,5 +1,6 @@
 /* Tooltip + row highlighting — pure DOM + dep lookups for state/functions. */
 import { D } from './deps.js';
+import { allDepIds, allSuccIds as coreAllSuccIds } from '../core/deps.js';
 import { countWorkingDays } from '../core/calendar.js';
 import { esc, safeColor } from '../core/format.js';
 import { t } from '../i18n/index.js';
@@ -10,26 +11,13 @@ export function highlightRow(id, on) {
   });
 }
 
-export function getPredIds(task) {
-  return [
-    ...(task.deps || []),
-    ...(task.sdeps || []),
-    ...(task.ffdeps || []),
-    ...(task.sfdeps || [])
-  ];
+function getPredIds(task) {
+  return allDepIds(task);
 }
 
-export function getSuccIds(id) {
+function getSuccIds(id) {
   const { tasks } = D;
-  return tasks
-    .filter(
-      t =>
-        (t.deps || []).includes(id) ||
-        (t.sdeps || []).includes(id) ||
-        (t.ffdeps || []).includes(id) ||
-        (t.sfdeps || []).includes(id)
-    )
-    .map(t => t.id);
+  return coreAllSuccIds(tasks, id);
 }
 
 export function highlightDeps(id, on) {

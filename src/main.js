@@ -19,15 +19,7 @@ import * as DateUtils from './core/date.js';
 import { validateProject } from './core/validate.js';
 import * as Sync from './sync.js';
 import { D } from './render/deps.js';
-import {
-  highlightRow,
-  getPredIds,
-  getSuccIds,
-  highlightDeps,
-  showTT,
-  moveTT,
-  hideTT
-} from './render/tooltip.js';
+import { highlightRow, highlightDeps, showTT, moveTT, hideTT } from './render/tooltip.js';
 import { computeWorkload, renderWorkloadPanel, renderWorkloadChart } from './render/workload.js';
 import { renderGrid } from './render/grid.js';
 import { renderBar, renderGroupBar, attachBarDrag, getWorkingSegs } from './render/bar.js';

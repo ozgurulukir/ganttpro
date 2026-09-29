@@ -1,6 +1,7 @@
 /* Milestone rendering: timeline spine + individual milestone diamonds. */
 import { D } from './deps.js';
 import { dragMilestonePatch } from '../core/drag.js';
+import { hasAnyDeps } from '../core/deps.js';
 import { safeColor } from '../core/format.js';
 import { showTT, moveTT, hideTT } from './tooltip.js';
 import { t } from '../i18n/index.js';
@@ -92,11 +93,7 @@ export function renderMilestone(row, task) {
   d.addEventListener('mouseleave', hideTT);
 
   // 拖移里程碑（無依賴時；有依賴的日期由排程決定）
-  const msDeps =
-    (task.deps || []).length ||
-    (task.sdeps || []).length ||
-    (task.ffdeps || []).length ||
-    (task.sfdeps || []).length;
+  const msDeps = hasAnyDeps(task);
   if (!isReadOnly && !msDeps) {
     d.style.cursor = 'grab';
     d.addEventListener('mousedown', e => {

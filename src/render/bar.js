@@ -1,5 +1,6 @@
 /* Bar rendering: regular bars, group bars, drag interactions. */
 import { D } from './deps.js';
+import { hasAnyDeps } from '../core/deps.js';
 import { darkenColor, safeColor } from '../core/format.js';
 import { isNonWorkday } from '../core/calendar.js';
 import { parseDate, formatDate, addDays } from '../core/date.js';
@@ -132,11 +133,7 @@ export function renderBar(row, task) {
 /* ── BAR DRAG（拖移整條 / 拖拉左右緣調整起訖）── */
 export function attachBarDrag(bar, task) {
   const { PPD, render, tasks } = D;
-  const hasDeps =
-    (task.deps || []).length ||
-    (task.sdeps || []).length ||
-    (task.ffdeps || []).length ||
-    (task.sfdeps || []).length;
+  const hasDeps = hasAnyDeps(task);
 
   // 右緣：調整結束日（永遠可用）；左緣與整條拖移：僅無依賴任務（有依賴時開始日由排程決定）
   const mkHandle = side => {

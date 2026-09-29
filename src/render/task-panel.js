@@ -1,5 +1,6 @@
 /* Task panel: left-side table with name, dates, deps, actions. */
 import { D } from './deps.js';
+import { hasAnyDeps } from '../core/deps.js';
 import { darkenColor, initials, safeColor } from '../core/format.js';
 import { countWorkingDays } from '../core/calendar.js';
 import { highlightRow } from './tooltip.js';
@@ -216,11 +217,7 @@ export function renderTaskPanel() {
       }
     }
     if (task.type === 'task') {
-      const hasDeps =
-        (task.deps || []).length ||
-        (task.sdeps || []).length ||
-        (task.ffdeps || []).length ||
-        (task.sfdeps || []).length;
+      const hasDeps = hasAnyDeps(task);
       if (!hasDeps) {
         sc.style.cursor = 'text';
         sc.addEventListener('click', e => {

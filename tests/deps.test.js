@@ -3,6 +3,9 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import {
+  allDepIds,
+  hasAnyDeps,
+  allSuccIds,
   wouldCreateCycle,
   buildDepsText,
   parseDepInput,
@@ -153,4 +156,29 @@ test('buildDepsText — positive and negative lag suffixes', () => {
 test('buildDepsText — lag 0 produces no suffix', () => {
   const zeroLag = { id: 'E', parent: null, type: 'task', deps: ['A'], lags: { FSA: 0 } };
   assert.equal(buildDepsText(TASKS, EMPTY, MS, zeroLag), '1FS');
+});
+
+test('allDepIds collects the four dep arrays deduped', () => {
+  const t = { id: 1, deps: [2, 3], sdeps: [3, 4], ffdeps: [], sfdeps: [2] };
+  assert.deepStrictEqual(allDepIds(t), [2, 3, 4]);
+  assert.deepStrictEqual(allDepIds({ id: 2 }), []);
+});
+
+test('hasAnyDeps is true iff any dep array is non-empty', () => {
+  assert.equal(hasAnyDeps({ id: 1, deps: [2] }), true);
+  assert.equal(hasAnyDeps({ id: 1, sfdeps: [5] }), true);
+  assert.equal(hasAnyDeps({ id: 1, deps: [], sdeps: [], ffdeps: [], sfdeps: [] }), false);
+  assert.equal(hasAnyDeps({ id: 1 }), false);
+});
+
+test('allSuccIds finds tasks referencing the given id in any dep array', () => {
+  const tasks = [
+    { id: 1, deps: [9] },
+    { id: 2, sdeps: [9] },
+    { id: 3, ffdeps: [8], sfdeps: [9] },
+    { id: 4, deps: [7] }
+  ];
+  assert.deepStrictEqual(allSuccIds(tasks, 9), [1, 2, 3]);
+  assert.deepStrictEqual(allSuccIds(tasks, 7), [4]);
+  assert.deepStrictEqual(allSuccIds(tasks, 99), []);
 });

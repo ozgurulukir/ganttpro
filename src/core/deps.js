@@ -22,8 +22,7 @@ export function wouldCreateCycle(tasks, taskId, newDepId) {
     visited.add(id);
     const t = taskById(tasks, id);
     if (!t) return false;
-    const all = [...(t.deps || []), ...(t.sdeps || []), ...(t.ffdeps || []), ...(t.sfdeps || [])];
-    return all.some(dfs);
+    return allDepIds(t).some(dfs);
   }
   return dfs(newDepId);
 }
@@ -89,4 +88,34 @@ export function lagsFromParsed(parsed) {
     if (p.lag) lags[p.type + p.taskId] = p.lag;
   });
   return lags;
+}
+
+/**
+ * All dependency ids referenced by a task's four dep arrays, deduped,
+ * in FS/SS/FF/SF order.
+ */
+export function allDepIds(task) {
+  return [
+    ...new Set([
+      ...(task.deps || []),
+      ...(task.sdeps || []),
+      ...(task.ffdeps || []),
+      ...(task.sfdeps || [])
+    ])
+  ];
+}
+
+/** Does the task reference any dependency (of any type)? */
+export function hasAnyDeps(task) {
+  return (
+    (task.deps || []).length > 0 ||
+    (task.sdeps || []).length > 0 ||
+    (task.ffdeps || []).length > 0 ||
+    (task.sfdeps || []).length > 0
+  );
+}
+
+/** Ids of tasks that reference `id` in any of their dep arrays. */
+export function allSuccIds(tasks, id) {
+  return tasks.filter(t => allDepIds(t).includes(id)).map(t => t.id);
 }
