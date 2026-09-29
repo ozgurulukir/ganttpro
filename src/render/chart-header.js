@@ -2,7 +2,16 @@
 import { D } from './deps.js';
 import { toStr } from '../core/format.js';
 import { isNonWorkday, getHoliday } from '../core/calendar.js';
-import { parseDate, formatDate, dayOfWeek } from '../core/date.js';
+import {
+  parseDate,
+  formatDate,
+  dayOfWeek,
+  endOfMonth,
+  startOfMonth,
+  yearOf,
+  monthOf,
+  dayOfMonth
+} from '../core/date.js';
 import { renderMilestoneTimeline } from './milestone.js';
 import { t } from '../i18n/index.js';
 
@@ -25,11 +34,9 @@ export function renderChartHeader() {
   let curDn = parseDate(toStr(CHART_START));
   const endDn = parseDate(toStr(CHART_END));
   while (curDn <= endDn) {
-    const curD = new Date(curDn * 86400000);
-    const y = curD.getUTCFullYear(),
-      m = curD.getUTCMonth();
-    const monthEndDn = Math.floor(Date.UTC(y, m + 1, 0) / 86400000);
-    const clampedDn = Math.min(monthEndDn, endDn);
+    const y = yearOf(curDn);
+    const m = monthOf(curDn);
+    const clampedDn = Math.min(endOfMonth(curDn), endDn);
     const x1 = dateToX(formatDate(curDn));
     const x2 = dateToX(formatDate(clampedDn)) + PPD;
     const el = document.createElement('div');
@@ -38,7 +45,7 @@ export function renderChartHeader() {
     const mn = t('chart.months', { returnObjects: true });
     el.innerHTML = `<span class="month-label-in">${y} ${mn[m]}</span>`;
     mRow.appendChild(el);
-    curDn = monthEndDn + 1;
+    curDn = endOfMonth(curDn) + 1;
   }
 
   // Sub-header: granularity based on PPD (not viewMode)
@@ -68,7 +75,7 @@ export function renderChartHeader() {
         'week-cell day-cell' + dayColor + (isTdy ? ' today-wk' : '') + (off ? ' wknd-cell' : '');
       el.style.cssText = `left:${x}px;width:${PPD}px`;
       if (hol) el.title = t(hol);
-      const dayDate = new Date(dn * 86400000).getUTCDate();
+      const dayDate = dayOfMonth(dn);
       el.innerHTML = `<span>${dayDate}</span><span class="day-dow">${dayNames[dow]}</span>`;
       wRow.appendChild(el);
       dn++;
@@ -89,34 +96,29 @@ export function renderChartHeader() {
         const el = document.createElement('div');
         el.className = 'week-cell' + (isTdy ? ' today-wk' : '');
         el.style.cssText = `left:${x1}px;width:${x2 - x1}px`;
-        const dd = new Date(dn * 86400000);
-        el.textContent = `${dd.getUTCMonth() + 1}/${dd.getUTCDate()}`;
+        el.textContent = `${monthOf(dn) + 1}/${dayOfMonth(dn)}`;
         wRow.appendChild(el);
       }
       dn += 7;
     }
   } else {
     // Month granularity: show each month label
-    let mnDn = parseDate(toStr(CHART_START));
-    const csD = new Date(mnDn * 86400000);
-    mnDn = Math.floor(Date.UTC(csD.getUTCFullYear(), csD.getUTCMonth(), 1) / 86400000);
+    let mnDn = startOfMonth(parseDate(toStr(CHART_START)));
     while (mnDn <= endDn) {
-      const md = new Date(mnDn * 86400000);
-      const y = md.getUTCFullYear(),
-        m = md.getUTCMonth();
-      const monthEndDn = Math.floor(Date.UTC(y, m + 1, 0) / 86400000);
-      const clampedDn = Math.min(monthEndDn, endDn);
+      const y = yearOf(mnDn);
+      const m = monthOf(mnDn);
+      const clampedDn = Math.min(endOfMonth(mnDn), endDn);
       const x1 = Math.max(0, dateToX(formatDate(mnDn)));
       const x2 = Math.min(tw, dateToX(formatDate(clampedDn)) + PPD);
-      const todayD = new Date(parseDate(TODAY_STR) * 86400000);
-      const isTdyMon = todayD.getUTCFullYear() === y && todayD.getUTCMonth() === m;
+      const todayDn = parseDate(TODAY_STR);
+      const isTdyMon = yearOf(todayDn) === y && monthOf(todayDn) === m;
       const el = document.createElement('div');
       el.className = 'week-cell' + (isTdyMon ? ' today-wk' : '');
       el.style.cssText = `left:${x1}px;width:${x2 - x1}px`;
       const mn = t('chart.months', { returnObjects: true });
       el.textContent = mn[m];
       wRow.appendChild(el);
-      mnDn = monthEndDn + 1;
+      mnDn = endOfMonth(mnDn) + 1;
     }
   }
 

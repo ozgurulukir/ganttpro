@@ -2,21 +2,16 @@
 import { D } from './deps.js';
 import { toStr } from '../core/format.js';
 import { isNonWorkday } from '../core/calendar.js';
-import { parseDate, formatDate, dayOfWeek } from '../core/date.js';
+import { parseDate, formatDate, dayOfWeek, startOfMonth, addMonths } from '../core/date.js';
 
 export function renderGrid(canvas, tw, th) {
   const { CHART_START, CHART_END, PPD, dateToX } = D;
   const startStr = toStr(CHART_START);
   const endStr = toStr(CHART_END);
   // Month lines
-  let mnDn = parseDate(startStr);
-  const csD = new Date(mnDn * 86400000);
-  mnDn = Math.floor(Date.UTC(csD.getUTCFullYear(), csD.getUTCMonth(), 1) / 86400000);
+  let mnDn = startOfMonth(parseDate(startStr));
   const endDn = parseDate(endStr);
   while (mnDn <= endDn) {
-    const md = new Date(mnDn * 86400000);
-    const y = md.getUTCFullYear(),
-      m = md.getUTCMonth();
     const x = dateToX(formatDate(mnDn));
     if (x > 0) {
       const l = document.createElement('div');
@@ -24,7 +19,7 @@ export function renderGrid(canvas, tw, th) {
       l.style.cssText = `left:${x}px;height:${th}px`;
       canvas.appendChild(l);
     }
-    mnDn = Math.floor(Date.UTC(y, m + 1, 1) / 86400000);
+    mnDn = startOfMonth(addMonths(mnDn, 1));
   }
 
   // Sub-grid lines based on PPD

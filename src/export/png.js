@@ -1,6 +1,14 @@
-import { countWorkingDays, nextWorkingDay } from '../core/calendar.js';
+import { countWorkingDays } from '../core/calendar.js';
 import { darkenColor } from '../core/format.js';
-import { parseDate, formatDate, addDays, dayOfWeek } from '../core/date.js';
+import {
+  parseDate,
+  formatDate,
+  addDays,
+  startOfMonth,
+  addMonths,
+  yearOf,
+  monthOf
+} from '../core/date.js';
 import { D } from '../render/deps.js';
 import { t } from '../i18n/index.js';
 
@@ -78,24 +86,21 @@ export function exportPNG() {
   let mnDn = parseDate(CHART_START.toISOString().slice(0, 10));
   const endDn = parseDate(CHART_END.toISOString().slice(0, 10));
   while (mnDn <= endDn) {
-    const md = new Date(mnDn * 86400000);
-    const y = md.getUTCFullYear(),
-      m = md.getUTCMonth();
+    const y = yearOf(mnDn);
+    const m = monthOf(mnDn);
     const mx = PANEL + dateToX(formatDate(mnDn));
     if (mx >= PANEL) {
       ctx.fillStyle = '#374151';
       ctx.font = '10px -apple-system,system-ui,sans-serif';
       ctx.fillText(`${y} ${t('chart.months', { returnObjects: true })[m]}`, mx + 3, HDR + THDR / 2);
     }
-    mnDn = Math.floor(Date.UTC(y, m + 1, 1) / 86400000);
+    mnDn = startOfMonth(addMonths(mnDn, 1));
   }
 
   // ─── 垂直格線（月） ───
   ctx.strokeStyle = '#E5E7EB';
   ctx.lineWidth = 0.5;
-  let gridDn = parseDate(CHART_START.toISOString().slice(0, 10));
-  const csD = new Date(gridDn * 86400000);
-  gridDn = Math.floor(Date.UTC(csD.getUTCFullYear(), csD.getUTCMonth(), 1) / 86400000);
+  let gridDn = startOfMonth(parseDate(CHART_START.toISOString().slice(0, 10)));
   while (gridDn <= endDn) {
     const gx = PANEL + dateToX(formatDate(gridDn));
     if (gx >= PANEL) {
@@ -104,8 +109,7 @@ export function exportPNG() {
       ctx.lineTo(gx, totalH);
       ctx.stroke();
     }
-    const gd = new Date(gridDn * 86400000);
-    gridDn = Math.floor(Date.UTC(gd.getUTCFullYear(), gd.getUTCMonth() + 1, 1) / 86400000);
+    gridDn = startOfMonth(addMonths(gridDn, 1));
   }
 
   // ─── 今日線 ───
@@ -242,7 +246,7 @@ export function exportPNG() {
       const b = groupBounds(task.id);
       if (b.s && b.e) {
         const bx = PANEL + dateToX(b.s);
-        const bw = Math.max(PANEL + dateToX(nextWorkingDay(b.e)) - bx, 6);
+        const bw = Math.max(PANEL + dateToX(addDays(b.e, 1)) - bx, 6);
         const by = y + (ROW_H - 8) / 2;
         ctx.fillStyle = task.color || '#5E6AD2';
         ctx.beginPath();

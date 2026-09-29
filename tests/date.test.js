@@ -2,7 +2,19 @@
    These must pass identically in ANY timezone (no local-time dependence). */
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { parseDate, formatDate, dayOfWeek, addDays, diffDays } from '../src/core/date.js';
+import {
+  parseDate,
+  formatDate,
+  dayOfWeek,
+  addDays,
+  diffDays,
+  yearOf,
+  monthOf,
+  dayOfMonth,
+  startOfMonth,
+  endOfMonth,
+  addMonths
+} from '../src/core/date.js';
 
 test('parseDate — YYYY-MM-DD to day number', () => {
   assert.equal(parseDate('1970-01-01'), 0);
@@ -52,4 +64,30 @@ test('cross-month/year arithmetic is correct', () => {
   assert.equal(addDays('2025-12-31', 1), '2026-01-01');
   assert.equal(addDays('2026-01-01', -1), '2025-12-31');
   assert.equal(diffDays('2026-01-01', '2025-12-31'), 1);
+});
+
+test('month component helpers read UTC parts of a day number', () => {
+  const dn = parseDate('2026-07-15');
+  assert.equal(yearOf(dn), 2026);
+  assert.equal(monthOf(dn), 6); // 0-based: July = 6
+  assert.equal(dayOfMonth(dn), 15);
+});
+
+test('startOfMonth and endOfMonth bound the containing month', () => {
+  assert.equal(formatDate(startOfMonth(parseDate('2026-07-15'))), '2026-07-01');
+  assert.equal(formatDate(endOfMonth(parseDate('2026-07-15'))), '2026-07-31');
+  assert.equal(formatDate(endOfMonth(parseDate('2026-02-10'))), '2026-02-28');
+  assert.equal(formatDate(endOfMonth(parseDate('2028-02-10'))), '2028-02-29');
+  // already at a month boundary
+  assert.equal(startOfMonth(parseDate('2026-07-01')), parseDate('2026-07-01'));
+  assert.equal(endOfMonth(parseDate('2026-07-31')), parseDate('2026-07-31'));
+});
+
+test('addMonths clamps to the target month length', () => {
+  const jan31 = parseDate('2026-01-31');
+  assert.equal(formatDate(addMonths(jan31, 1)), '2026-02-28');
+  assert.equal(formatDate(addMonths(jan31, 13)), '2027-02-28');
+  assert.equal(formatDate(addMonths(parseDate('2026-01-15'), 1)), '2026-02-15');
+  assert.equal(formatDate(addMonths(parseDate('2026-03-31'), -1)), '2026-02-28');
+  assert.equal(formatDate(addMonths(parseDate('2026-12-15'), 2)), '2027-02-15');
 });
