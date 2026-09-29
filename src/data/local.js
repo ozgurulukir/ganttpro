@@ -1,6 +1,22 @@
 /* LocalStorage I/O — pure functions, no app state. */
 const LS_KEY = 'ganttpro_v1';
 const OWNER_KEY = 'ganttpro_owner_id';
+export const WORKDAYS_KEY = 'gp_workdays';
+export const HOLIDAYS_KEY = 'gp_customHolidays';
+
+// Work-calendar settings (consumed by core/calendar.js via setters at boot
+// and by ui/worktime.js for the settings modal). Holidays are {date, label}.
+export function loadWorkCalendarSettings() {
+  let workdays = [1, 2, 3, 4, 5];
+  let holidays = [];
+  try {
+    workdays = JSON.parse(localStorage.getItem(WORKDAYS_KEY)) || workdays;
+  } catch {}
+  try {
+    holidays = JSON.parse(localStorage.getItem(HOLIDAYS_KEY)) || holidays;
+  } catch {}
+  return { workdays, holidays };
+}
 
 export function saveToLS(data) {
   try {

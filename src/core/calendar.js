@@ -22,7 +22,6 @@ export function dateKey(d) {
 // Dynamic holiday store (loaded from JSON via loadHolidaysFromJSON).
 let _loadedHolidays = {};
 let _loadedMakeupWorkdays = new Set();
-let _holidaysLoaded = false;
 
 export function loadHolidaysFromJSON(data) {
   const entries = Array.isArray(data) ? data : [data];
@@ -36,42 +35,22 @@ export function loadHolidaysFromJSON(data) {
       }
     }
   }
-  _holidaysLoaded = true;
 }
 
 export function resetHolidays() {
   _loadedHolidays = {};
   _loadedMakeupWorkdays = new Set();
-  _holidaysLoaded = false;
 }
 
 export function getHoliday(d) {
   return _loadedHolidays[dateKey(d)] || null;
 }
 
-// In-memory caches for user-customizable work settings.
-// Populated lazily on first isNonWorkday() call, kept in sync via setters
-// from worktime.js. Avoids re-parsing localStorage on every call inside
-// schedule / count working-days loops.
-let _customHolidays = null; // Set<string> of 'YYYY-MM-DD'
-let _workdays = null; // Set<number> of dayOfWeek values that are workdays
-let _workdaysLoaded = false;
-
-function loadWorkdaysFromLS() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem('gp_workdays') || '[1,2,3,4,5]'));
-  } catch {
-    return new Set([1, 2, 3, 4, 5]);
-  }
-}
-
-function loadHolidaysFromLS() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem('gp_customHolidays') || '[]').map(h => h.date));
-  } catch {
-    return new Set();
-  }
-}
+// In-memory work-calendar settings, injected at boot from the data layer
+// (see data/local.js loadWorkCalendarSettings) and updated by ui/worktime.js
+// on save. Defaults: Monday–Friday, no custom holidays.
+let _customHolidays = new Set(); // Set<string> of 'YYYY-MM-DD'
+let _workdays = new Set([1, 2, 3, 4, 5]); // Set<number> of dayOfWeek values
 
 export function setCustomHolidays(dates) {
   _customHolidays = new Set(dates);
@@ -83,11 +62,9 @@ export function setWorkDays(days) {
 
 export function isNonWorkday(s) {
   if (s instanceof Date) s = s.toISOString().slice(0, 10);
-  if (!_customHolidays) _customHolidays = loadHolidaysFromLS();
   if (_customHolidays.has(s)) return true;
   if (_loadedHolidays[s]) return true;
   if (_loadedMakeupWorkdays.has(s)) return false;
-  if (!_workdays) _workdays = loadWorkdaysFromLS();
   return !_workdays.has(dayOfWeek(s));
 }
 

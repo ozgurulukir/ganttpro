@@ -3,8 +3,8 @@ import assert from 'node:assert';
 import { dragTaskPatch, dragMilestonePatch } from '../src/core/drag.js';
 import { snapToWorkday } from '../src/core/calendar.js';
 
-// Note: under node --test there is no localStorage, so isNonWorkday falls back
-// to the default Mon–Fri workweek — exactly the calendar these tests assume.
+// Note: without an explicit setWorkDays/setCustomHolidays call, calendar.js
+// defaults to a Mon–Fri workweek — exactly the calendar these tests assume.
 // node --test runs each file in its own process, so sibling test files that
 // set custom work calendars cannot leak state here.
 

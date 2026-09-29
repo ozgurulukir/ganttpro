@@ -1,14 +1,13 @@
 import { t } from '../i18n/index.js';
 import { parseDate, formatDate, dayOfWeek } from '../core/date.js';
 import { setWorkDays, setCustomHolidays, loadHolidaysFromJSON } from '../core/calendar.js';
+import { WORKDAYS_KEY, HOLIDAYS_KEY } from '../data/local.js';
 
-const LS_WORKDAYS = 'gp_workdays';
-const LS_HOLIDAYS = 'gp_customHolidays';
 const DEFAULT_WORKDAYS = [1, 2, 3, 4, 5];
 
 export function loadWorkDays() {
   try {
-    return JSON.parse(localStorage.getItem(LS_WORKDAYS)) || DEFAULT_WORKDAYS;
+    return JSON.parse(localStorage.getItem(WORKDAYS_KEY)) || DEFAULT_WORKDAYS;
   } catch {
     return DEFAULT_WORKDAYS;
   }
@@ -16,15 +15,15 @@ export function loadWorkDays() {
 
 export function loadCustomHolidays() {
   try {
-    return JSON.parse(localStorage.getItem(LS_HOLIDAYS)) || [];
+    return JSON.parse(localStorage.getItem(HOLIDAYS_KEY)) || [];
   } catch {
     return [];
   }
 }
 
 export function saveWorkSettings(workdays, holidays) {
-  localStorage.setItem(LS_WORKDAYS, JSON.stringify(workdays));
-  localStorage.setItem(LS_HOLIDAYS, JSON.stringify(holidays));
+  localStorage.setItem(WORKDAYS_KEY, JSON.stringify(workdays));
+  localStorage.setItem(HOLIDAYS_KEY, JSON.stringify(holidays));
 }
 
 let _workdays = loadWorkDays();

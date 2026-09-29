@@ -6,7 +6,9 @@ import {
   nextWorkingDay,
   shiftWorkingDays,
   countWorkingDays,
-  loadHolidaysFromJSON
+  loadHolidaysFromJSON,
+  setWorkDays,
+  setCustomHolidays
 } from './core/calendar.js';
 import * as Tree from './core/tree.js';
 import * as Deps from './core/deps.js';
@@ -138,6 +140,14 @@ let CHART_END = new Date('2026-07-31');
 let TODAY_STR = DateUtils.formatDate(Math.floor(Date.now() / 86400000));
 const sTodayDisplay = document.getElementById('sTodayDisplay');
 if (sTodayDisplay) sTodayDisplay.textContent = TODAY_STR;
+
+/* Boot: seed the work calendar from localStorage before the first render —
+   core/calendar.js is pure and never reads storage itself. */
+{
+  const wc = Local.loadWorkCalendarSettings();
+  setWorkDays(wc.workdays);
+  setCustomHolidays(wc.holidays.map(h => h.date));
+}
 function recomputeToday() {
   const newTodayStr = DateUtils.formatDate(Math.floor(Date.now() / 86400000));
   if (TODAY_STR !== newTodayStr) {
