@@ -1,6 +1,7 @@
 import { auth, googleProvider } from './data/firebase.js';
 import { signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import * as Remote from './data/remote.js';
+import { clearAuditLog } from './data/audit.js';
 import { D } from './render/deps.js';
 import { t } from './i18n/index.js';
 
@@ -83,6 +84,9 @@ export async function submitRegister() {
 
 export async function signOut() {
   D.cleanupRealtime?.();
+  // Audit entries contain task/project names — wipe them so the next user
+  // on a shared device cannot read the previous session's activity.
+  clearAuditLog();
   if (!D.IsGuestMode()) await firebaseSignOut(auth);
   D.SetCurrentUser(null);
   D.SetGuestMode(false);

@@ -29,6 +29,16 @@ export function getAuditLog() {
   }
 }
 
+/** Wipe the audit log. Called on sign-out: entries record task/project names,
+ * so they must not outlive the session on a shared device. */
+export function clearAuditLog() {
+  try {
+    localStorage.removeItem(LS_KEY);
+  } catch (e) {
+    console.warn('Audit log: failed to clear.', e);
+  }
+}
+
 const ACTION_LABELS = {
   taskCreated: () => t('audit.taskCreated'),
   taskEdited: () => t('audit.taskEdited'),
