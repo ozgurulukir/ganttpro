@@ -35,7 +35,6 @@ import { renderChartHeader } from './render/chart-header.js';
 import { renderChartBody } from './render/chart-body.js';
 import { renderTaskPanel } from './render/task-panel.js';
 import {
-  populateModal,
   syncWday,
   syncEndFromWday,
   updateModalForType,
@@ -56,13 +55,6 @@ import {
   closeDeleteModal,
   executeDeleteTask,
   submitTask,
-  toggleDepsMenu,
-  closeDepsOutside,
-  toggleDepOpt,
-  removeDepTag,
-  updateDepsTags,
-  renderDepsMenu,
-  openDepsEditor,
   openAllDepsEditor,
   cancelInlineEditors
 } from './ui/modal.js';

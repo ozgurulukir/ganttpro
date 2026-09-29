@@ -8,9 +8,6 @@ import { logAudit } from '../data/audit.js';
 
 /* Modal-local state (moved from main.js — only used here). */
 let editingTaskId = null;
-let selectedDeps = new Set();
-let depsExcludeId = null;
-let selectedSdeps = new Set();
 let _deleteTargetId = null;
 let _blockInlineCommit = false;
 
@@ -21,12 +18,7 @@ export function cancelInlineEditors() {
   _blockInlineCommit = false;
 }
 
-export function populateModal(
-  excludeId = null,
-  checkedDeps = [],
-  presetParent = null,
-  isDone = false
-) {
+export function populateModal(excludeId = null, presetParent = null, isDone = false) {
   const { tasks, projects, getAllDescendants } = D;
   // Parent groups（含「無」選項；編輯時排除自己與後代避免循環）
   const sel = document.getElementById('fParent');
@@ -62,11 +54,6 @@ export function populateModal(
     o.value = n;
     dl.appendChild(o);
   });
-
-  // Deps picker
-  depsExcludeId = excludeId;
-  selectedDeps = new Set(checkedDeps);
-  selectedSdeps = new Set();
 
   // Done checkbox
   const fd = document.getElementById('fDone');
@@ -242,6 +229,7 @@ export function openModal(unused, prefillDate) {
   populateModal();
   updateModalForType();
   document.getElementById('overlay').classList.add('open');
+  modalOpen = true;
   setupDepsInputListener(null);
   setTimeout(() => document.getElementById('fName').focus(), 50);
 }
@@ -365,10 +353,11 @@ export function openModalUnder(taskId) {
   document.getElementById('fEvidence').value = '';
   const adv = document.getElementById('modalAdvanced');
   if (adv) adv.classList.add('collapsed');
-  populateModal(null, [], parentId);
+  populateModal(null, parentId);
   updateModalForType();
   document.getElementById('overlay').classList.add('open');
   modalOpen = true;
+  setupDepsInputListener(null);
   setTimeout(() => document.getElementById('fName').focus(), 50);
 }
 
@@ -388,8 +377,7 @@ export function openEditModal(taskId) {
     task.start && task.end ? countWorkingDays(task.start, task.end) : 1;
   document.getElementById('fProgress').value = task.done ? 100 : task.progress || 0;
   document.getElementById('fAssignee').value = task.assignee || '';
-  populateModal(taskId, task.deps || [], task.parent, task.done || false);
-  selectedSdeps = new Set(task.sdeps || []);
+  populateModal(taskId, task.parent, task.done || false);
   document.getElementById('fDeps').value = buildDepsText(task);
   document.getElementById('fDepsTip').textContent = '';
   document.getElementById('fHyperlink').value = task.link || '';
@@ -762,74 +750,7 @@ export function openWdayEditor(task, cell) {
   });
 }
 
-/* ── DEPS PICKER LOGIC ── */
-export function toggleDepsMenu(e) {
-  const { isReadOnly } = D;
-  if (isReadOnly) return;
-  if (e && e.target.closest('.deps-tag-x')) return;
-  const menu = document.getElementById('depsMenu');
-  if (menu.classList.contains('open')) {
-    menu.classList.remove('open');
-  } else {
-    renderDepsMenu();
-    menu.classList.add('open');
-    setTimeout(() => document.addEventListener('click', closeDepsOutside, { once: true }), 0);
-  }
-}
-
-export function closeDepsOutside(e) {
-  if (!document.getElementById('depsPicker').contains(e.target)) {
-    document.getElementById('depsMenu').classList.remove('open');
-  } else {
-    document.addEventListener('click', closeDepsOutside, { once: true });
-  }
-}
-
-export function toggleDepOpt(id) {
-  if (selectedDeps.has(id)) selectedDeps.delete(id);
-  else selectedDeps.add(id);
-  renderDepsMenu();
-}
-
-export function removeDepTag(id) {
-  selectedDeps.delete(id);
-}
-
-export function updateDepsTags() {
-  /* 已由 fDeps 文字輸入取代 */
-}
-
-export function renderDepsMenu() {
-  const { tasks, taskById } = D;
-  const menu = document.getElementById('depsMenu');
-  menu.innerHTML = '';
-  const editingTask = taskById(depsExcludeId);
-  const editingParent = editingTask ? editingTask.parent : null;
-  const list = tasks.filter(
-    t => t.type !== 'milestone' && t.parent !== null && t.id !== depsExcludeId
-  );
-  if (list.length === 0) {
-    menu.innerHTML = `<div style="padding:10px;text-align:center;font-size:12px;color:var(--t4)">${t('modal.noDepsAvailable')}</div>`;
-    return;
-  }
-  list.forEach(t => {
-    const opt = document.createElement('div');
-    opt.className = 'deps-opt' + (selectedDeps.has(t.id) ? ' sel' : '');
-    opt.innerHTML = `
-      <span class="deps-opt-num">#${t.id}</span>
-      <span class="cdot" style="background:${t.color}"></span>
-      <span>${esc(t.name)}</span>
-      <span class="deps-opt-check">${selectedDeps.has(t.id) ? '✓' : ''}</span>
-    `;
-    opt.addEventListener('click', () => toggleDepOpt(t.id));
-    menu.appendChild(opt);
-  });
-}
-
-export function openDepsEditor(task, cell) {
-  openAllDepsEditor(task, cell);
-}
-
+/* ── DEPS CELL INLINE EDITOR ── */
 export function openAllDepsEditor(task, cell) {
   const {
     parseDepInput,
