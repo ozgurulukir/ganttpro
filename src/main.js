@@ -1324,6 +1324,11 @@ function toggleShortcutsOverlay() {
   el.classList.toggle('open');
 }
 
+function closeShortcutsModal() {
+  let el = document.getElementById('shortcutsOverlay');
+  if (el) el.classList.remove('open');
+}
+
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
     e.preventDefault();
@@ -1359,6 +1364,7 @@ document.addEventListener('keydown', e => {
     closeProjModal();
     closeProjMenuOnly();
     closeDeleteModal();
+    closeShortcutsModal();
   }
 });
 
@@ -1827,6 +1833,11 @@ function wireDeleteModalEvents() {
   clk('deleteCancelBtn', () => closeDeleteModal());
 }
 
+function wireShortcutsModalEvents() {
+  overlayClose('shortcutsOverlay', closeShortcutsModal);
+  clk('shortcutsCloseBtn', closeShortcutsModal);
+}
+
 function wireTaskModalEvents() {
   overlayClose('overlay', () => closeModal());
   clk('taskModalCloseBtn', () => closeModal());
@@ -1932,6 +1943,7 @@ function wireStaticEvents() {
   wireCollabModalEvents();
   wireAdminPanelEvents();
   wireDeleteModalEvents();
+  wireShortcutsModalEvents();
   wireTaskModalEvents();
   wireArrowStyleEvents();
   wireProjectModalEvents();
