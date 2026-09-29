@@ -2,6 +2,7 @@
 import { D } from '../render/deps.js';
 import { esc, safeColor } from '../core/format.js';
 import { parseDate, formatDate } from '../core/date.js';
+import { openOverlay, closeOverlay, attachOutsideClose } from './overlay.js';
 import { t } from '../i18n/index.js';
 
 let _editingProjId = null;
@@ -59,27 +60,18 @@ export function updateProjUI() {
 
 export function toggleProjMenu(e) {
   const menu = document.getElementById('projMenu');
-  const sel = document.getElementById('projSelector');
-  const isOpen = menu.classList.contains('open');
-  if (isOpen) {
+  if (menu.classList.contains('open')) {
     closeProjMenuOnly();
     return;
   }
   renderProjMenu();
-  menu.classList.add('open');
-  sel.classList.add('open');
+  openOverlay('projMenu', 'projSelector');
   // Close when clicking outside
-  setTimeout(() => document.addEventListener('click', closeProjOnOutside, { once: true }), 0);
-}
-
-export function closeProjOnOutside(e) {
-  if (!document.getElementById('projSelector').contains(e.target)) closeProjMenuOnly();
-  else document.addEventListener('click', closeProjOnOutside, { once: true });
+  attachOutsideClose('projSelector', closeProjMenuOnly);
 }
 
 export function closeProjMenuOnly() {
-  document.getElementById('projMenu').classList.remove('open');
-  document.getElementById('projSelector').classList.remove('open');
+  closeOverlay('projMenu', 'projSelector');
 }
 
 export function renderProjMenu() {
@@ -167,7 +159,7 @@ export function openEditProjModal(id, e) {
   if (tplRow) tplRow.style.display = 'none';
   const preview = document.getElementById('templatePreview');
   if (preview) preview.style.display = 'none';
-  document.getElementById('projOverlay').classList.add('open');
+  openOverlay('projOverlay');
   setTimeout(() => document.getElementById('pName').focus(), 50);
 }
 
@@ -209,7 +201,7 @@ export function openProjModal() {
   document.getElementById('projColorDot').style.background = nextColor;
   const tplRow = document.getElementById('tplRow');
   if (tplRow) tplRow.style.display = '';
-  document.getElementById('projOverlay').classList.add('open');
+  openOverlay('projOverlay');
   setTimeout(() => document.getElementById('pName').focus(), 50);
 }
 
@@ -249,8 +241,7 @@ export function onTemplateChange() {
 }
 
 export function closeProjModal(e) {
-  if (!e || e.target === document.getElementById('projOverlay'))
-    document.getElementById('projOverlay').classList.remove('open');
+  if (!e || e.target === document.getElementById('projOverlay')) closeOverlay('projOverlay');
 }
 
 export function selectColor(el) {
@@ -307,7 +298,7 @@ export function submitProject() {
       render();
       D.persist();
     }
-    document.getElementById('projOverlay').classList.remove('open');
+    closeOverlay('projOverlay');
     _editingProjId = null;
     return;
   }
@@ -346,7 +337,7 @@ export function submitProject() {
   };
   projects.push(newProj);
   D.nextProjId = nextProjId + 1;
-  document.getElementById('projOverlay').classList.remove('open');
+  closeOverlay('projOverlay');
   if (curProj()) curProj().nextId = D.nextId; // 儲存舊專案的 nextId
   loadProject(newProj);
   setChartStart(new Date(start));

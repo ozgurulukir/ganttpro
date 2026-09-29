@@ -55,7 +55,6 @@ import {
   switchProject,
   updateProjUI,
   toggleProjMenu,
-  closeProjOnOutside,
   closeProjMenuOnly,
   renderProjMenu,
   deleteProject,
@@ -66,6 +65,7 @@ import {
   selectColor,
   submitProject
 } from './ui/project.js';
+import { onBackdropClick } from './ui/overlay.js';
 import {
   onSettingBarDatesChange,
   onSettingBaselineChange,
@@ -1692,13 +1692,7 @@ const clk = (id, fn) => {
   const el = $(id);
   if (el) el.addEventListener('click', fn);
 };
-const overlayClose = (id, fn) => {
-  const el = $(id);
-  if (el)
-    el.addEventListener('click', e => {
-      if (e.target === el) fn();
-    });
-};
+const overlayClose = onBackdropClick;
 
 function wireLoginEvents() {
   clk('loginGoogleBtn', signInWithGoogle);

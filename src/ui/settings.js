@@ -1,6 +1,7 @@
 /* Settings panel, zoom, stats, dark mode, baseline, versions. */
 import { D } from '../render/deps.js';
 import { esc } from '../core/format.js';
+import { openOverlay, closeOverlay } from './overlay.js';
 import { t } from '../i18n/index.js';
 import { logAudit, renderAuditLog } from '../data/audit.js';
 
@@ -50,7 +51,7 @@ export function toggleExportMenu() {
   document.getElementById('exportPanel').classList.toggle('open');
 }
 export function closeExportMenu() {
-  document.getElementById('exportPanel').classList.remove('open');
+  closeOverlay('exportPanel');
 }
 
 // Click-outside listeners (module-load wiring)
@@ -60,7 +61,7 @@ document.addEventListener('click', e => {
 });
 
 export function closeSettings() {
-  document.getElementById('settingsPanel').classList.remove('open');
+  closeOverlay('settingsPanel');
 }
 
 document.addEventListener('click', e => {
@@ -138,8 +139,7 @@ export function curVersions() {
 }
 
 export function openVersionPanel() {
-  document.getElementById('verPanel').classList.add('open');
-  document.getElementById('verBackdrop').classList.add('open');
+  openOverlay('verPanel', 'verBackdrop');
   renderVersionList();
   setupVerTabs();
   setTimeout(() => document.getElementById('verNameInput').focus(), 200);
@@ -169,8 +169,7 @@ function setupVerTabs() {
 }
 
 export function closeVersionPanel() {
-  document.getElementById('verPanel').classList.remove('open');
-  document.getElementById('verBackdrop').classList.remove('open');
+  closeOverlay('verPanel', 'verBackdrop');
 }
 
 export function createVersion() {

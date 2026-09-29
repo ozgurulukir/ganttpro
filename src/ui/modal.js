@@ -4,6 +4,7 @@ import { countWorkingDays, addWorkingDays } from '../core/calendar.js';
 import { depsFromParsed, startEditPatch, endEditPatch } from '../core/taskform.js';
 import { TASK_FIELDS } from '../core/validate.js';
 import { esc } from '../core/format.js';
+import { openOverlay, closeOverlay } from './overlay.js';
 import { t } from '../i18n/index.js';
 import { logAudit } from '../data/audit.js';
 
@@ -229,7 +230,7 @@ export function openModal(unused, prefillDate) {
   if (adv) adv.classList.add('collapsed');
   populateModal();
   updateModalForType();
-  document.getElementById('overlay').classList.add('open');
+  openOverlay('overlay');
   modalOpen = true;
   setupDepsInputListener(null);
   setTimeout(() => document.getElementById('fName').focus(), 50);
@@ -358,7 +359,7 @@ export function openModalUnder(taskId) {
   if (adv) adv.classList.add('collapsed');
   populateModal(null, parentId);
   updateModalForType();
-  document.getElementById('overlay').classList.add('open');
+  openOverlay('overlay');
   modalOpen = true;
   setupDepsInputListener(null);
   setTimeout(() => document.getElementById('fName').focus(), 50);
@@ -391,7 +392,7 @@ export function openEditModal(taskId) {
     if (adv) adv.classList.remove('collapsed');
   }
   updateModalForType();
-  document.getElementById('overlay').classList.add('open');
+  openOverlay('overlay');
   modalOpen = true;
   setupDepsInputListener(taskId);
   setTimeout(() => document.getElementById('fName').focus(), 50);
@@ -399,7 +400,7 @@ export function openEditModal(taskId) {
 
 export function closeModal(e) {
   if (!e || e.target === document.getElementById('overlay')) {
-    document.getElementById('overlay').classList.remove('open');
+    closeOverlay('overlay');
     modalOpen = false;
   }
 }
@@ -421,12 +422,12 @@ export function confirmDeleteTask(id) {
   document.getElementById('deleteConfirmBtn').onclick = () => {
     executeDeleteTask(_deleteTargetId);
   };
-  document.getElementById('deleteOverlay').classList.add('open');
+  openOverlay('deleteOverlay');
 }
 
 export function closeDeleteModal(e) {
   if (!e || e.target === document.getElementById('deleteOverlay')) {
-    document.getElementById('deleteOverlay').classList.remove('open');
+    closeOverlay('deleteOverlay');
     _deleteTargetId = null;
   }
 }
@@ -442,7 +443,7 @@ export function executeDeleteTask(id) {
     saveToCloud,
     currentUser
   } = D;
-  document.getElementById('deleteOverlay').classList.remove('open');
+  closeOverlay('deleteOverlay');
   _deleteTargetId = null;
   const deletedTask = taskById(id);
   pushHistory();
@@ -586,7 +587,7 @@ export function submitTask() {
   }
 
   editingTaskId = null;
-  document.getElementById('overlay').classList.remove('open');
+  closeOverlay('overlay');
   modalOpen = false;
   scheduleTasks();
   recalcProjEnd();
