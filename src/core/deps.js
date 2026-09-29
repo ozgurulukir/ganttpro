@@ -1,13 +1,13 @@
 /**
  * Pure dependency (predecessor) parsing & cycle detection.
  *
- * Stateful resolvers (taskById, getRowNum, getTaskByRowNum) come from tree.js;
- * the task array and view state are passed explicitly so these are testable.
+ * Stateful resolvers (taskById, getVisibleRows) come from tree.js; the task
+ * array and view state are passed explicitly so these are testable.
  *
  * Extracted verbatim from main.js (Phase 1.3); only the state previously read
  * as globals is now passed explicitly.
  */
-import { taskById, getRowNum, getTaskByRowNum } from './tree.js';
+import { taskById, getVisibleRows } from './tree.js';
 
 /**
  * Would adding `taskId -> newDepId` (taskId depends on newDepId) create a cycle?
@@ -27,27 +27,38 @@ export function wouldCreateCycle(tasks, taskId, newDepId) {
   return dfs(newDepId);
 }
 
-/** Render a task's four dependency arrays as editable text, e.g. "2FS, 3SS+1". */
-export function buildDepsText(tasks, collapsed, milestoneView, task) {
+/**
+ * Render a task's four dependency arrays as editable text, e.g. "2FS, 3SS+1".
+ * `rowMap` (Map<taskId, 1-based row>) may be passed by callers that already
+ * walked the visible rows (panel render, CSV export); otherwise it is built
+ * once here instead of re-walking per dependency.
+ */
+export function buildDepsText(tasks, collapsed, milestoneView, task, rowMap = null) {
   const parts = [];
   const lagSfx = (type, id) => {
     const l = (task.lags || {})[type + id] || 0;
     return l ? (l > 0 ? '+' + l : String(l)) : '';
   };
+  if (!rowMap) {
+    const rows = getVisibleRows(tasks, collapsed, milestoneView);
+    rowMap = new Map();
+    for (let i = 0; i < rows.length; i++) rowMap.set(rows[i].task.id, i + 1);
+  }
+  const rowNum = id => rowMap.get(id) ?? null;
   (task.deps || []).forEach(id => {
-    const n = getRowNum(tasks, collapsed, milestoneView, id);
+    const n = rowNum(id);
     if (n) parts.push(n + 'FS' + lagSfx('FS', id));
   });
   (task.sdeps || []).forEach(id => {
-    const n = getRowNum(tasks, collapsed, milestoneView, id);
+    const n = rowNum(id);
     if (n) parts.push(n + 'SS' + lagSfx('SS', id));
   });
   (task.ffdeps || []).forEach(id => {
-    const n = getRowNum(tasks, collapsed, milestoneView, id);
+    const n = rowNum(id);
     if (n) parts.push(n + 'FF' + lagSfx('FF', id));
   });
   (task.sfdeps || []).forEach(id => {
-    const n = getRowNum(tasks, collapsed, milestoneView, id);
+    const n = rowNum(id);
     if (n) parts.push(n + 'SF' + lagSfx('SF', id));
   });
   return parts.join(', ');
@@ -61,6 +72,7 @@ export function buildDepsText(tasks, collapsed, milestoneView, task) {
  */
 export function parseDepInput(val, taskId, tasks, collapsed, milestoneView) {
   if (!val || typeof val !== 'string' || !val.trim()) return [];
+  const rows = getVisibleRows(tasks, collapsed, milestoneView);
   return val
     .split(',')
     .map(s => {
@@ -71,7 +83,7 @@ export function parseDepInput(val, taskId, tasks, collapsed, milestoneView) {
       const rowNum = parseInt(m[1]);
       const type = m[2] || 'FS';
       const lag = m[3] ? parseInt(m[3]) : 0;
-      const depTask = getTaskByRowNum(tasks, collapsed, milestoneView, rowNum);
+      const depTask = rows[rowNum - 1]?.task ?? null;
       if (!depTask) return { raw: s, err: `Row ${rowNum} not found` };
       if (depTask.id === taskId) return { raw: s, err: 'Cannot depend on itself' };
       if (taskId != null && wouldCreateCycle(tasks, taskId, depTask.id))

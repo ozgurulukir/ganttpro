@@ -199,3 +199,13 @@ test('parseDepInput — malicious HTML in raw dependency input is safely escaped
   assert.ok(!escapedRaw.includes('>'));
   assert.ok(!escapedErr.includes('<'));
 });
+
+test('buildDepsText — uses pre-computed rowMap when provided', () => {
+  const C = TASKS[2]; // deps: ['B'], sdeps: ['A']
+  const customRowMap = new Map([
+    ['A', 10],
+    ['B', 20],
+    ['C', 30]
+  ]);
+  assert.equal(buildDepsText(TASKS, EMPTY, MS, C, customRowMap), '20FS, 10SS');
+});

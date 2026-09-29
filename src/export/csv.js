@@ -1,5 +1,6 @@
 import { countWorkingDays } from '../core/calendar.js';
 import { csvEsc } from '../core/format.js';
+import { buildIndex } from '../core/tree.js';
 import { D } from '../render/deps.js';
 import { t } from '../i18n/index.js';
 
@@ -8,6 +9,18 @@ export function exportCSV() {
   const { curProj, tasks, groupBounds, buildDepsText, TODAY_STR } = D;
   const proj = curProj();
   if (!proj) return;
+  // Row numbers in the exported CSV follow full-tree DFS order (collapse is
+  // ignored here), so dep references must use the same numbering.
+  const { byParent } = buildIndex(tasks);
+  const rowMap = new Map();
+  let rowNum = 0;
+  const numberRows = parentId => {
+    for (const tk of byParent.get(parentId) || []) {
+      rowMap.set(tk.id, ++rowNum);
+      numberRows(tk.id);
+    }
+  };
+  numberRows(null);
   const lines = [
     [
       '#',
@@ -43,7 +56,7 @@ export function exportCSV() {
           isGrp ? gb.e || '' : tk.end || tk.date || '',
           tk.type === 'task' && tk.start && tk.end ? countWorkingDays(tk.start, tk.end) : '',
           tk.type === 'task' ? (tk.done ? 100 : tk.progress || 0) : '',
-          buildDepsText(tk),
+          buildDepsText(tk, rowMap),
           tk.done ? 'Y' : ''
         ]);
         walk(tk.id, depth + 1);
