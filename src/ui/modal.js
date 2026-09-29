@@ -111,7 +111,7 @@ export function setupDepsInputListener(excludeId) {
     const parsed = parseDepInput(val, excludeId);
     tip.innerHTML = parsed
       .map(p => {
-        if (p.err) return `<span style="color:var(--red)">✕ ${p.raw}: ${p.err}</span>`;
+        if (p.err) return `<span style="color:var(--red)">✕ ${esc(p.raw)}: ${esc(p.err)}</span>`;
         const dt = taskById(p.taskId);
         return `<span style="color:#10B981">✓ ${p.rowNum}${p.type} - ${esc(dt ? dt.name : '')}</span>`;
       })
@@ -713,7 +713,7 @@ export function openAllDepsEditor(task, cell) {
     }
     const rows = parsed.map(p => {
       if (p.err)
-        return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.raw}</span> <span style="color:#FCA5A5">✕ ${p.err}</span></div>`;
+        return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${esc(p.raw)}</span> <span style="color:#FCA5A5">✕ ${esc(p.err)}</span></div>`;
       const dt = taskById(p.taskId);
       return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.rowNum}${p.type}</span> <span style="color:#6EE7B7">✓ ${esc(dt ? dt.name : '')} · ${p.type}</span></div>`;
     });

@@ -11,6 +11,7 @@ import {
   parseDepInput,
   lagsFromParsed
 } from '../src/core/deps.js';
+import { esc } from '../src/core/format.js';
 
 /*   A (row 1) — no deps
  *   B (row 2) — deps: [A]
@@ -181,4 +182,20 @@ test('allSuccIds finds tasks referencing the given id in any dep array', () => {
   assert.deepStrictEqual(allSuccIds(tasks, 9), [1, 2, 3]);
   assert.deepStrictEqual(allSuccIds(tasks, 7), [4]);
   assert.deepStrictEqual(allSuccIds(tasks, 99), []);
+});
+
+test('parseDepInput — malicious HTML in raw dependency input is safely escaped', () => {
+  const maliciousInput = '<img src=x onerror=alert(1)>';
+  const r = parseDepInput(maliciousInput, 'A', TASKS, EMPTY, MS);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].raw, maliciousInput);
+  assert.ok(r[0].err);
+
+  const escapedRaw = esc(r[0].raw);
+  const escapedErr = esc(r[0].err);
+
+  assert.equal(escapedRaw, '&lt;img src=x onerror=alert(1)&gt;');
+  assert.ok(!escapedRaw.includes('<'));
+  assert.ok(!escapedRaw.includes('>'));
+  assert.ok(!escapedErr.includes('<'));
 });
