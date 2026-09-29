@@ -22,6 +22,19 @@ export function exportCSV() {
       t('export.done')
     ]
   ];
+  const rowMap = new Map();
+  let rCount = 0;
+  const populateRowMap = parentId => {
+    tasks
+      .filter(tk => tk.parent === parentId)
+      .forEach(tk => {
+        rCount++;
+        rowMap.set(tk.id, rCount);
+        populateRowMap(tk.id);
+      });
+  };
+  populateRowMap(null);
+
   let num = 0;
   const walk = (parentId, depth) => {
     tasks
@@ -43,7 +56,7 @@ export function exportCSV() {
           isGrp ? gb.e || '' : tk.end || tk.date || '',
           tk.type === 'task' && tk.start && tk.end ? countWorkingDays(tk.start, tk.end) : '',
           tk.type === 'task' ? (tk.done ? 100 : tk.progress || 0) : '',
-          buildDepsText(tk),
+          buildDepsText(tk, rowMap),
           tk.done ? 'Y' : ''
         ]);
         walk(tk.id, depth + 1);

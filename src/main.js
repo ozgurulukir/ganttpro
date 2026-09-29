@@ -1272,8 +1272,8 @@ function toggleWBS() {
 }
 
 /* deps adapters: pure logic in core/deps.js; bind global state. */
-function buildDepsText(task) {
-  return Deps.buildDepsText(tasks, collapsed, milestoneView, task);
+function buildDepsText(task, rowMap = null) {
+  return Deps.buildDepsText(tasks, collapsed, milestoneView, task, rowMap);
 }
 function wouldCreateCycle(taskId, newDepId) {
   return Deps.wouldCreateCycle(tasks, taskId, newDepId);

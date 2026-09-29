@@ -39,6 +39,9 @@ export function renderTaskPanel() {
   } = D;
 
   const rows = getVisibleRows();
+  const rowMap = new Map();
+  rows.forEach(({ task }, idx) => rowMap.set(task.id, idx + 1));
+
   const body = document.getElementById('taskBody');
   body.innerHTML = '';
   const wbsMap = D.showWBS ? Tree.getWBSMap(tasks) : null;
@@ -278,7 +281,7 @@ export function renderTaskPanel() {
     const dc = document.createElement('div');
     dc.className = 'deps-cell';
     dc.style.position = 'relative';
-    const allDepsText = buildDepsText(task);
+    const allDepsText = buildDepsText(task, rowMap);
     dc.innerHTML = allDepsText
       ? `<span class="deps-nums">${allDepsText}</span>`
       : `<span style="font-size:11px;color:var(--t4)">—</span>`;

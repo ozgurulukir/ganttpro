@@ -154,3 +154,13 @@ test('buildDepsText — lag 0 produces no suffix', () => {
   const zeroLag = { id: 'E', parent: null, type: 'task', deps: ['A'], lags: { FSA: 0 } };
   assert.equal(buildDepsText(TASKS, EMPTY, MS, zeroLag), '1FS');
 });
+
+test('buildDepsText — uses pre-computed rowMap when provided', () => {
+  const C = TASKS[2]; // deps: ['B'], sdeps: ['A']
+  const customRowMap = new Map([
+    ['A', 10],
+    ['B', 20],
+    ['C', 30]
+  ]);
+  assert.equal(buildDepsText(TASKS, EMPTY, MS, C, customRowMap), '20FS, 10SS');
+});

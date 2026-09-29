@@ -53,15 +53,28 @@ export function getVisibleRows(tasks, collapsed, milestoneView) {
       .map(t => ({ task: t, depth: 0 }));
   }
   const rows = [];
+  // Pre-group tasks by parent for O(1) child lookups and hasChildren check
+  const byParent = new Map();
+  for (let i = 0; i < tasks.length; i++) {
+    const t = tasks[i];
+    const p = t.parent;
+    let arr = byParent.get(p);
+    if (!arr) {
+      arr = [];
+      byParent.set(p, arr);
+    }
+    arr.push(t);
+  }
   function addChildren(parentId, depth) {
-    tasks
-      .filter(t => t.parent === parentId)
-      .forEach(t => {
-        rows.push({ task: t, depth });
-        if (!collapsed.has(t.id) && tasks.some(c => c.parent === t.id)) {
-          addChildren(t.id, depth + 1);
-        }
-      });
+    const children = byParent.get(parentId);
+    if (!children) return;
+    for (let i = 0; i < children.length; i++) {
+      const t = children[i];
+      rows.push({ task: t, depth });
+      if (!collapsed.has(t.id) && byParent.has(t.id)) {
+        addChildren(t.id, depth + 1);
+      }
+    }
   }
   addChildren(null, 0);
   return rows;
