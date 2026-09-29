@@ -263,8 +263,12 @@ export function validateProject(raw) {
     proj.baseline = b;
   }
   if (p.ownerId) proj.ownerId = toStr(p.ownerId);
-
-  delete proj.shareToken;
+  // Keep the share-link token across save/load round-trips — the share modal
+  // and revocation depend on it surviving reloads. Strict charset: it is a
+  // doc id we place into `gantt_shares/{token}` URLs, never free-form text.
+  if (typeof p.shareToken === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(p.shareToken)) {
+    proj.shareToken = p.shareToken;
+  }
 
   return migrate(proj);
 }

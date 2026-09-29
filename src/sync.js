@@ -58,7 +58,9 @@ export function stripSharedFlags(proj) {
   delete p._ownerId;
   delete p.ownerId;
   delete p._history;
-  delete p.shareToken;
+  // shareToken is intentionally kept: the share modal and revocation need it
+  // to survive save/load round-trips. (On the collab-write path the owner's
+  // stored token always wins — see updateSharedProjectAtomic.)
   return p;
 }
 

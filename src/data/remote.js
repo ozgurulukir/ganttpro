@@ -1,6 +1,6 @@
 /* Firestore I/O wrappers — pure functions taking data, returning data.
    No app-state globals. All Firestore API calls live here.
-   Collections: gantt_user_data, gantt_project_shares, gantt_allowed_users. */
+   Collections: gantt_user_data, gantt_project_shares, gantt_shares, gantt_allowed_users. */
 import { db } from './firebase.js';
 import {
   doc,
@@ -30,7 +30,13 @@ export async function updateSharedProjectAtomic(ownerId, sharedProject) {
     if (!data.projects) {
       throw new Error('Owner projects not found!');
     }
-    const ownerProjects = data.projects.map(p => (p.id === sharedProject.id ? sharedProject : p));
+    const ownerProjects = data.projects.map(p => {
+      if (p.id !== sharedProject.id) return p;
+      // An editor's copy may be stale or absent the owner's share token;
+      // the stored one always wins so collaborative edits can neither drop
+      // nor forge the owner's share link.
+      return p.shareToken ? { ...sharedProject, shareToken: p.shareToken } : sharedProject;
+    });
     transaction.update(docRef, {
       data: {
         ...data,
@@ -83,6 +89,12 @@ export async function addProjectShare(docId, data) {
 
 export async function removeProjectShare(shareId) {
   await deleteDoc(doc(db, 'gantt_project_shares', shareId));
+}
+
+/* ── gantt_shares (public read-only share links) ── */
+
+export async function deleteShareDoc(token) {
+  await deleteDoc(doc(db, 'gantt_shares', token));
 }
 
 /* ── gantt_allowed_users ── */

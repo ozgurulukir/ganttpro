@@ -102,6 +102,7 @@ import {
   openShareModal,
   closeShareModal,
   copyShareLink,
+  invalidateShareLink,
   openCollabModal,
   closeCollabModal,
   onCollabProjChange,
@@ -1800,6 +1801,7 @@ function wireShareModalEvents() {
   overlayClose('shareOverlay', closeShareModal);
   clk('shareCloseBtn', closeShareModal);
   clk('copyShareLinkBtn', copyShareLink);
+  clk('invalidateShareLinkBtn', invalidateShareLink);
 }
 
 function wireCollabModalEvents() {

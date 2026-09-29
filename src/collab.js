@@ -10,19 +10,58 @@ export async function openShareModal() {
   if (D.isReadOnly) return;
   const { curProj, render } = D;
   const proj = curProj();
+  const user = D.GetCurrentUser();
+  const note = document.querySelector('.share-owner-note');
+  const invBtn = document.getElementById('invalidateShareLinkBtn');
+  // Revocation works by deleting the Firestore share doc — only possible when
+  // the link is Firestore-backed. Anonymous (hash) links cannot be revoked.
+  if (invBtn) invBtn.style.display = user ? '' : 'none';
+  // TextEncoder gives real UTF-8 bytes — CJK-heavy projects serialize to
+  // several UTF-16 units per byte-heavy hash character.
+  if (new TextEncoder().encode(JSON.stringify(proj)).length > Share.SHARE_MAX_BYTES) {
+    // Too large for a URL hash; refuse rather than emit a link that browsers
+    // may silently truncate into a broken state.
+    document.getElementById('shareLinkInput').value = '';
+    if (invBtn) invBtn.style.display = 'none';
+    if (note) note.innerHTML = '⚠️ ' + t('share.linkTooLarge');
+    document.getElementById('shareOverlay').classList.add('open');
+    return;
+  }
   const token = Share.getOrCreateShareToken(proj);
   document.getElementById('shareModalProjName').textContent = proj.name;
-  const note = document.querySelector('.share-owner-note');
   if (note) note.innerHTML = '💡 ' + t('share.ownerNote');
   render();
   D.persist();
-  const user = D.GetCurrentUser();
-  const encoded = await Share.saveShareDoc(token, user?.uid, proj);
+  const { ok, encoded } = await Share.saveShareDoc(token, user?.uid, proj);
   const hash = encoded ? '#d=' + encoded : '';
   const url = location.origin + location.pathname + '?share=' + token + hash;
-  document.getElementById('shareLinkInput').value = url;
-  if (!encoded && note) note.innerHTML = '⚠️ ' + t('share.linkFailed');
+  document.getElementById('shareLinkInput').value = ok ? url : '';
+  if (!ok) {
+    if (note) note.innerHTML = '⚠️ ' + t('share.linkFailed');
+  } else if (encoded && note) {
+    // Anonymous link: the project data rides in the URL hash itself.
+    note.innerHTML = '⚠️ ' + t('share.hashNote');
+  }
   document.getElementById('shareOverlay').classList.add('open');
+}
+
+/** Kill the current share link: delete the Firestore share doc, then rotate
+ * the project's token so any copy of the old URL stops resolving. */
+export async function invalidateShareLink() {
+  const { curProj, showStatus } = D;
+  const proj = curProj();
+  const user = D.GetCurrentUser();
+  if (!user || !proj?.shareToken) return;
+  try {
+    await Remote.deleteShareDoc(proj.shareToken);
+  } catch (e) {
+    // The doc may already be gone; rotating the token is what revokes access.
+    console.warn('invalidateShareLink:', e);
+  }
+  delete proj.shareToken;
+  D.persist();
+  showStatus(t('share.invalidated'));
+  await openShareModal();
 }
 
 export function closeShareModal() {

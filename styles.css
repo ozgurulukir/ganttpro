@@ -1568,6 +1568,17 @@ body.readonly .readonly-badge {
 .share-copy-btn:hover {
   filter: brightness(1.1);
 }
+/* Secondary "Invalidate Link" action under the copy row */
+.share-invalidate-btn {
+  background: transparent;
+  color: var(--t3);
+  border: 1px solid var(--border);
+}
+.share-invalidate-btn:hover {
+  filter: none;
+  color: #e53;
+  border-color: #e53;
+}
 .share-note {
   font-size: 12px;
   color: var(--t3);

@@ -144,6 +144,19 @@ describe('validateProject', () => {
   it('rejects invalid id', () => {
     assert.equal(validateProject({ name: 'P' }), null);
   });
+
+  it('keeps a well-formed shareToken across validation (round-trip for revocation)', () => {
+    const token = 'abc-DEF_123-456';
+    const p = validateProject({ id: 1, shareToken: token, tasks: [] });
+    assert.equal(p.shareToken, token);
+  });
+
+  it('drops malformed shareToken values', () => {
+    for (const bad of [123, { t: 1 }, 'x'.repeat(101), 'bad token with spaces', 'token;drop']) {
+      const p = validateProject({ id: 1, shareToken: bad, tasks: [] });
+      assert.equal(Object.hasOwn(p, 'shareToken'), false, `should omit: ${String(bad)}`);
+    }
+  });
 });
 
 describe('validateProjects', () => {
