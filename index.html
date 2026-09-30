@@ -420,9 +420,9 @@
 
     <!-- VERSION PANEL -->
     <div class="ver-backdrop" id="verBackdrop"></div>
-    <div class="ver-panel" id="verPanel">
+    <div class="ver-panel" id="verPanel" role="dialog" aria-modal="true" aria-labelledby="verTitle">
       <div class="ver-head">
-        <span class="ver-head-title">
+        <span class="ver-head-title" id="verTitle">
           🕐
           <span data-i18n="settings.versionHistory">Version History</span>
         </span>
@@ -455,7 +455,13 @@
     </div>
 
     <!-- SHARE MODAL -->
-    <div class="overlay" id="shareOverlay">
+    <div
+      class="overlay"
+      id="shareOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="shareModalTitle"
+    >
       <div class="modal share-modal" id="shareModalBox">
         <button
           class="modal-close"
@@ -465,7 +471,7 @@
         >
           ✕
         </button>
-        <div class="modal-title">
+        <div class="modal-title" id="shareModalTitle">
           🔗
           <span data-i18n="share.title">Share Project:</span>
           <span id="shareModalProjName" style="color: var(--accent); font-size: 14px"></span>
@@ -496,9 +502,15 @@
     </div>
 
     <!-- COLLAB MODAL -->
-    <div class="collab-overlay" id="collabOverlay">
+    <div
+      class="collab-overlay"
+      id="collabOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="collabTitle"
+    >
       <div class="collab-box" id="collabBox">
-        <div class="collab-title">
+        <div class="collab-title" id="collabTitle">
           🔗
           <span data-i18n="share.collaboration">Collaboration</span>
         </div>
@@ -528,9 +540,15 @@
     </div>
 
     <!-- ADMIN PANEL -->
-    <div class="admin-overlay" id="adminOverlay">
+    <div
+      class="admin-overlay"
+      id="adminOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="adminTitle"
+    >
       <div class="admin-box" id="adminBox">
-        <div class="admin-title">
+        <div class="admin-title" id="adminTitle">
           👑
           <span data-i18n="admin.title">User Management</span>
           <span
@@ -654,10 +672,17 @@
     </div>
 
     <!-- DELETE CONFIRM MODAL -->
-    <div class="overlay" id="deleteOverlay">
+    <div
+      class="overlay"
+      id="deleteOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="deleteModalTitle"
+    >
       <div class="modal" id="deleteModalBox" style="width: 320px; padding: 20px 20px 16px">
         <div
           class="modal-title"
+          id="deleteModalTitle"
           style="font-size: 14px; margin-bottom: 6px"
           data-i18n="common.delete"
         >
@@ -708,7 +733,7 @@
     </div>
 
     <!-- ADD TASK MODAL -->
-    <div class="overlay" id="overlay">
+    <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div class="modal" id="taskModalBox">
         <button
           class="modal-close"
@@ -863,7 +888,13 @@
     </div>
 
     <!-- NEW PROJECT MODAL -->
-    <div class="overlay" id="projOverlay">
+    <div
+      class="overlay"
+      id="projOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="projModalTitle"
+    >
       <div class="modal" id="projModalBox">
         <button
           class="modal-close"
