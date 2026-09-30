@@ -89,8 +89,8 @@ export function esc(s) {
 /** Escape CSV cell value and sanitize formula injection triggers (=, +, -, @, \t, \r). */
 export function csvEsc(v) {
   v = String(v ?? '');
-  if (/^[=+\-@\t\r]/.test(v)) {
+  if (/^\s*[=+\-@\t\r]/.test(v)) {
     v = "'" + v;
   }
-  return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
 }
