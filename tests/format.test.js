@@ -109,7 +109,13 @@ test('csvEsc — escapes formula injection triggers', () => {
   assert.equal(csvEsc('-50'), "'-50");
   assert.equal(csvEsc('@Admin'), "'@Admin");
   assert.equal(csvEsc('\tTabPrefix'), "'\tTabPrefix");
-  assert.equal(csvEsc('\rCarriageReturn'), "'\rCarriageReturn");
+  assert.equal(csvEsc('\rCarriageReturn'), '"\'\rCarriageReturn"');
+});
+
+test('csvEsc — escapes formula injection triggers with leading whitespace', () => {
+  assert.equal(csvEsc('  =SUM(1,2)'), '"\'  =SUM(1,2)"');
+  assert.equal(csvEsc('\t+100'), "'\t+100");
+  assert.equal(csvEsc('  @Admin'), "'  @Admin");
 });
 
 test('csvEsc — handles standard CSV cell escaping', () => {
@@ -117,6 +123,7 @@ test('csvEsc — handles standard CSV cell escaping', () => {
   assert.equal(csvEsc('Task, with comma'), '"Task, with comma"');
   assert.equal(csvEsc('Task "with quotes"'), '"Task ""with quotes"""');
   assert.equal(csvEsc('Task\nwith newline'), '"Task\nwith newline"');
+  assert.equal(csvEsc('Task\rwith carriage return'), '"Task\rwith carriage return"');
   assert.equal(csvEsc(null), '');
   assert.equal(csvEsc(123), '123');
 });
