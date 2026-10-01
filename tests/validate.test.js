@@ -423,6 +423,20 @@ describe('extended task fields (pinStart/link/approval/evidence)', () => {
     assert.equal(t.assignee, undefined);
   });
 
+  it('strips dangerous URI schemes from link and evidence fields', () => {
+    const t = validateTask({
+      id: 1,
+      name: 'x',
+      type: 'task',
+      start: '2026-04-01',
+      end: '2026-04-02',
+      link: 'javascript:alert(1)',
+      evidence: 'data:text/html,<script>alert(1)</script>'
+    });
+    assert.equal(t.link, undefined);
+    assert.equal(t.evidence, undefined);
+  });
+
   it('omits extended fields that are absent from input', () => {
     const t = validateTask({
       id: 1,

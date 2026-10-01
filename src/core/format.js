@@ -94,3 +94,19 @@ export function csvEsc(v) {
   }
   return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
 }
+
+/** Sanitize URL string — blocks dangerous schemes (javascript:, data:, vbscript:) to prevent XSS. */
+export function sanitizeUrl(url) {
+  if (typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  const clean = trimmed.replace(/[\x00-\x20]/g, '').toLowerCase();
+  if (
+    clean.startsWith('javascript:') ||
+    clean.startsWith('data:') ||
+    clean.startsWith('vbscript:')
+  ) {
+    return '';
+  }
+  return trimmed;
+}

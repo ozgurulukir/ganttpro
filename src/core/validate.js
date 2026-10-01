@@ -4,7 +4,7 @@
  * or null if the input is not recoverable.
  */
 
-import { isValidHexColor } from './format.js';
+import { isValidHexColor, sanitizeUrl } from './format.js';
 
 const TASK_TYPES = new Set(['task', 'group', 'milestone']);
 const DEFAULT_COLOR = '#5E6AD2';
@@ -60,6 +60,14 @@ function cleanText(max) {
   };
 }
 
+function sanitizeUrlText(max) {
+  const clean = cleanText(max);
+  return v => {
+    const s = clean(v);
+    return s ? sanitizeUrl(s) || undefined : undefined;
+  };
+}
+
 function sanitizeLags(v) {
   if (!v || typeof v !== 'object') return undefined;
   const lags = {};
@@ -85,12 +93,12 @@ export const TASK_FIELDS = {
   sfdeps: { types: ['task', 'milestone'], sanitize: v => toIdArray(v) },
   lags: { types: ['task', 'milestone'], sanitize: sanitizeLags },
   assignee: { types: ['task', 'milestone'], sanitize: cleanText(100) },
-  link: { types: ['task', 'milestone', 'group'], sanitize: cleanText(2000) },
+  link: { types: ['task', 'milestone', 'group'], sanitize: sanitizeUrlText(2000) },
   approval: {
     types: ['task', 'milestone', 'group'],
     sanitize: v => (APPROVAL_STATES.has(v) ? v : undefined)
   },
-  evidence: { types: ['task', 'milestone', 'group'], sanitize: cleanText(2000) },
+  evidence: { types: ['task', 'milestone', 'group'], sanitize: sanitizeUrlText(2000) },
   start: { types: ['task'], sanitize: toDateStr },
   end: { types: ['task'], sanitize: toDateStr },
   wday: { types: ['task'], sanitize: v => Math.min(3650, Math.max(1, toInt(v, 1))) },
