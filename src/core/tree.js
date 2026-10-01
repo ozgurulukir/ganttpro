@@ -163,15 +163,15 @@ export function isDescendant(tasks, ancestorId, checkId) {
 }
 
 /** Depth of `id` in the tree (root = 0), with circular-reference guard. */
-export function getTaskDepth(tasks, id) {
+export function getTaskDepth(tasks, id, index = buildIndex(tasks)) {
   let depth = 0,
-    cur = taskById(tasks, id),
+    cur = index.byId.get(id),
     seen = new Set();
   while (cur && cur.parent !== null) {
     if (seen.has(cur.id)) break; // circular reference guard
     seen.add(cur.id);
     depth++;
-    cur = taskById(tasks, cur.parent);
+    cur = index.byId.get(cur.parent);
   }
   return depth;
 }
