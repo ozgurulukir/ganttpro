@@ -9,7 +9,8 @@ import {
   avColor,
   darkenColor,
   hexToRgba,
-  csvEsc
+  csvEsc,
+  sanitizeUrl
 } from '../src/core/format.js';
 
 /* ── dateToX ── */
@@ -126,4 +127,23 @@ test('csvEsc — handles standard CSV cell escaping', () => {
   assert.equal(csvEsc('Task\rwith carriage return'), '"Task\rwith carriage return"');
   assert.equal(csvEsc(null), '');
   assert.equal(csvEsc(123), '123');
+});
+
+/* ── sanitizeUrl ── */
+
+test('sanitizeUrl — allows safe URLs and text', () => {
+  assert.equal(sanitizeUrl('https://example.com/doc'), 'https://example.com/doc');
+  assert.equal(sanitizeUrl('http://example.com'), 'http://example.com');
+  assert.equal(sanitizeUrl('mailto:user@example.com'), 'mailto:user@example.com');
+  assert.equal(sanitizeUrl('/relative/path'), '/relative/path');
+  assert.equal(sanitizeUrl('DOC-1234'), 'DOC-1234');
+});
+
+test('sanitizeUrl — blocks dangerous URI schemes', () => {
+  assert.equal(sanitizeUrl('javascript:alert(1)'), '');
+  assert.equal(sanitizeUrl('JAVASCRIPT:alert(1)'), '');
+  assert.equal(sanitizeUrl('  java\0script:alert(1)  '), '');
+  assert.equal(sanitizeUrl('data:text/html,<script>alert(1)</script>'), '');
+  assert.equal(sanitizeUrl('vbscript:msgbox(1)'), '');
+  assert.equal(sanitizeUrl(null), '');
 });
