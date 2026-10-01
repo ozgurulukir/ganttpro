@@ -43,6 +43,7 @@ export function renderTaskPanel() {
   rows.forEach(({ task }, idx) => rowMap.set(task.id, idx + 1));
   const body = document.getElementById('taskBody');
   body.innerHTML = '';
+  const taskIndex = Tree.buildIndex(tasks);
   const wbsMap = D.showWBS ? Tree.getWBSMap(tasks) : null;
   document.getElementById('taskCount').textContent = tasks.filter(t => t.type === 'task').length;
 
@@ -122,7 +123,8 @@ export function renderTaskPanel() {
     ind.style.width = depth * 18 + 'px';
     nc.appendChild(ind);
 
-    const hasChildren = tasks.some(c => c.parent === task.id);
+    const children = taskIndex.byParent.get(task.id);
+    const hasChildren = Boolean(children && children.length > 0);
     if (hasChildren) {
       const tog = document.createElement('span');
       tog.className = 'toggle' + (collapsed.has(task.id) ? ' coll' : '');
@@ -141,7 +143,7 @@ export function renderTaskPanel() {
     const dot = document.createElement('span');
     dot.className = 'cdot';
     if (task.type === 'milestone') {
-      const parentTask = tasks.find(t => t.id === task.parent);
+      const parentTask = taskIndex.byId.get(task.parent);
       dot.style.background = parentTask
         ? darkenColor(safeColor(parentTask.color))
         : darkenColor(safeColor(task.color));
@@ -319,17 +321,12 @@ export function renderTaskPanel() {
     const ac = document.createElement('div');
     ac.className = 'add-cell';
 
-    const _parent = taskById(task.parent);
+    const _parent = taskIndex.byId.get(task.parent);
     const canOutdent = task.parent !== null && _parent && _parent.parent !== null;
-    const _myIdx = tasks.indexOf(task);
-    let _prevSib = null;
-    for (let i = _myIdx - 1; i >= 0; i--) {
-      if (tasks[i].parent === task.parent) {
-        _prevSib = tasks[i];
-        break;
-      }
-    }
-    const canIndent = _prevSib !== null && getTaskDepth(_prevSib.id) + 1 < 5;
+    const siblings = taskIndex.byParent.get(task.parent) || [];
+    const sibIdx = siblings.indexOf(task);
+    const _prevSib = sibIdx > 0 ? siblings[sibIdx - 1] : null;
+    const canIndent = _prevSib !== null && Tree.getTaskDepth(tasks, _prevSib.id, taskIndex) + 1 < 5;
 
     const outBtn = document.createElement('div');
     outBtn.className = 'row-action-btn';
