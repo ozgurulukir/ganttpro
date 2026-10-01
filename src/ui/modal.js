@@ -537,13 +537,13 @@ export function submitTask() {
       const asg = document.getElementById('fAssignee').value.trim();
       if (type !== 'group' && asg) t.assignee = asg;
       else delete t.assignee;
-      const linkVal = document.getElementById('fHyperlink').value.trim();
+      const linkVal = TASK_FIELDS.link.sanitize(document.getElementById('fHyperlink').value);
       if (linkVal) t.link = linkVal;
       else delete t.link;
       const approvalVal = document.getElementById('fApproval').value;
       if (approvalVal) t.approval = approvalVal;
       else delete t.approval;
-      const evidenceVal = document.getElementById('fEvidence').value.trim();
+      const evidenceVal = TASK_FIELDS.evidence.sanitize(document.getElementById('fEvidence').value);
       if (evidenceVal) t.evidence = evidenceVal;
       else delete t.evidence;
     }
@@ -576,11 +576,11 @@ export function submitTask() {
     }
     const asg = document.getElementById('fAssignee').value.trim();
     if (type !== 'group' && asg) t.assignee = asg;
-    const linkVal = document.getElementById('fHyperlink').value.trim();
+    const linkVal = TASK_FIELDS.link.sanitize(document.getElementById('fHyperlink').value);
     if (linkVal) t.link = linkVal;
     const approvalVal = document.getElementById('fApproval').value;
     if (approvalVal) t.approval = approvalVal;
-    const evidenceVal = document.getElementById('fEvidence').value.trim();
+    const evidenceVal = TASK_FIELDS.evidence.sanitize(document.getElementById('fEvidence').value);
     if (evidenceVal) t.evidence = evidenceVal;
     tasks.push(t);
     logAudit('taskCreated', name);
