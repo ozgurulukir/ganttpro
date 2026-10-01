@@ -297,11 +297,24 @@ export function renderTaskPanel() {
       const cb = document.createElement('div');
       cb.className = 'check-box' + (task.done ? ' done' : '');
       cb.textContent = task.done ? '✓' : '';
+      cb.setAttribute('role', 'checkbox');
+      cb.setAttribute('aria-checked', task.done ? 'true' : 'false');
+      cb.setAttribute('tabindex', '0');
+      cb.setAttribute(
+        'aria-label',
+        (task.done ? t('taskPanel.markIncomplete') : t('taskPanel.markDone')) + ': ' + task.name
+      );
       cb.onclick = e => {
         e.stopPropagation();
         D.applyTaskChange(task, task.done ? { done: false } : { done: true, progress: 100 }, {
           schedule: false
         });
+      };
+      cb.onkeydown = e => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          cb.click();
+        }
       };
       cc.appendChild(cb);
     } else if (task.type === 'milestone') {
@@ -309,9 +322,22 @@ export function renderTaskPanel() {
       mb.textContent = '◆';
       mb.style.cssText = `font-size:13px;color:${safeColor(task.color)};cursor:pointer;opacity:${task.done ? 0.3 : 1};transition:opacity .12s`;
       mb.title = task.done ? t('taskPanel.markIncomplete') : t('taskPanel.markDone');
+      mb.setAttribute('role', 'checkbox');
+      mb.setAttribute('aria-checked', task.done ? 'true' : 'false');
+      mb.setAttribute('tabindex', '0');
+      mb.setAttribute(
+        'aria-label',
+        (task.done ? t('taskPanel.markIncomplete') : t('taskPanel.markDone')) + ': ' + task.name
+      );
       mb.onclick = e => {
         e.stopPropagation();
         D.applyTaskChange(task, { done: !task.done }, { schedule: false });
+      };
+      mb.onkeydown = e => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          mb.click();
+        }
       };
       cc.appendChild(mb);
     }
@@ -334,12 +360,22 @@ export function renderTaskPanel() {
     outBtn.title = t('taskPanel.outdent');
     outBtn.setAttribute('aria-label', t('taskPanel.outdent'));
     outBtn.setAttribute('role', 'button');
-    if (canOutdent)
+    outBtn.setAttribute('tabindex', '0');
+    if (canOutdent) {
       outBtn.onclick = e => {
         e.stopPropagation();
         outdentTask(task.id);
       };
-    else outBtn.style.visibility = 'hidden';
+      outBtn.onkeydown = e => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          outBtn.click();
+        }
+      };
+    } else {
+      outBtn.style.visibility = 'hidden';
+      outBtn.removeAttribute('tabindex');
+    }
     ac.appendChild(outBtn);
 
     const inBtn = document.createElement('div');
@@ -348,12 +384,22 @@ export function renderTaskPanel() {
     inBtn.title = t('taskPanel.indent');
     inBtn.setAttribute('aria-label', t('taskPanel.indent'));
     inBtn.setAttribute('role', 'button');
-    if (canIndent)
+    inBtn.setAttribute('tabindex', '0');
+    if (canIndent) {
       inBtn.onclick = e => {
         e.stopPropagation();
         indentTask(task.id);
       };
-    else inBtn.style.visibility = 'hidden';
+      inBtn.onkeydown = e => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          inBtn.click();
+        }
+      };
+    } else {
+      inBtn.style.visibility = 'hidden';
+      inBtn.removeAttribute('tabindex');
+    }
     ac.appendChild(inBtn);
 
     const addBtn = document.createElement('div');
@@ -362,9 +408,16 @@ export function renderTaskPanel() {
     addBtn.title = t('taskPanel.addSubtask');
     addBtn.setAttribute('aria-label', t('taskPanel.addSubtask'));
     addBtn.setAttribute('role', 'button');
+    addBtn.setAttribute('tabindex', '0');
     addBtn.onclick = e => {
       e.stopPropagation();
       addTaskInline(task.id);
+    };
+    addBtn.onkeydown = e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        addBtn.click();
+      }
     };
     ac.appendChild(addBtn);
 
@@ -374,9 +427,16 @@ export function renderTaskPanel() {
     delBtn.title = t('taskPanel.deleteTask');
     delBtn.setAttribute('aria-label', t('taskPanel.deleteTask'));
     delBtn.setAttribute('role', 'button');
+    delBtn.setAttribute('tabindex', '0');
     delBtn.onclick = e => {
       e.stopPropagation();
       confirmDeleteTask(task.id);
+    };
+    delBtn.onkeydown = e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        delBtn.click();
+      }
     };
     ac.appendChild(delBtn);
 
