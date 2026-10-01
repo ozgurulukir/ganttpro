@@ -400,9 +400,15 @@ body.dark .btn-group .btn.active {
   background: #fee2e2;
   color: var(--red);
 }
-.task-row:hover .row-action-btn {
+.task-row:hover .row-action-btn,
+.task-row:focus-within .row-action-btn,
+.row-action-btn:focus-visible {
   opacity: 1;
   pointer-events: auto;
+}
+.row-action-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 .indent {
   display: inline-block;
@@ -774,6 +780,10 @@ body.dark .ms-badge {
 }
 .check-box:hover {
   border-color: var(--accent);
+}
+.check-box:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 .check-box.done {
   background: var(--accent);
