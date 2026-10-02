@@ -73,6 +73,7 @@ export function renderTaskPanel() {
 
   rows.forEach(({ task, depth }, rowIndex) => {
     const row = document.createElement('div');
+    const grpBounds = task.type === 'group' ? Tree.groupBounds(tasks, task.id, taskIndex) : null;
     row.className = 'task-row' + (task.type === 'group' ? ' group-row' : '');
     row.dataset.id = task.id;
     row.draggable = true;
@@ -208,7 +209,7 @@ export function renderTaskPanel() {
     const sc = document.createElement('div');
     sc.className = 'date-cell' + (task.pinStart ? ' pinned' : '');
     if (task.type === 'group') {
-      const gb = groupBounds(task.id);
+      const gb = grpBounds;
       sc.textContent = gb.s || '';
       if (gb.s) sc.style.color = 'var(--t3)';
     } else {
@@ -236,7 +237,7 @@ export function renderTaskPanel() {
     const ec = document.createElement('div');
     ec.className = 'date-cell';
     if (task.type === 'group') {
-      const gb = groupBounds(task.id);
+      const gb = grpBounds;
       ec.textContent = gb.e || '';
       if (gb.e) ec.style.color = 'var(--t3)';
     } else {
@@ -262,7 +263,7 @@ export function renderTaskPanel() {
         if (!isReadOnly) openWdayEditor(task, wc);
       });
     } else if (task.type === 'group') {
-      const gb = groupBounds(task.id);
+      const gb = grpBounds;
       if (gb.s && gb.e) {
         wc.textContent = countWorkingDays(gb.s, gb.e);
         wc.style.color = 'var(--t3)';

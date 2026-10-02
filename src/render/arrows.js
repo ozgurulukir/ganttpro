@@ -1,5 +1,6 @@
 /* Dependency arrows (SVG) — FS, SS, FF, SF + critical path. */
 import { D } from './deps.js';
+import * as Tree from '../core/tree.js';
 
 function arrowPath(sx, sy, tx, ty) {
   const style = D.arrowStyle || 'bezier';
@@ -15,16 +16,9 @@ function arrowPath(sx, sy, tx, ty) {
 }
 
 export function renderArrows(canvas, rows, tw, th) {
-  const {
-    ROW_H,
-    PPD,
-    showCriticalPath,
-    criticalTaskIds,
-    dateToX,
-    taskById,
-    groupBounds,
-    getCriticalPredTaskIds
-  } = D;
+  const { tasks, ROW_H, PPD, showCriticalPath, criticalTaskIds, dateToX, getCriticalPredTaskIds } =
+    D;
+  const taskIndex = Tree.buildIndex(tasks);
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', tw);
   svg.setAttribute('height', th);
@@ -71,19 +65,20 @@ export function renderArrows(canvas, rows, tw, th) {
     // FS arrows (只在非 CP 模式顯示)
     if (!showCriticalPath) {
       (task.deps || []).forEach(depId => {
-        const dep = taskById(depId);
+        const dep = taskIndex.byId.get(depId);
         if (!dep) return;
         if (dep.type === 'task' && !dep.end) return;
         if (dep.type === 'milestone' && !dep.date) return;
+        let gb = null;
         if (dep.type === 'group') {
-          const gb = groupBounds(dep.id);
+          gb = Tree.groupBounds(tasks, dep.id, taskIndex);
           if (!gb.e) return;
         }
         if (task.type === 'task' && !task.start) return;
         const sRow = ri.get(depId);
         if (sRow === undefined) return;
         const sY = sRow * ROW_H + ROW_H / 2;
-        const depEnd = dep.type === 'group' ? groupBounds(dep.id).e : dep.end;
+        const depEnd = dep.type === 'group' ? gb.e : dep.end;
         const sX =
           dep.type === 'milestone' ? dateToX(dep.date) + PPD / 2 + 7 : dateToX(depEnd) + PPD;
         if (isNaN(sX)) return;
@@ -102,7 +97,7 @@ export function renderArrows(canvas, rows, tw, th) {
     // Critical path arrows (red elbow, trace through milestones)
     if (showCriticalPath && criticalTaskIds.has(task.id) && task.type === 'task') {
       getCriticalPredTaskIds(task).forEach(depId => {
-        const dep = taskById(depId);
+        const dep = taskIndex.byId.get(depId);
         if (!dep) return;
         const sRow = ri.get(depId);
         if (sRow === undefined) return;
@@ -130,7 +125,7 @@ export function renderArrows(canvas, rows, tw, th) {
 
     // SS arrows (amber, dep.start → task.start)
     (task.sdeps || []).forEach(depId => {
-      const dep = taskById(depId);
+      const dep = taskIndex.byId.get(depId);
       if (!dep) return;
       if (dep.type === 'task' && !dep.start) return;
       if (dep.type === 'milestone' && !dep.date) return;
@@ -153,7 +148,7 @@ export function renderArrows(canvas, rows, tw, th) {
 
     // FF arrows (green, dep.end → task.end)
     (task.ffdeps || []).forEach(depId => {
-      const dep = taskById(depId);
+      const dep = taskIndex.byId.get(depId);
       if (!dep) return;
       if (dep.type === 'task' && !dep.end) return;
       if (task.type === 'task' && !task.end) return;
@@ -176,7 +171,7 @@ export function renderArrows(canvas, rows, tw, th) {
 
     // SF arrows (purple, dep.start → task.end)
     (task.sfdeps || []).forEach(depId => {
-      const dep = taskById(depId);
+      const dep = taskIndex.byId.get(depId);
       if (!dep) return;
       if (dep.type === 'task' && !dep.start) return;
       if (task.type === 'task' && !task.end) return;
