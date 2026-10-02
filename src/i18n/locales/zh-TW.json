@@ -134,6 +134,7 @@
   },
   "project": {
     "noProjects": "— 無專案 —",
+    "selectProject": "選擇專案",
     "shared": "共享",
     "newProject": "＋ 建立新專案",
     "editProject": "✎ 編輯專案",

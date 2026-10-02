@@ -60,18 +60,22 @@ export function updateProjUI() {
 
 export function toggleProjMenu(e) {
   const menu = document.getElementById('projMenu');
+  const sel = document.getElementById('projSelector');
   if (menu.classList.contains('open')) {
     closeProjMenuOnly();
     return;
   }
   renderProjMenu();
   openOverlay('projMenu', 'projSelector');
+  if (sel) sel.setAttribute('aria-expanded', 'true');
   // Close when clicking outside
   attachOutsideClose('projSelector', closeProjMenuOnly);
 }
 
 export function closeProjMenuOnly() {
   closeOverlay('projMenu', 'projSelector');
+  const sel = document.getElementById('projSelector');
+  if (sel) sel.setAttribute('aria-expanded', 'false');
 }
 
 export function renderProjMenu() {
@@ -82,11 +86,14 @@ export function renderProjMenu() {
     const shared = isSharedProject(p);
     const item = document.createElement('div');
     item.className = 'proj-item' + (p.id === currentProjId ? ' active' : '');
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', p.id === currentProjId ? 'true' : 'false');
+    item.setAttribute('tabindex', '0');
     item.innerHTML = `
       <div class="proj-item-dot" style="background:${safeColor(p.color)}"></div>
       <span class="proj-item-name">${esc(p.name)}${shared ? ' <span class="collab-shared-badge">Shared</span>' : ''}</span>
-      ${!shared ? `<span class="proj-item-edit" data-action="edit-proj" data-pid="${esc(p.id)}" title="Edit project">✎</span>` : ''}
-      ${!shared ? `<span class="proj-item-del" data-action="delete-proj" data-pid="${esc(p.id)}" title="Delete project">✕</span>` : ''}
+      ${!shared ? `<span class="proj-item-edit" data-action="edit-proj" data-pid="${esc(p.id)}" title="${t('project.editProject')}" aria-label="${t('project.editProject')}: ${esc(p.name)}" role="button" tabindex="0">✎</span>` : ''}
+      ${!shared ? `<span class="proj-item-del" data-action="delete-proj" data-pid="${esc(p.id)}" title="${t('common.delete')}" aria-label="${t('common.delete')}: ${esc(p.name)}" role="button" tabindex="0">✕</span>` : ''}
     `;
     item.dataset.pid = p.id;
     menu.appendChild(item);
@@ -96,6 +103,9 @@ export function renderProjMenu() {
   menu.appendChild(div);
   const add = document.createElement('div');
   add.className = 'proj-item proj-item-new';
+  add.setAttribute('role', 'button');
+  add.setAttribute('tabindex', '0');
+  add.setAttribute('data-action', 'new-proj');
   add.innerHTML = t('project.newProject');
   add.onclick = () => {
     closeProjMenuOnly();

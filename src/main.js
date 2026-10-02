@@ -1719,10 +1719,17 @@ function wireLoginEvents() {
 
 function wireToolbarEvents() {
   const projSel = $('projSelector');
-  if (projSel)
+  if (projSel) {
     projSel.addEventListener('click', e => {
       if (!e.target.closest('#projMenu')) toggleProjMenu(e);
     });
+    projSel.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('#projMenu')) {
+        e.preventDefault();
+        toggleProjMenu(e);
+      }
+    });
+  }
   clk('shareBtn', openCollabModal);
   clk('addTaskBtn', openModal);
   clk('undoBtn', boundUndo);
@@ -1904,19 +1911,31 @@ function wireDelegationEvents() {
     });
 
   const projMenu = $('projMenu');
-  if (projMenu)
-    projMenu.addEventListener('click', e => {
+  if (projMenu) {
+    const handleProjMenuAction = e => {
       e.stopPropagation();
       const actEl = e.target.closest('[data-action]');
       if (actEl) {
         const pid = Number(actEl.dataset.pid);
         if (actEl.dataset.action === 'edit-proj') openEditProjModal(pid, e);
         else if (actEl.dataset.action === 'delete-proj') deleteProject(pid, e);
+        else if (actEl.dataset.action === 'new-proj') {
+          closeProjMenuOnly();
+          openProjModal();
+        }
         return;
       }
       const item = e.target.closest('.proj-item');
       if (item && item.dataset.pid) switchProject(Number(item.dataset.pid));
+    };
+    projMenu.addEventListener('click', handleProjMenuAction);
+    projMenu.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleProjMenuAction(e);
+      }
     });
+  }
 
   const csl = $('collabShareList');
   if (csl)
