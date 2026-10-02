@@ -107,10 +107,8 @@ export function renderProjMenu() {
   add.setAttribute('tabindex', '0');
   add.setAttribute('data-action', 'new-proj');
   add.innerHTML = t('project.newProject');
-  add.onclick = () => {
-    closeProjMenuOnly();
-    openProjModal();
-  };
+  // Click and keyboard activation are handled by the projMenu delegated
+  // handler (data-action="new-proj"); a direct onclick here would fire twice.
   menu.appendChild(add);
 }
 
