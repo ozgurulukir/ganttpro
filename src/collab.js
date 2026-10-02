@@ -96,7 +96,7 @@ export async function openCollabModal() {
   const sel = document.getElementById('collabProjSelect');
   const ownedProjects = projects.filter(p => !isSharedProject(p));
   sel.innerHTML = ownedProjects
-    .map(p => `<option value="${p.id}">${esc(p.name)}</option>`)
+    .map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`)
     .join('');
   const cur = curProj();
   if (cur && !isSharedProject(cur)) sel.value = cur.id;
@@ -133,8 +133,8 @@ function renderCollabModal() {
       s => `
     <div class="collab-share-item">
       <span class="ci-email" title="${esc(s.shared_with_email)}">${esc(s.shared_with_email)}</span>
-      <span class="ci-perm ${s.permission}">${s.permission === 'read' ? 'Read only' : 'Can edit'}</span>
-      <span class="ci-del" data-action="remove-share" data-share-id="${s.id}" data-email="${esc(s.shared_with_email)}" title="Remove">✕</span>
+      <span class="ci-perm ${esc(s.permission)}">${s.permission === 'read' ? 'Read only' : 'Can edit'}</span>
+      <span class="ci-del" data-action="remove-share" data-share-id="${esc(s.id)}" data-email="${esc(s.shared_with_email)}" title="Remove">✕</span>
     </div>
   `
     )

@@ -85,8 +85,8 @@ export function renderProjMenu() {
     item.innerHTML = `
       <div class="proj-item-dot" style="background:${safeColor(p.color)}"></div>
       <span class="proj-item-name">${esc(p.name)}${shared ? ' <span class="collab-shared-badge">Shared</span>' : ''}</span>
-      ${!shared ? `<span class="proj-item-edit" data-action="edit-proj" data-pid="${p.id}" title="Edit project">✎</span>` : ''}
-      ${!shared ? `<span class="proj-item-del" data-action="delete-proj" data-pid="${p.id}" title="Delete project">✕</span>` : ''}
+      ${!shared ? `<span class="proj-item-edit" data-action="edit-proj" data-pid="${esc(p.id)}" title="Edit project">✎</span>` : ''}
+      ${!shared ? `<span class="proj-item-del" data-action="delete-proj" data-pid="${esc(p.id)}" title="Delete project">✕</span>` : ''}
     `;
     item.dataset.pid = p.id;
     menu.appendChild(item);
@@ -193,7 +193,7 @@ export function openProjModal() {
   const sel = document.getElementById('pTemplate');
   sel.innerHTML =
     `<option value="">${t('project.blankProject')}</option>` +
-    TEMPLATES.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    TEMPLATES.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('');
   sel.value = '';
   document.getElementById('templatePreview').style.display = 'none';
   // Preview the color that will be auto-assigned
@@ -221,7 +221,7 @@ export function onTemplateChange() {
   // List phase names (top-level groups)
   const phases = tpl.tasks
     .filter(t => t.type === 'group' && t.parent === 1)
-    .map(t => t.name)
+    .map(t => esc(t.name))
     .join(' → ');
   preview.innerHTML = `<b>${t('project.template')}:</b> ${t('project.templatePreview', { groups, tasks, miles })}<br>
     <span style="color:var(--t4)">${phases}</span>`;

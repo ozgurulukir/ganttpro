@@ -1,7 +1,7 @@
 /* Task panel: left-side table with name, dates, deps, actions. */
 import { D } from './deps.js';
 import { hasAnyDeps } from '../core/deps.js';
-import { darkenColor, initials, safeColor } from '../core/format.js';
+import { darkenColor, esc, initials, safeColor } from '../core/format.js';
 import { countWorkingDays } from '../core/calendar.js';
 import { highlightRow } from './tooltip.js';
 import { renderWorkloadPanel } from './workload.js';
@@ -214,7 +214,7 @@ export function renderTaskPanel() {
     } else {
       const sv = task.start || task.date || '';
       if (task.pinStart && sv) {
-        sc.innerHTML = '<span class="pin-dot"></span>' + sv;
+        sc.innerHTML = '<span class="pin-dot"></span>' + esc(sv);
         sc.title = t('taskPanel.fixedDate');
       } else {
         sc.textContent = sv;
@@ -280,7 +280,7 @@ export function renderTaskPanel() {
     dc.style.position = 'relative';
     const allDepsText = buildDepsText(task, rowMap);
     dc.innerHTML = allDepsText
-      ? `<span class="deps-nums">${allDepsText}</span>`
+      ? `<span class="deps-nums">${esc(allDepsText)}</span>`
       : `<span style="font-size:11px;color:var(--t4)">—</span>`;
     dc.addEventListener('click', e => {
       e.stopPropagation();
