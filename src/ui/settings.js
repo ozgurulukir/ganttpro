@@ -44,14 +44,23 @@ export function setBaseline() {
 }
 
 export function toggleSettings() {
-  document.getElementById('settingsPanel').classList.toggle('open');
+  const panel = document.getElementById('settingsPanel');
+  const btn = document.getElementById('settingsBtn');
+  const isOpen = panel.classList.toggle('open');
+  if (btn) btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
 
 export function toggleExportMenu() {
-  document.getElementById('exportPanel').classList.toggle('open');
+  const panel = document.getElementById('exportPanel');
+  const btn = document.getElementById('exportToggleBtn');
+  const isOpen = panel.classList.toggle('open');
+  if (btn) btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
+
 export function closeExportMenu() {
   closeOverlay('exportPanel');
+  const btn = document.getElementById('exportToggleBtn');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
 // Click-outside listeners (module-load wiring)
@@ -62,6 +71,8 @@ document.addEventListener('click', e => {
 
 export function closeSettings() {
   closeOverlay('settingsPanel');
+  const btn = document.getElementById('settingsBtn');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
 document.addEventListener('click', e => {

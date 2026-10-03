@@ -9,3 +9,8 @@
 
 **Learning:** Custom interactive elements (e.g. `div` or `span` buttons/checkboxes) inside table/list rows are unreachable for keyboard and screen reader users unless assigned `tabindex="0"`, `role="checkbox"`/`role="button"`, `aria-checked`, and `keydown` handlers (Space/Enter). Additionally, action buttons that reveal on row hover must also be revealed when focus enters the row (`.task-row:focus-within .row-action-btn`).
 **Action:** Always pair custom interactive row controls with `tabindex="0"`, ARIA roles, keydown listeners, and `.task-row:focus-within` CSS selectors so keyboard users can navigate and operate them smoothly.
+
+## 2026-04-01 - Discoverability & ARIA Expansion States for Keyboard Shortcuts & Dropdowns
+
+**Learning:** Shortcut overlays triggered only via single-key listeners (e.g., `?`) are undiscoverable for visual and screen-reader users unless exposed in standard navigation menus (e.g., Settings dropdown). Additionally, popup/dropdown trigger buttons require `aria-haspopup="true"` and dynamic `aria-expanded` updates so assistive technologies can track open/closed overlay states.
+**Action:** Expose shortcut modals in the Settings dropdown menu, update trigger `aria-expanded` states on open/close, and automatically focus the modal close button upon opening.
