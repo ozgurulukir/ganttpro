@@ -1,13 +1,13 @@
 /**
  * Pure dependency (predecessor) parsing & cycle detection.
  *
- * Stateful resolvers (taskById, getVisibleRows) come from tree.js; the task
+ * Stateful resolvers (buildIndex, getVisibleRows) come from tree.js; the task
  * array and view state are passed explicitly so these are testable.
  *
  * Extracted verbatim from main.js (Phase 1.3); only the state previously read
  * as globals is now passed explicitly.
  */
-import { taskById, buildIndex, getVisibleRows } from './tree.js';
+import { buildIndex, getVisibleRows } from './tree.js';
 
 /**
  * Would adding `taskId -> newDepId` (taskId depends on newDepId) create a cycle?

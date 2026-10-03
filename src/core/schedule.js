@@ -3,7 +3,7 @@
  *
  * Computes earliest start/end for every task and milestone based on the four
  * dependency types (FS/SS/FF/SF) with optional lag.  Calendar helpers come
- * from calendar.js; `taskById` / `groupBounds` from tree.js.  The task array
+ * from calendar.js; `groupBounds` / `buildIndex` from tree.js.  The task array
  * and project start date are passed explicitly.
  *
  * NOTE: these functions MUTATE the passed task objects (set start/end/date),
@@ -22,7 +22,7 @@ import {
   isNonWorkday
 } from './calendar.js';
 import { parseDate, formatDate } from './date.js';
-import { taskById, groupBounds, buildIndex } from './tree.js';
+import { groupBounds, buildIndex } from './tree.js';
 import { wouldCreateCycle } from './deps.js';
 
 /** Are all (transitively, through sub-groups) children of `groupId` scheduled? */

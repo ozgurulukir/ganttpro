@@ -3,7 +3,7 @@
  *
  * `computeCriticalPath` runs the backward pass (the forward pass — earliest
  * start/end — is done by `scheduleTasks` in main.js).  Calendar helpers come
- * from calendar.js; `taskById` from tree.js.  The task array is passed
+ * from calendar.js; `buildIndex` from tree.js.  The task array is passed
  * explicitly so these are testable.
  *
  * Extracted verbatim from main.js (Phase 1.4); only the state previously read
@@ -17,7 +17,7 @@ import {
   shiftWorkingDays
 } from './calendar.js';
 import { parseDate, formatDate } from './date.js';
-import { taskById, buildIndex } from './tree.js';
+import { buildIndex } from './tree.js';
 
 /** Last working day before exclusive `endStr` (YYYY-MM-DD). */
 export function prevWorkingDay(endStr) {
