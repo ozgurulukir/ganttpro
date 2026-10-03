@@ -256,7 +256,7 @@ describe('Issue #7 specific validation rules', () => {
     const tasks = [{ id: 1, type: 'group', parent: null }];
     for (let i = 2; i <= 600; i++) {
       tasks.push({ id: i, type: 'task', parent: 1 });
-      dates[i] = '2026-04-01';
+      dates[i] = { s: '2026-04-01', e: '2026-04-10' };
     }
     const p = validateProject({
       id: 1,
@@ -264,6 +264,28 @@ describe('Issue #7 specific validation rules', () => {
       baseline: { dates }
     });
     assert.equal(Object.keys(p.baseline.dates).length, 500);
+  });
+
+  it('sanitizes baseline date objects and strips unknown properties', () => {
+    const p = validateProject({
+      id: 1,
+      tasks: [
+        { id: 1, type: 'group', parent: null },
+        { id: 2, type: 'task', parent: 1 },
+        { id: 3, type: 'milestone', parent: 1 }
+      ],
+      baseline: {
+        setAt: '2026-04-01',
+        dates: {
+          2: { s: '2026-04-01', e: '2026-04-10', maliciousProp: 'evil' },
+          3: { d: '2026-04-15', invalidDate: 'bad' },
+          999: { s: '2026-04-01' }
+        }
+      }
+    });
+    assert.deepStrictEqual(p.baseline.dates[2], { s: '2026-04-01', e: '2026-04-10' });
+    assert.deepStrictEqual(p.baseline.dates[3], { d: '2026-04-15' });
+    assert.equal(p.baseline.dates[999], undefined);
   });
 
   it('caps wday at 3650', () => {

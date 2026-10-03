@@ -263,8 +263,20 @@ export function validateProject(raw) {
       let keys = Object.keys(p.baseline.dates).slice(0, 500);
       for (const k of keys) {
         if (/^\d+$/.test(k) && validIds.has(Number(k))) {
-          const v = toDateStr(p.baseline.dates[k]);
-          if (v) b.dates[k] = v;
+          const entry = p.baseline.dates[k];
+          if (typeof entry === 'string') {
+            const v = toDateStr(entry);
+            if (v) b.dates[k] = v;
+          } else if (entry && typeof entry === 'object') {
+            const cleanObj = {};
+            const s = toDateStr(entry.s);
+            const e = toDateStr(entry.e);
+            const d = toDateStr(entry.d);
+            if (s) cleanObj.s = s;
+            if (e) cleanObj.e = e;
+            if (d) cleanObj.d = d;
+            if (Object.keys(cleanObj).length > 0) b.dates[k] = cleanObj;
+          }
         }
       }
     }
