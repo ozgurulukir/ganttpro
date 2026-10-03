@@ -162,7 +162,7 @@ export function scheduleTasks(tasks, projStart) {
       .forEach(t => {
         ['deps', 'sdeps', 'ffdeps', 'sfdeps'].forEach(depProp => {
           (t[depProp] || []).forEach(depId => {
-            if (wouldCreateCycle(tasks, t.id, depId)) {
+            if (wouldCreateCycle(tasks, t.id, depId, index)) {
               console.warn(`Cycle detected between ${t.id} and ${depId}`);
             }
           });
@@ -174,8 +174,9 @@ export function scheduleTasks(tasks, projStart) {
 /**
  * Re-schedule a single task from its FS/SS deps (lightweight, used on edit).
  * Only pushes the task LATER (never earlier).  Mutates task.start/end in place.
+ * Uses indexed task lookups O(1) instead of repeated O(N) array finds.
  */
-export function autoScheduleFromDeps(tasks, task) {
+export function autoScheduleFromDeps(tasks, task, index = buildIndex(tasks)) {
   if (task.type !== 'task') return;
   const deps = task.deps || [];
   const sdeps = task.sdeps || [];
@@ -183,7 +184,7 @@ export function autoScheduleFromDeps(tasks, task) {
   let candidateStart = null;
   // FS: start after dep ends
   deps.forEach(depId => {
-    const dep = taskById(tasks, depId);
+    const dep = index.byId.get(depId);
     if (!dep) return;
     let depEnd =
       dep.type === 'task'
@@ -191,7 +192,7 @@ export function autoScheduleFromDeps(tasks, task) {
         : dep.type === 'milestone'
           ? dep.date
           : dep.type === 'group'
-            ? groupBounds(tasks, dep.id).e
+            ? groupBounds(tasks, dep.id, index).e
             : null;
     if (depEnd) {
       const s = nextWorkingDay(depEnd);
@@ -200,7 +201,7 @@ export function autoScheduleFromDeps(tasks, task) {
   });
   // SS: start no earlier than dep starts
   sdeps.forEach(depId => {
-    const dep = taskById(tasks, depId);
+    const dep = index.byId.get(depId);
     if (!dep) return;
     const s = dep.type === 'task' ? dep.start : dep.type === 'milestone' ? dep.date : null;
     if (s && (!candidateStart || s > candidateStart)) candidateStart = s;

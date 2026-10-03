@@ -1184,8 +1184,8 @@ const { prevWorkingDay } = CPM;
 function computeCriticalPath() {
   return CPM.computeCriticalPath(tasks);
 }
-function getCriticalPredTaskIds(task) {
-  return CPM.getCriticalPredTaskIds(tasks, criticalTaskIds, task);
+function getCriticalPredTaskIds(task, index) {
+  return CPM.getCriticalPredTaskIds(tasks, criticalTaskIds, task, index);
 }
 
 function toggleCriticalPath() {

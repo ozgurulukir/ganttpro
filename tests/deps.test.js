@@ -11,6 +11,7 @@ import {
   parseDepInput,
   lagsFromParsed
 } from '../src/core/deps.js';
+import { buildIndex } from '../src/core/tree.js';
 import { esc } from '../src/core/format.js';
 
 /*   A (row 1) — no deps
@@ -69,6 +70,18 @@ test('wouldCreateCycle — pre-existing cycle does not hang (visited guard)', ()
   ];
   // Z is unreachable from the X<->Y cycle, so no cycle to Z
   assert.equal(wouldCreateCycle(cyclic, 'Z', 'X'), false);
+});
+
+test('wouldCreateCycle — with pre-built index and deep dependency chain', () => {
+  const tasks = [];
+  const count = 500;
+  for (let i = 0; i < count; i++) {
+    tasks.push({ id: `t${i}`, parent: null, type: 'task', deps: i > 0 ? [`t${i - 1}`] : [] });
+  }
+  const index = buildIndex(tasks);
+  // Adding dependency from t0 to t499 creates cycle t499 -> t498 -> ... -> t0 -> t499
+  assert.equal(wouldCreateCycle(tasks, 't0', `t${count - 1}`, index), true);
+  assert.equal(wouldCreateCycle(tasks, `t${count - 1}`, 't0', index), false);
 });
 
 test('lagsFromParsed — maps nonzero lags, drops zero', () => {

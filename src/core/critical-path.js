@@ -17,7 +17,7 @@ import {
   shiftWorkingDays
 } from './calendar.js';
 import { parseDate, formatDate } from './date.js';
-import { taskById } from './tree.js';
+import { taskById, buildIndex } from './tree.js';
 
 /** Last working day before exclusive `endStr` (YYYY-MM-DD). */
 export function prevWorkingDay(endStr) {
@@ -167,15 +167,17 @@ export function computeCriticalPath(tasks) {
 /**
  * Trace a task's predecessors to find which lie on the critical path.
  * Milestones are transparent (followed through, never returned).
+ * Uses indexed task lookups O(1) during tracing instead of repeated O(N) array finds.
  * @param {Array} tasks
  * @param {Set<string>} criticalTaskIds  result of computeCriticalPath
  * @param {object} task  the task whose predecessors to trace
+ * @param {object} [index] pre-built index from buildIndex(tasks)
  * @returns {string[]} critical predecessor task ids
  */
-export function getCriticalPredTaskIds(tasks, criticalTaskIds, task) {
+export function getCriticalPredTaskIds(tasks, criticalTaskIds, task, index = buildIndex(tasks)) {
   const result = new Set();
   function trace(depId) {
-    const dep = taskById(tasks, depId);
+    const dep = index.byId.get(depId);
     if (!dep) return;
     if (dep.type === 'task') {
       if (criticalTaskIds.has(depId)) result.add(depId);
