@@ -1,6 +1,6 @@
-import { describe, it } from 'node:test';
+import { describe, it, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reorderTask } from '../src/task-ops.js';
+import { reorderTask, collectSubtree } from '../src/task-ops.js';
 
 function createMockDeps(overrides = {}) {
   const calls = [];
@@ -165,4 +165,82 @@ describe('reorderTask', () => {
       ['t2', 't3', 't1', 't4']
     );
   });
+});
+
+/* Fixture task tree:
+   root1 (group)
+     ├─ t1 (task)
+     └─ g2 (group)
+          ├─ t2 (task)
+          └─ m1 (milestone)
+   root2 (task, unrelated)
+*/
+const TASKS = [
+  { id: 'root1', parent: null, type: 'group' },
+  { id: 't1', parent: 'root1', type: 'task' },
+  { id: 'g2', parent: 'root1', type: 'group' },
+  { id: 't2', parent: 'g2', type: 'task' },
+  { id: 'm1', parent: 'g2', type: 'milestone' },
+  { id: 'root2', parent: null, type: 'task' }
+];
+
+test('collectSubtree — collects root task and all multi-level descendants', () => {
+  const result = collectSubtree('root1', TASKS);
+
+  assert.equal(result.ids instanceof Set, true);
+  assert.equal(result.ids.size, 5);
+  assert.deepEqual(Array.from(result.ids).sort(), ['g2', 'm1', 'root1', 't1', 't2']);
+
+  assert.equal(result.items.length, 5);
+  assert.deepEqual(
+    result.items.map(t => t.id),
+    ['root1', 't1', 'g2', 't2', 'm1']
+  );
+});
+
+test('collectSubtree — collects nested group and its direct/indirect descendants only', () => {
+  const result = collectSubtree('g2', TASKS);
+
+  assert.equal(result.ids.size, 3);
+  assert.deepEqual(Array.from(result.ids).sort(), ['g2', 'm1', 't2']);
+
+  assert.deepEqual(
+    result.items.map(t => t.id),
+    ['g2', 't2', 'm1']
+  );
+});
+
+test('collectSubtree — leaf task returns set containing only target ID and target task item', () => {
+  const result = collectSubtree('t1', TASKS);
+
+  assert.equal(result.ids.size, 1);
+  assert.equal(result.ids.has('t1'), true);
+
+  assert.equal(result.items.length, 1);
+  assert.equal(result.items[0].id, 't1');
+});
+
+test('collectSubtree — non-existent tid returns set containing target ID and empty items array', () => {
+  const result = collectSubtree('non-existent', TASKS);
+
+  assert.equal(result.ids.size, 1);
+  assert.equal(result.ids.has('non-existent'), true);
+  assert.equal(result.items.length, 0);
+});
+
+test('collectSubtree — empty tasks array returns set containing target ID and empty items array', () => {
+  const result = collectSubtree('any-id', []);
+
+  assert.equal(result.ids.size, 1);
+  assert.equal(result.ids.has('any-id'), true);
+  assert.equal(result.items.length, 0);
+});
+
+test('collectSubtree — excludes unrelated sibling or parent tasks', () => {
+  const result = collectSubtree('root2', TASKS);
+
+  assert.equal(result.ids.size, 1);
+  assert.equal(result.ids.has('root2'), true);
+  assert.equal(result.items.length, 1);
+  assert.equal(result.items[0].id, 'root2');
 });
