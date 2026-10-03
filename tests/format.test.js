@@ -10,7 +10,8 @@ import {
   darkenColor,
   hexToRgba,
   csvEsc,
-  sanitizeUrl
+  sanitizeUrl,
+  esc
 } from '../src/core/format.js';
 
 /* ── dateToX ── */
@@ -146,4 +147,15 @@ test('sanitizeUrl — blocks dangerous URI schemes', () => {
   assert.equal(sanitizeUrl('data:text/html,<script>alert(1)</script>'), '');
   assert.equal(sanitizeUrl('vbscript:msgbox(1)'), '');
   assert.equal(sanitizeUrl(null), '');
+});
+
+/* ── esc ── */
+
+test('esc — escapes HTML special characters to prevent XSS in template previews', () => {
+  assert.equal(esc('<script>alert(1)</script>'), '&lt;script&gt;alert(1)&lt;/script&gt;');
+  assert.equal(
+    esc('Phase 1 & Phase 2 "Test" \'Quote\''),
+    'Phase 1 &amp; Phase 2 &quot;Test&quot; &#39;Quote&#39;'
+  );
+  assert.equal(esc(null), '');
 });
