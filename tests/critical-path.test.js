@@ -187,3 +187,95 @@ test('computeCriticalPath — FS successor with idle slack does not overconstrai
   assert.ok(!c.has('D'), 'D should not be critical');
   assert.ok(c.has('C'), 'C is critical as it spans the whole duration');
 });
+
+test('computeCriticalPath — SS (Start-to-Start) dependency on critical path', () => {
+  // B depends on A via SS. A (May4-5, 2d), B (May4-8, 5d, sdeps:[A]).
+  // Both start May 4 and B ends May 8 (projEnd). Float for both is 0.
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' },
+    { id: 'B', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-08', sdeps: ['A'] }
+  ];
+  const c = computeCriticalPath(tasks);
+  assert.ok(c.has('A'), 'A is critical via SS constraint');
+  assert.ok(c.has('B'), 'B is critical');
+});
+
+test('computeCriticalPath — FF (Finish-to-Finish) dependency handling', () => {
+  // B depends on A via FF.
+  // B finishes May 8 (projEnd), A finishes May 8, ffdeps: [A]. Both critical.
+  // C finishes May 5, ffdeps: [A]. C has float, not critical.
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-08' },
+    { id: 'B', parent: null, type: 'task', start: '2026-05-06', end: '2026-05-08', ffdeps: ['A'] },
+    { id: 'C', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05', ffdeps: ['A'] }
+  ];
+  const c = computeCriticalPath(tasks);
+  assert.ok(c.has('A'), 'A is critical');
+  assert.ok(c.has('B'), 'B is critical');
+  assert.ok(!c.has('C'), 'C has float');
+});
+
+test('computeCriticalPath — SF (Start-to-Finish) dependency handling', () => {
+  // B depends on A via SF (B finishes after A starts).
+  // A: May 4-5. B: May 6-8, sfdeps: ['A'].
+  // projEnd is May 8. B determines projEnd (critical).
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' },
+    { id: 'B', parent: null, type: 'task', start: '2026-05-06', end: '2026-05-08', sfdeps: ['A'] }
+  ];
+  const c = computeCriticalPath(tasks);
+  assert.ok(c.has('B'), 'B is critical');
+});
+
+test('computeCriticalPath — dependency lag (lags) adjusts late finish constraint', () => {
+  // B depends on A via FS with lag 2 working days.
+  // A: May 4 (1d). Lag: 2d (May 5, May 6). B start: May 7, end: May 8 (2d).
+  // Total path: May 4 -> lag 2d -> May 7-8. A is zero float and critical.
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
+    {
+      id: 'B',
+      parent: null,
+      type: 'task',
+      start: '2026-05-07',
+      end: '2026-05-08',
+      deps: ['A'],
+      lags: { FSA: 2 }
+    }
+  ];
+  const c = computeCriticalPath(tasks);
+  assert.ok(c.has('A'), 'A is critical with lag constraint');
+  assert.ok(c.has('B'), 'B is critical');
+});
+
+test('computeCriticalPath — ignores tasks missing dates or non-task/milestone types', () => {
+  // Group tasks or tasks with null dates should be filtered out safely without throwing.
+  const tasks = [
+    { id: 'G', parent: null, type: 'group', start: '2026-05-04', end: '2026-05-08' },
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' },
+    { id: 'B', parent: null, type: 'task', start: null, end: null, deps: ['A'] },
+    { id: 'C', parent: null, type: 'task', start: '2026-05-06', end: '2026-05-08', deps: ['A'] }
+  ];
+  const c = computeCriticalPath(tasks);
+  assert.ok(c.has('A'));
+  assert.ok(c.has('C'));
+  assert.ok(!c.has('G'), 'Group type ignored');
+  assert.ok(!c.has('B'), 'Task without dates ignored');
+});
+
+test('computeCriticalPath — disconnected subgraphs evaluate against global project end', () => {
+  // Subgraph 1: A1 (May 4-5) -> A2 (May 6-8) -> ends May 8
+  // Subgraph 2: B1 (May 4-7) -> B2 (May 8-11) -> ends May 11 (global projEnd)
+  // Subgraph 2 is longer and critical; Subgraph 1 finishes earlier than projEnd, so has float.
+  const tasks = [
+    { id: 'A1', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' },
+    { id: 'A2', parent: null, type: 'task', start: '2026-05-06', end: '2026-05-08', deps: ['A1'] },
+    { id: 'B1', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-07' },
+    { id: 'B2', parent: null, type: 'task', start: '2026-05-08', end: '2026-05-11', deps: ['B1'] }
+  ];
+  const c = computeCriticalPath(tasks);
+  assert.ok(!c.has('A1'));
+  assert.ok(!c.has('A2'));
+  assert.ok(c.has('B1'));
+  assert.ok(c.has('B2'));
+});
