@@ -11,7 +11,7 @@
     "build:rules": "node scripts/generate-firestore-rules.js",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "firebase": "firebase",
-    "test": "node --test",
+    "test": "node --import ./register-loader.js --test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
