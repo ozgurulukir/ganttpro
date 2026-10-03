@@ -106,6 +106,18 @@ test('isDescendant — direct, transitive, unrelated, root', () => {
   assert.equal(isDescendant(TASKS, 'root1', 'm2'), false); // m2 is root
 });
 
+test('isDescendant — efficient O(depth) lookup with pre-built index on deep hierarchy', () => {
+  const deepTasks = [];
+  const count = 500;
+  for (let i = 0; i < count; i++) {
+    deepTasks.push({ id: `t${i}`, parent: i === 0 ? null : `t${i - 1}`, type: 'task' });
+  }
+  const index = buildIndex(deepTasks);
+  assert.equal(isDescendant(deepTasks, 't0', `t${count - 1}`, index), true);
+  assert.equal(isDescendant(deepTasks, 't250', `t${count - 1}`, index), true);
+  assert.equal(isDescendant(deepTasks, `t${count - 1}`, 't0', index), false);
+});
+
 test('getAllDescendants — pre-order traversal of subtree', () => {
   assert.deepEqual(getAllDescendants(TASKS, 'root1'), ['t1', 't2', 'g2', 't3', 'm1']);
   assert.deepEqual(getAllDescendants(TASKS, 'g2'), ['t3', 'm1']);

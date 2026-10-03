@@ -154,12 +154,20 @@ export function getAllDescendants(tasks, id) {
   return result;
 }
 
-/** Is `checkId` a (transitive) descendant of `ancestorId`? */
-export function isDescendant(tasks, ancestorId, checkId) {
-  const t = taskById(tasks, checkId);
-  if (!t || t.parent === null) return false;
-  if (t.parent === ancestorId) return true;
-  return isDescendant(tasks, ancestorId, t.parent);
+/**
+ * Is `checkId` a (transitive) descendant of `ancestorId`?
+ * Uses indexed parent-chain traversal O(depth) instead of repeated O(N) array finds.
+ */
+export function isDescendant(tasks, ancestorId, checkId, index = buildIndex(tasks)) {
+  let cur = index.byId.get(checkId);
+  const seen = new Set();
+  while (cur && cur.parent !== null) {
+    if (seen.has(cur.id)) break; // circular reference guard
+    seen.add(cur.id);
+    if (cur.parent === ancestorId) return true;
+    cur = index.byId.get(cur.parent);
+  }
+  return false;
 }
 
 /** Depth of `id` in the tree (root = 0), with circular-reference guard. */

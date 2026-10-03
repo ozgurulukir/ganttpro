@@ -7,20 +7,21 @@
  * Extracted verbatim from main.js (Phase 1.3); only the state previously read
  * as globals is now passed explicitly.
  */
-import { taskById, getVisibleRows } from './tree.js';
+import { taskById, buildIndex, getVisibleRows } from './tree.js';
 
 /**
  * Would adding `taskId -> newDepId` (taskId depends on newDepId) create a cycle?
  * Walks the dependency graph forward from newDepId; if it reaches taskId, the
- * new edge would close a loop.  `visited` guards against pre-existing cycles.
+ * new edge would close a loop. `visited` guards against pre-existing cycles.
+ * Uses indexed task lookups O(1) during DFS instead of repeated O(N) array finds.
  */
-export function wouldCreateCycle(tasks, taskId, newDepId) {
+export function wouldCreateCycle(tasks, taskId, newDepId, index = buildIndex(tasks)) {
   const visited = new Set();
   function dfs(id) {
     if (id === taskId) return true;
     if (visited.has(id)) return false;
     visited.add(id);
-    const t = taskById(tasks, id);
+    const t = index.byId.get(id);
     if (!t) return false;
     return allDepIds(t).some(dfs);
   }

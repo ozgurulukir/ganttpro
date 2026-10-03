@@ -96,7 +96,7 @@ export function renderArrows(canvas, rows, tw, th) {
 
     // Critical path arrows (red elbow, trace through milestones)
     if (showCriticalPath && criticalTaskIds.has(task.id) && task.type === 'task') {
-      getCriticalPredTaskIds(task).forEach(depId => {
+      getCriticalPredTaskIds(task, taskIndex).forEach(depId => {
         const dep = taskIndex.byId.get(depId);
         if (!dep) return;
         const sRow = ri.get(depId);
