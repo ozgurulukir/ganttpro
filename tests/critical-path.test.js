@@ -187,3 +187,98 @@ test('computeCriticalPath — FS successor with idle slack does not overconstrai
   assert.ok(!c.has('D'), 'D should not be critical');
   assert.ok(c.has('C'), 'C is critical as it spans the whole duration');
 });
+
+test('getCriticalPredTaskIds — task with no dependencies returns empty array', () => {
+  const tasks = [{ id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' }];
+  const crit = new Set(['A']);
+  assert.deepEqual(getCriticalPredTaskIds(tasks, crit, tasks[0]), []);
+});
+
+test('getCriticalPredTaskIds — inspects all 4 task dependency types (deps, sdeps, ffdeps, sfdeps)', () => {
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' },
+    { id: 'B', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' },
+    { id: 'C', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' },
+    { id: 'D', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' },
+    {
+      id: 'E',
+      parent: null,
+      type: 'task',
+      start: '2026-05-06',
+      end: '2026-05-07',
+      deps: ['A'],
+      sdeps: ['B'],
+      ffdeps: ['C'],
+      sfdeps: ['D']
+    }
+  ];
+  const crit = new Set(['A', 'B', 'C', 'D', 'E']);
+  const preds = getCriticalPredTaskIds(tasks, crit, tasks[4]);
+  assert.deepEqual(preds.sort(), ['A', 'B', 'C', 'D']);
+});
+
+test('getCriticalPredTaskIds — ignores non-existent / phantom dependency IDs', () => {
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' },
+    {
+      id: 'B',
+      parent: null,
+      type: 'task',
+      start: '2026-05-06',
+      end: '2026-05-07',
+      deps: ['A', 'NON_EXISTENT']
+    }
+  ];
+  const crit = new Set(['A', 'B']);
+  const preds = getCriticalPredTaskIds(tasks, crit, tasks[1]);
+  assert.deepEqual(preds, ['A']);
+});
+
+test('getCriticalPredTaskIds — accepts custom pre-built index parameter', () => {
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-05' },
+    { id: 'B', parent: null, type: 'task', start: '2026-05-06', end: '2026-05-07', deps: ['A'] }
+  ];
+  const crit = new Set(['A', 'B']);
+  const customIndex = {
+    byId: new Map(tasks.map(t => [t.id, t])),
+    byParent: new Map()
+  };
+  const preds = getCriticalPredTaskIds(tasks, crit, tasks[1], customIndex);
+  assert.deepEqual(preds, ['A']);
+});
+
+test('getCriticalPredTaskIds — inspects all 4 dependency types on milestones and supports multi-level milestone chains', () => {
+  // A(task) --deps--> M1(milestone) --sdeps--> M2(milestone) --ffdeps--> E(task)
+  // B(task) --sfdeps--> M2(milestone)
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
+    { id: 'B', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
+    { id: 'M1', parent: null, type: 'milestone', date: '2026-05-05', deps: ['A'] },
+    { id: 'M2', parent: null, type: 'milestone', date: '2026-05-05', sdeps: ['M1'], sfdeps: ['B'] },
+    { id: 'E', parent: null, type: 'task', start: '2026-05-06', end: '2026-05-07', ffdeps: ['M2'] }
+  ];
+  const crit = new Set(['A', 'B', 'E']);
+  const preds = getCriticalPredTaskIds(tasks, crit, tasks[4]);
+  assert.deepEqual(preds.sort(), ['A', 'B']);
+});
+
+test('getCriticalPredTaskIds — deduplicates predecessor task IDs across multiple paths', () => {
+  // A is referenced via both deps and ffdeps on task B, and also via milestone M
+  const tasks = [
+    { id: 'A', parent: null, type: 'task', start: '2026-05-04', end: '2026-05-04' },
+    { id: 'M', parent: null, type: 'milestone', date: '2026-05-05', deps: ['A'] },
+    {
+      id: 'B',
+      parent: null,
+      type: 'task',
+      start: '2026-05-06',
+      end: '2026-05-07',
+      deps: ['A', 'M'],
+      ffdeps: ['A']
+    }
+  ];
+  const crit = new Set(['A', 'B']);
+  const preds = getCriticalPredTaskIds(tasks, crit, tasks[2]);
+  assert.deepEqual(preds, ['A']);
+});
