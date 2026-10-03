@@ -1321,7 +1321,11 @@ function getOwnerId() {
 function toggleShortcutsOverlay() {
   let el = document.getElementById('shortcutsOverlay');
   if (!el) return;
-  el.classList.toggle('open');
+  const isOpen = el.classList.toggle('open');
+  if (isOpen) {
+    const closeBtn = document.getElementById('shortcutsCloseBtn');
+    if (closeBtn) closeBtn.focus();
+  }
 }
 
 function closeShortcutsModal() {
@@ -1782,6 +1786,10 @@ function wireToolbarEvents() {
   clk('worktimeBtn', async () => {
     const m = await import('./ui/worktime.js');
     m.openWorkTimeModal();
+    closeSettings();
+  });
+  clk('shortcutsBtn', () => {
+    toggleShortcutsOverlay();
     closeSettings();
   });
   clk('adminBtn', () => import('./admin.js').then(m => m.openAdminPanel()));
