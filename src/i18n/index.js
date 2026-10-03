@@ -5,8 +5,8 @@
  * Phase 2 will populate en.json and zh-TW.json with all ~300 keys.
  */
 import i18next from 'i18next';
-import en from './locales/en.json';
-import zhTW from './locales/zh-TW.json';
+import en from './locales/en.json' with { type: 'json' };
+import zhTW from './locales/zh-TW.json' with { type: 'json' };
 
 const STORAGE_KEY = 'ganttpro-locale';
 const SUPPORTED = ['en', 'zh-TW'];

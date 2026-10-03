@@ -18,6 +18,7 @@ const _pendingCloudWrites = new Set();
 let _realtimeUnsub = null;
 let _saveTimer = null;
 const _syncChannel = new BroadcastChannel('gantt_sync');
+if (_syncChannel.unref) _syncChannel.unref();
 let _syncReloadTimer = null;
 let _sharedChannels = [];
 const _shareMap = new Map();
