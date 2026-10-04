@@ -110,3 +110,10 @@ export function sanitizeUrl(url) {
   }
   return trimmed;
 }
+
+/** Sanitize string for iCalendar TEXT fields — prevents CRLF injection. */
+export function icalEsc(v) {
+  return String(v ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/[\r\n,;]/g, ' ');
+}

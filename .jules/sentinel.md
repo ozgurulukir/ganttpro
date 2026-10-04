@@ -9,3 +9,9 @@
 **Vulnerability:** Project schema validator `validateProject` dropped baseline date objects `{ s, e }` or `{ d }` by calling `toDateStr` directly on objects, while failing to sanitize nested object properties against untrusted input.
 **Learning:** Baseline entries are stored as structured objects (`{ s, e }` / `{ d }`), but validator expected string dates.
 **Prevention:** Ensure schema validators handle nested object data structures explicitly, sanitizing each nested string property while stripping unvalidated keys.
+
+## 2026-10-01 - iCalendar CRLF Injection via Unescaped Carriage Returns in Exports
+
+**Vulnerability:** CRLF injection in `.ics` calendar exports when task names or assignees contain carriage returns (`\r`), allowing injection of arbitrary iCalendar properties or `VEVENT` objects.
+**Learning:** `replace(/[\n,;]/g, ' ')` failed to match `\r` (carriage return). When parsed by calendar clients, unescaped `\r` acts as a line separator.
+**Prevention:** Use `icalEsc()` from `src/core/format.js` to escape backslashes and sanitize `\r`, `\n`, `,`, and `;` in exported TEXT fields.

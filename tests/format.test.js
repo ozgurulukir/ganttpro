@@ -11,7 +11,8 @@ import {
   hexToRgba,
   csvEsc,
   sanitizeUrl,
-  esc
+  esc,
+  icalEsc
 } from '../src/core/format.js';
 
 /* ── dateToX ── */
@@ -158,4 +159,14 @@ test('esc — escapes HTML special characters to prevent XSS in template preview
     'Phase 1 &amp; Phase 2 &quot;Test&quot; &#39;Quote&#39;'
   );
   assert.equal(esc(null), '');
+});
+
+/* ── icalEsc ── */
+
+test('icalEsc — sanitizes strings for iCalendar preventing CRLF injection', () => {
+  assert.equal(icalEsc('Task\r\nSUMMARY:Hacked'), 'Task  SUMMARY:Hacked');
+  assert.equal(icalEsc('Task\rWith\nCRLF'), 'Task With CRLF');
+  assert.equal(icalEsc('Task, with; delimiters\\'), 'Task  with  delimiters\\\\');
+  assert.equal(icalEsc(null), '');
+  assert.equal(icalEsc(123), '123');
 });

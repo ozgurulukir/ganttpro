@@ -1,4 +1,5 @@
 import { D } from '../render/deps.js';
+import { icalEsc } from '../core/format.js';
 
 export function exportICalendar() {
   const { tasks } = D;
@@ -9,15 +10,12 @@ export function exportICalendar() {
     const start = task.start || task.date;
     const end = task.end || task.date;
     if (!start) return;
-    const desc =
-      `Assignee: ${task.assignee || 'None'}|Progress: ${task.progress || 0}%|Done: ${task.done ? 'Yes' : 'No'}`.replace(
-        /[\n,;]/g,
-        ' '
-      );
+    const assigneeStr = icalEsc(task.assignee || 'None');
+    const desc = `Assignee: ${assigneeStr}|Progress: ${task.progress || 0}%|Done: ${task.done ? 'Yes' : 'No'}`;
     ics += 'BEGIN:VEVENT\n';
     ics += `DTSTART;VALUE=DATE:${fmt(start)}\n`;
     ics += `DTEND;VALUE=DATE:${fmt(end || start)}\n`;
-    ics += `SUMMARY:${task.name.replace(/[\n,;]/g, ' ')}\n`;
+    ics += `SUMMARY:${icalEsc(task.name)}\n`;
     ics += `DESCRIPTION:${desc}\n`;
     ics += 'END:VEVENT\n';
   });
