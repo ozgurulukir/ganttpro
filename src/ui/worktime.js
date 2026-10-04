@@ -1,5 +1,5 @@
 import { t } from '../i18n/index.js';
-import { parseDate, formatDate, dayOfWeek } from '../core/date.js';
+import { parseDate, formatDate } from '../core/date.js';
 import { setWorkDays, setCustomHolidays, loadHolidaysFromJSON } from '../core/calendar.js';
 import { WORKDAYS_KEY, HOLIDAYS_KEY } from '../data/local.js';
 
