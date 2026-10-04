@@ -18,8 +18,7 @@ export function switchProject(id) {
     scheduleTasks,
     recalcProjEnd,
     render,
-    scrollToToday,
-    isSharedProject
+    scrollToToday
   } = D;
   if (id === currentProjId) {
     closeProjMenuOnly();
