@@ -58,7 +58,7 @@ export function updateProjUI() {
   updateReadOnly();
 }
 
-export function toggleProjMenu(e) {
+export function toggleProjMenu() {
   const menu = document.getElementById('projMenu');
   const sel = document.getElementById('projSelector');
   if (menu.classList.contains('open')) {
