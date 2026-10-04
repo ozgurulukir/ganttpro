@@ -1869,12 +1869,25 @@ function wireTaskModalEvents() {
     });
   }
   const fDone = $('fDone');
-  if (fDone)
-    fDone.addEventListener('click', () => {
-      fDone.classList.toggle('done');
-      fDone.textContent = fDone.classList.contains('done') ? '✓' : '';
-      if (fDone.classList.contains('done')) $('fProgress').value = 100;
+  if (fDone) {
+    const toggleDone = () => {
+      const isDone = fDone.classList.toggle('done');
+      fDone.textContent = isDone ? '✓' : '';
+      fDone.setAttribute('aria-checked', isDone ? 'true' : 'false');
+      if (isDone) $('fProgress').value = 100;
+    };
+    fDone.addEventListener('click', toggleDone);
+    fDone.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        toggleDone();
+      }
     });
+    const fDoneLabel = $('fDoneLabel');
+    if (fDoneLabel) {
+      fDoneLabel.addEventListener('click', toggleDone);
+    }
+  }
   clk('taskCancelBtn', () => closeModal());
   clk('modal-submit', submitTask);
 
