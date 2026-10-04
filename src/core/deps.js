@@ -34,14 +34,14 @@ export function wouldCreateCycle(tasks, taskId, newDepId, index = buildIndex(tas
  * walked the visible rows (panel render, CSV export); otherwise it is built
  * once here instead of re-walking per dependency.
  */
-export function buildDepsText(tasks, collapsed, milestoneView, task, rowMap = null) {
+export function buildDepsText(tasks, collapsed, milestoneView, task, rowMap = null, index = buildIndex(tasks)) {
   const parts = [];
   const lagSfx = (type, id) => {
     const l = (task.lags || {})[type + id] || 0;
     return l ? (l > 0 ? '+' + l : String(l)) : '';
   };
   if (!rowMap) {
-    const rows = getVisibleRows(tasks, collapsed, milestoneView);
+    const rows = getVisibleRows(tasks, collapsed, milestoneView, index);
     rowMap = new Map();
     for (let i = 0; i < rows.length; i++) rowMap.set(rows[i].task.id, i + 1);
   }
@@ -71,9 +71,9 @@ export function buildDepsText(tasks, collapsed, milestoneView, task, rowMap = nu
  * error `{ raw, err }`.  Validates format, row existence, self-reference, and
  * cycles.  Empty/blank input yields [].
  */
-export function parseDepInput(val, taskId, tasks, collapsed, milestoneView) {
+export function parseDepInput(val, taskId, tasks, collapsed, milestoneView, index = buildIndex(tasks)) {
   if (!val || typeof val !== 'string' || !val.trim()) return [];
-  const rows = getVisibleRows(tasks, collapsed, milestoneView);
+  const rows = getVisibleRows(tasks, collapsed, milestoneView, index);
   return val
     .split(',')
     .map(s => {
@@ -87,7 +87,7 @@ export function parseDepInput(val, taskId, tasks, collapsed, milestoneView) {
       const depTask = rows[rowNum - 1]?.task ?? null;
       if (!depTask) return { raw: s, err: `Row ${rowNum} not found` };
       if (depTask.id === taskId) return { raw: s, err: 'Cannot depend on itself' };
-      if (taskId != null && wouldCreateCycle(tasks, taskId, depTask.id))
+      if (taskId != null && wouldCreateCycle(tasks, taskId, depTask.id, index))
         return { raw: s, err: 'Circular dependency detected' };
       return { rowNum, type, lag, taskId: depTask.id, raw: s };
     })

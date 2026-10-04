@@ -35,12 +35,11 @@ export function buildIndex(tasks) {
 }
 
 /** Does `id` (transitively, through groups) have a milestone descendant? */
-export function hasMilestoneDescendant(tasks, id, visited = new Set()) {
-  const { byParent } = buildIndex(tasks);
+export function hasMilestoneDescendant(tasks, id, visited = new Set(), index = buildIndex(tasks)) {
   function walk(pid) {
     if (visited.has(pid)) return false;
     visited.add(pid);
-    for (const t of byParent.get(pid) || []) {
+    for (const t of index.byParent.get(pid) || []) {
       if (t.type === 'milestone') return true;
       if (t.type === 'group' && walk(t.id)) return true;
     }
@@ -50,15 +49,15 @@ export function hasMilestoneDescendant(tasks, id, visited = new Set()) {
 }
 
 /** 1-based row number of `taskId` within the currently visible rows. */
-export function getRowNum(tasks, collapsed, milestoneView, taskId) {
-  const rows = getVisibleRows(tasks, collapsed, milestoneView);
+export function getRowNum(tasks, collapsed, milestoneView, taskId, index = buildIndex(tasks)) {
+  const rows = getVisibleRows(tasks, collapsed, milestoneView, index);
   const idx = rows.findIndex(r => r.task.id === taskId);
   return idx >= 0 ? idx + 1 : null;
 }
 
 /** Task at 1-based row `num`, or null. */
-export function getTaskByRowNum(tasks, collapsed, milestoneView, num) {
-  const rows = getVisibleRows(tasks, collapsed, milestoneView);
+export function getTaskByRowNum(tasks, collapsed, milestoneView, num, index = buildIndex(tasks)) {
+  const rows = getVisibleRows(tasks, collapsed, milestoneView, index);
   return rows[num - 1]?.task ?? null;
 }
 
@@ -67,19 +66,18 @@ export function getTaskByRowNum(tasks, collapsed, milestoneView, num) {
  * In milestone view only non-done milestones are shown (depth 0).
  * Otherwise the tree is walked from root, skipping collapsed groups.
  */
-export function getVisibleRows(tasks, collapsed, milestoneView) {
+export function getVisibleRows(tasks, collapsed, milestoneView, index = buildIndex(tasks)) {
   if (milestoneView) {
     return tasks
       .filter(t => t.type === 'milestone' && !t.done)
       .sort((a, b) => ((a.date || '') < (b.date || '') ? -1 : 1))
       .map(t => ({ task: t, depth: 0 }));
   }
-  const { byParent } = buildIndex(tasks);
   const rows = [];
   function addChildren(parentId, depth) {
-    for (const t of byParent.get(parentId) || []) {
+    for (const t of index.byParent.get(parentId) || []) {
       rows.push({ task: t, depth });
-      if (!collapsed.has(t.id) && byParent.has(t.id)) {
+      if (!collapsed.has(t.id) && index.byParent.has(t.id)) {
         addChildren(t.id, depth + 1);
       }
     }
@@ -141,11 +139,10 @@ export function groupProgress(tasks, id, index = buildIndex(tasks)) {
 /**
  * All descendant ids of `id` (recursive, pre-order).
  */
-export function getAllDescendants(tasks, id) {
-  const { byParent } = buildIndex(tasks);
+export function getAllDescendants(tasks, id, index = buildIndex(tasks)) {
   const result = [];
   function collect(parentId) {
-    for (const t of byParent.get(parentId) || []) {
+    for (const t of index.byParent.get(parentId) || []) {
       result.push(t.id);
       collect(t.id);
     }
@@ -185,8 +182,8 @@ export function getTaskDepth(tasks, id, index = buildIndex(tasks)) {
 }
 
 /** WBS code for a task: dot-separated path of 1-based sibling indices. */
-export function getWBSCode(tasks, taskId) {
-  const { byId, byParent } = buildIndex(tasks);
+export function getWBSCode(tasks, taskId, index = buildIndex(tasks)) {
+  const { byId, byParent } = index;
   const path = [];
   let cur = byId.get(taskId);
   const seen = new Set();
@@ -209,8 +206,8 @@ export function getWBSCode(tasks, taskId) {
  * each task once using the parent chain. The sibling index for a task is its
  * 1-based position among siblings in the original `tasks` order.
  */
-export function getWBSMap(tasks) {
-  const { byId, byParent } = buildIndex(tasks);
+export function getWBSMap(tasks, index = buildIndex(tasks)) {
+  const { byId, byParent } = index;
   const map = new Map();
   function walk(id) {
     if (map.has(id)) return map.get(id);

@@ -245,3 +245,17 @@ test('getWBSMap — empty task list returns empty map', () => {
 test('getWBSCode — missing task returns empty string', () => {
   assert.equal(getWBSCode(TASKS, 'nonexistent'), '');
 });
+
+test('pre-built index parameter — accepts index and avoids index rebuilding across core tree helpers', () => {
+  const index = buildIndex(TASKS);
+  assert.equal(hasMilestoneDescendant(TASKS, 'root1', new Set(), index), true);
+  assert.equal(getRowNum(TASKS, EMPTY, false, 't3', index), 5);
+  assert.equal(getTaskByRowNum(TASKS, EMPTY, false, 5, index).id, 't3');
+  assert.deepEqual(
+    getVisibleRows(TASKS, EMPTY, false, index).map(r => r.task.id),
+    ['root1', 't1', 't2', 'g2', 't3', 'm1', 'm2']
+  );
+  assert.deepEqual(getAllDescendants(TASKS, 'g2', index), ['t3', 'm1']);
+  assert.equal(getWBSCode(TASKS, 't3', index), '1.3.1');
+  assert.equal(getWBSMap(TASKS, index).get('t3'), '1.3.1');
+});
