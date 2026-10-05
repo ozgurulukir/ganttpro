@@ -873,8 +873,23 @@
           id="rowDone"
           style="display: flex; align-items: center; gap: 10px; margin-bottom: 0"
         >
-          <label class="form-lbl" style="margin-bottom: 0" data-i18n="common.done">Done</label>
-          <div class="check-box" id="fDone"></div>
+          <label
+            class="form-lbl"
+            id="fDoneLabel"
+            style="margin-bottom: 0; cursor: pointer"
+            data-i18n="common.done"
+          >
+            Done
+          </label>
+          <div
+            class="check-box"
+            id="fDone"
+            role="checkbox"
+            tabindex="0"
+            aria-checked="false"
+            aria-label="Done"
+            data-i18n-aria-label="common.done"
+          ></div>
           <label
             class="form-lbl"
             style="margin-bottom: 0; margin-left: 14px"

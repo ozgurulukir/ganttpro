@@ -59,8 +59,11 @@ export function populateModal(excludeId = null, presetParent = null, isDone = fa
 
   // Done checkbox
   const fd = document.getElementById('fDone');
-  fd.classList.toggle('done', isDone);
-  fd.textContent = isDone ? '✓' : '';
+  if (fd) {
+    fd.classList.toggle('done', isDone);
+    fd.textContent = isDone ? '✓' : '';
+    fd.setAttribute('aria-checked', isDone ? 'true' : 'false');
+  }
 }
 
 export function syncWday() {
