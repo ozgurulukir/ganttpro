@@ -35,12 +35,25 @@ export function buildIndex(tasks) {
 }
 
 /** Does `id` (transitively, through groups) have a milestone descendant? */
-export function hasMilestoneDescendant(tasks, id, visited = new Set()) {
-  const { byParent } = buildIndex(tasks);
+export function hasMilestoneDescendant(tasks, id, visitedOrIndex = null, indexOrVisited = null) {
+  let index, visited;
+  if (visitedOrIndex && typeof visitedOrIndex.byParent !== 'undefined') {
+    index = visitedOrIndex;
+    visited = indexOrVisited instanceof Set ? indexOrVisited : new Set();
+  } else if (visitedOrIndex instanceof Set) {
+    visited = visitedOrIndex;
+    index =
+      indexOrVisited && typeof indexOrVisited.byParent !== 'undefined'
+        ? indexOrVisited
+        : buildIndex(tasks);
+  } else {
+    index = buildIndex(tasks);
+    visited = new Set();
+  }
   function walk(pid) {
     if (visited.has(pid)) return false;
     visited.add(pid);
-    for (const t of byParent.get(pid) || []) {
+    for (const t of index.byParent.get(pid) || []) {
       if (t.type === 'milestone') return true;
       if (t.type === 'group' && walk(t.id)) return true;
     }
@@ -141,11 +154,10 @@ export function groupProgress(tasks, id, index = buildIndex(tasks)) {
 /**
  * All descendant ids of `id` (recursive, pre-order).
  */
-export function getAllDescendants(tasks, id) {
-  const { byParent } = buildIndex(tasks);
+export function getAllDescendants(tasks, id, index = buildIndex(tasks)) {
   const result = [];
   function collect(parentId) {
-    for (const t of byParent.get(parentId) || []) {
+    for (const t of index.byParent.get(parentId) || []) {
       result.push(t.id);
       collect(t.id);
     }
@@ -185,8 +197,8 @@ export function getTaskDepth(tasks, id, index = buildIndex(tasks)) {
 }
 
 /** WBS code for a task: dot-separated path of 1-based sibling indices. */
-export function getWBSCode(tasks, taskId) {
-  const { byId, byParent } = buildIndex(tasks);
+export function getWBSCode(tasks, taskId, index = buildIndex(tasks)) {
+  const { byId, byParent } = index;
   const path = [];
   let cur = byId.get(taskId);
   const seen = new Set();

@@ -52,7 +52,17 @@ export function computeCriticalPath(tasks) {
 
   const getS = t => (t.type === 'milestone' ? t.date : t.start);
   const getE = t => (t.type === 'milestone' ? t.date : t.end);
-  const wdur = t => (t.type === 'task' ? countWorkingDays(t.start, t.end) : 0);
+
+  // Pre-compute durations and static initial previous working day per node to avoid repeated O(D) date math inside fixpoint loop
+  const wdurMap = new Map();
+  const prevWdStartMap = new Map();
+  nodes.forEach(t => {
+    const s = getS(t);
+    if (s) prevWdStartMap.set(t.id, prevWorkingDay(s));
+    wdurMap.set(t.id, t.type === 'task' ? t.wday || countWorkingDays(t.start, t.end) : 0);
+  });
+  const wdur = t => wdurMap.get(t.id) || 0;
+
   const nodeIds = new Set(nodes.map(t => t.id));
 
   // 建立「後繼者」關係（所有依賴類型）
@@ -80,8 +90,10 @@ export function computeCriticalPath(tasks) {
 
   // 後向傳遞：迭代計算 LF
   const LF = {};
+  const LS = {};
   nodes.forEach(t => {
     LF[t.id] = null;
+    LS[t.id] = null;
   });
 
   let changed = true,
@@ -107,11 +119,10 @@ export function computeCriticalPath(tasks) {
               // succ.LS = succ.LF - succ_duration + 1;
               // so t.LF = succ.LF - succ_duration
               if (succLF) {
-                const succLS =
-                  succ.type === 'task' ? subtractWorkingDays(succLF, wdur(succ) - 1) : succLF;
+                const succLS = LS[succ.id];
                 c = prevWorkingDay(succLS);
               } else {
-                c = prevWorkingDay(getS(succ));
+                c = prevWdStartMap.get(succ.id);
               }
               break;
 
@@ -120,8 +131,7 @@ export function computeCriticalPath(tasks) {
               // t.LF = t.LS + t_duration - 1 = succ.LS + t_duration - 1
               // succ.LS = succ.LF - succ_duration + 1（已知 succLF 時）
               if (succLF) {
-                const succLS =
-                  succ.type === 'task' ? subtractWorkingDays(succLF, wdur(succ) - 1) : succLF;
+                const succLS = LS[succ.id];
                 c = t.type === 'task' ? addWorkingDays(succLS, wdur(t) - 1) : succLS;
               } else {
                 c = t.type === 'task' ? addWorkingDays(getS(succ), wdur(t) - 1) : getS(succ);
@@ -150,6 +160,7 @@ export function computeCriticalPath(tasks) {
 
       if (newLF && newLF !== LF[t.id]) {
         LF[t.id] = newLF;
+        LS[t.id] = t.type === 'task' ? subtractWorkingDays(newLF, wdur(t) - 1) : newLF;
         changed = true;
       }
     });
