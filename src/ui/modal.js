@@ -433,16 +433,7 @@ export function closeDeleteModal(e) {
 }
 
 export function executeDeleteTask(id) {
-  const {
-    tasks,
-    taskById,
-    getAllDescendants,
-    pushHistory,
-    render,
-    saveToLS,
-    saveToCloud,
-    currentUser
-  } = D;
+  const { tasks, taskById, getAllDescendants, pushHistory, render } = D;
   closeOverlay('deleteOverlay');
   _deleteTargetId = null;
   const deletedTask = taskById(id);

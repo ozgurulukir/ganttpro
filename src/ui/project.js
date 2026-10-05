@@ -18,8 +18,7 @@ export function switchProject(id) {
     scheduleTasks,
     recalcProjEnd,
     render,
-    scrollToToday,
-    isSharedProject
+    scrollToToday
   } = D;
   if (id === currentProjId) {
     closeProjMenuOnly();
@@ -120,8 +119,6 @@ export function deleteProject(id, e) {
     resetState,
     closeProjMenuOnly,
     switchProject,
-    saveToLS,
-    saveToCloud,
     updateProjUI,
     renderProjMenu,
     render,
@@ -271,10 +268,7 @@ export function submitProject() {
     scheduleTasks,
     recalcProjEnd,
     updateProjUI,
-    render,
-    saveToLS,
-    saveToCloud,
-    currentUser
+    render
   } = D;
   const name = document.getElementById('pName').value.trim();
   if (!name) {
