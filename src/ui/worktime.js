@@ -46,9 +46,9 @@ export function openWorkTimeModal() {
     el = document.createElement('div');
     el.id = 'worktimeOverlay';
     el.className = 'overlay';
-    el.innerHTML = `<div class='modal worktime-modal' onclick='event.stopPropagation()'>
-      <button class='modal-close' onclick='document.getElementById("worktimeOverlay").classList.remove("open")'>✕</button>
-      <div class='modal-title'>🗓 ${t('worktime.title')}</div>
+    el.innerHTML = `<div class='modal worktime-modal' role='dialog' aria-modal='true' aria-labelledby='worktimeTitle' onclick='event.stopPropagation()'>
+      <button class='modal-close' aria-label='${t('common.close')}' data-i18n-aria-label='common.close' onclick='document.getElementById("worktimeOverlay").classList.remove("open")'>✕</button>
+      <div class='modal-title' id='worktimeTitle'>🗓 ${t('worktime.title')}</div>
       <div class='worktime-section'><h4>${t('worktime.workdays')}</h4><div class='worktime-day-chips' id='wtDayChips'></div></div>
       <div class='worktime-section'><h4>${t('worktime.customHolidays')}</h4><div id='wtHolidayList'></div><div style='display:flex;gap:8px;margin-top:8px'><input type='date' id='wtHolidayDate' style='padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px'><input id='wtHolidayLabel' placeholder='${t('worktime.holidayLabel')}' style='padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;flex:1'><button class='btn btn-primary' id='wtAddHoliday' style='font-size:12px'>${t('worktime.addHoliday')}</button><button class='btn' id='wtLoadHoliday' style='font-size:12px'>${t('worktime.loadHoliday')}</button></div></div>
       <div class='modal-footer'><button class='btn' onclick='document.getElementById("worktimeOverlay").classList.remove("open")'>${t('common.cancel')}</button><button class='btn btn-primary' id='wtSaveBtn'>${t('worktime.save')}</button></div>
@@ -64,14 +64,30 @@ export function openWorkTimeModal() {
   chipsEl.innerHTML = '';
   days.forEach((name, i) => {
     const chip = document.createElement('span');
-    chip.className = 'worktime-chip' + (workdays.includes(i) ? ' active' : '');
+    const isSelected = workdays.includes(i);
+    chip.className = 'worktime-chip' + (isSelected ? ' active' : '');
     chip.textContent = name;
-    chip.onclick = () => {
+    chip.setAttribute('role', 'checkbox');
+    chip.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+    chip.setAttribute('tabindex', '0');
+    chip.setAttribute('aria-label', name);
+
+    const toggle = () => {
       const idx = workdays.indexOf(i);
       if (idx >= 0) workdays.splice(idx, 1);
       else workdays.push(i);
       workdays.sort();
-      chip.classList.toggle('active');
+      const active = workdays.includes(i);
+      chip.classList.toggle('active', active);
+      chip.setAttribute('aria-checked', active ? 'true' : 'false');
+    };
+
+    chip.onclick = toggle;
+    chip.onkeydown = e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        toggle();
+      }
     };
     chipsEl.appendChild(chip);
   });
@@ -102,9 +118,25 @@ export function openWorkTimeModal() {
       del.className = 'worktime-holiday-del';
       del.textContent = '✕';
       del.dataset.idx = String(i);
-      del.onclick = () => {
+      del.setAttribute('role', 'button');
+      del.setAttribute('tabindex', '0');
+      const delLabel = h.label
+        ? `${t('common.delete')}: ${h.date} (${h.label})`
+        : `${t('common.delete')}: ${h.date}`;
+      del.setAttribute('aria-label', delLabel);
+      del.title = delLabel;
+
+      const removeHoliday = () => {
         holidays.splice(i, 1);
         renderHolidays();
+      };
+
+      del.onclick = removeHoliday;
+      del.onkeydown = e => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          removeHoliday();
+        }
       };
 
       row.append(dateEl, labelEl, del);
