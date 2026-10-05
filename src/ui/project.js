@@ -273,8 +273,7 @@ export function submitProject() {
     updateProjUI,
     render,
     saveToLS,
-    saveToCloud,
-    currentUser
+    saveToCloud
   } = D;
   const name = document.getElementById('pName').value.trim();
   if (!name) {
