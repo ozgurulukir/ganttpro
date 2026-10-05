@@ -1,7 +1,6 @@
 /* Project CRUD: switch, create, edit, delete, menu rendering. */
 import { D } from '../render/deps.js';
 import { esc, safeColor } from '../core/format.js';
-import { parseDate, formatDate } from '../core/date.js';
 import { openOverlay, closeOverlay, attachOutsideClose } from './overlay.js';
 import { t } from '../i18n/index.js';
 
