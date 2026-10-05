@@ -216,7 +216,7 @@ export async function loadFromCloud() {
     _ctx.setChartStart(new Date(_ctx.getCurProj().startDate));
     _ctx.setChartEnd(new Date(_ctx.getCurProj().endDate));
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
