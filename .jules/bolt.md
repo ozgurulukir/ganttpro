@@ -12,3 +12,8 @@
 
 **Learning:** `isDescendant`, `wouldCreateCycle`, `getCriticalPredTaskIds`, and `autoScheduleFromDeps` were calling `taskById` ($O(N)$ linear array find) for every node visited during tree/graph traversals. Accepting an optional pre-built `index` parameter (`default = buildIndex(tasks)`) converted node lookups to $O(1)$ Map accesses, dropping traversal complexity from $O(V \cdot N)$ to $O(V)$ without breaking call signatures.
 **Action:** Always accept an optional `index = buildIndex(tasks)` parameter in recursive or graph traversal core functions to allow callers with pre-computed indices to achieve $O(1)$ node lookups.
+
+## 2025-05-21 - Pre-computed durations and LS caching in CPM backward pass
+
+**Learning:** `computeCriticalPath` repeatedly computed `countWorkingDays`, `subtractWorkingDays`, and `prevWorkingDay` inside its backward-pass fixpoint loop. Pre-computing node durations (`wdurMap`) and initial `prevWorkingDay` bounds prior to the fixpoint loop, and caching `LS` on `LF` updates reduced runtime by ~2.8x (from 56.9s to 20.3s across 100 CPM iterations on a 100-task network).
+**Action:** Pre-calculate static node metrics outside iterative graph fixpoint loops, and cache derived node constraints (`LS`) when primary node state (`LF`) updates.
