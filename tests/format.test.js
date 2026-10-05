@@ -10,6 +10,7 @@ import {
   darkenColor,
   hexToRgba,
   csvEsc,
+  icalEsc,
   sanitizeUrl,
   esc
 } from '../src/core/format.js';
@@ -158,4 +159,15 @@ test('esc — escapes HTML special characters to prevent XSS in template preview
     'Phase 1 &amp; Phase 2 &quot;Test&quot; &#39;Quote&#39;'
   );
   assert.equal(esc(null), '');
+});
+
+/* ── icalEsc ── */
+
+test('icalEsc — sanitizes TEXT fields for iCalendar exports', () => {
+  assert.equal(icalEsc('Normal Task'), 'Normal Task');
+  assert.equal(icalEsc('Task\\With\\Backslash'), 'Task\\\\With\\\\Backslash');
+  assert.equal(icalEsc('Task\r\nWith\r\nCRLF'), 'Task  With  CRLF');
+  assert.equal(icalEsc('Task, with semicolon; and comma'), 'Task  with semicolon  and comma');
+  assert.equal(icalEsc(null), '');
+  assert.equal(icalEsc(undefined), '');
 });

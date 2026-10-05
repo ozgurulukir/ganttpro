@@ -95,6 +95,13 @@ export function csvEsc(v) {
   return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
 }
 
+/** Sanitize string value for iCalendar TEXT fields to prevent CRLF and iCal injection. */
+export function icalEsc(s) {
+  return String(s ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/[\r\n,;]/g, ' ');
+}
+
 /** Sanitize URL string — blocks dangerous schemes (javascript:, data:, vbscript:) to prevent XSS. */
 export function sanitizeUrl(url) {
   if (typeof url !== 'string') return '';
