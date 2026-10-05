@@ -1,7 +1,6 @@
 /* Project CRUD: switch, create, edit, delete, menu rendering. */
 import { D } from '../render/deps.js';
 import { esc, safeColor } from '../core/format.js';
-import { parseDate, formatDate } from '../core/date.js';
 import { openOverlay, closeOverlay, attachOutsideClose } from './overlay.js';
 import { t } from '../i18n/index.js';
 
@@ -18,8 +17,7 @@ export function switchProject(id) {
     scheduleTasks,
     recalcProjEnd,
     render,
-    scrollToToday,
-    isSharedProject
+    scrollToToday
   } = D;
   if (id === currentProjId) {
     closeProjMenuOnly();
@@ -58,7 +56,7 @@ export function updateProjUI() {
   updateReadOnly();
 }
 
-export function toggleProjMenu(e) {
+export function toggleProjMenu() {
   const menu = document.getElementById('projMenu');
   const sel = document.getElementById('projSelector');
   if (menu.classList.contains('open')) {
@@ -120,8 +118,6 @@ export function deleteProject(id, e) {
     resetState,
     closeProjMenuOnly,
     switchProject,
-    saveToLS,
-    saveToCloud,
     updateProjUI,
     renderProjMenu,
     render,
@@ -271,10 +267,7 @@ export function submitProject() {
     scheduleTasks,
     recalcProjEnd,
     updateProjUI,
-    render,
-    saveToLS,
-    saveToCloud,
-    currentUser
+    render
   } = D;
   const name = document.getElementById('pName').value.trim();
   if (!name) {
