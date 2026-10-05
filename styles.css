@@ -2641,6 +2641,10 @@ body.dark .proj-item.active {
   color: #fff;
   border-color: var(--accent);
 }
+.worktime-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 .worktime-holiday-row {
   display: flex;
   align-items: center;
@@ -2652,6 +2656,10 @@ body.dark .proj-item.active {
   cursor: pointer;
   color: var(--red);
   font-size: 14px;
+}
+.worktime-holiday-del:focus-visible {
+  outline: 2px solid var(--accent);
+  border-radius: 3px;
 }
 
 /* ═══ Print Settings Modal ═══ */
