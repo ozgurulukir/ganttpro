@@ -1,9 +1,20 @@
-import { describe, it, test } from 'node:test';
+import { describe, it, test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { reorderTask, collectSubtree } from '../src/task-ops.js';
+import { initI18n, t } from '../src/i18n/index.js';
+import { reorderTask, collectSubtree, outdentTask } from '../src/task-ops.js';
+
+before(async () => {
+  globalThis.localStorage = {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {}
+  };
+  await initI18n();
+});
 
 function createMockDeps(overrides = {}) {
   const calls = [];
+  const statusMessages = [];
   const deps = {
     taskById: id => deps._tasks.find(t => t.id === id),
     isDescendant: (srcId, targetId) => false,
@@ -11,12 +22,129 @@ function createMockDeps(overrides = {}) {
     scheduleTasks: () => calls.push('scheduleTasks'),
     recalcProjEnd: () => calls.push('recalcProjEnd'),
     render: () => calls.push('render'),
+    showStatus: msg => statusMessages.push(msg),
     _tasks: [],
     calls,
+    statusMessages,
     ...overrides
   };
   return deps;
 }
+
+describe('outdentTask', () => {
+  it('shows status error when task is not found', () => {
+    const tasks = [{ id: 't1', parent: null, type: 'task' }];
+    const deps = createMockDeps();
+    deps._tasks = tasks;
+
+    outdentTask('nonexistent', tasks, deps);
+
+    assert.equal(deps.calls.length, 0);
+    assert.equal(deps.statusMessages.length, 1);
+    assert.equal(deps.statusMessages[0], t('modal.outdentLimit'));
+  });
+
+  it('shows status error when task parent is null (already top-level)', () => {
+    const tasks = [{ id: 't1', parent: null, type: 'task' }];
+    const deps = createMockDeps();
+    deps._tasks = tasks;
+
+    outdentTask('t1', tasks, deps);
+
+    assert.equal(deps.calls.length, 0);
+    assert.equal(deps.statusMessages.length, 1);
+    assert.equal(deps.statusMessages[0], t('modal.outdentLimit'));
+  });
+
+  it('shows status error when parent task is missing or parent is top-level (parent.parent is null)', () => {
+    const tasks = [
+      { id: 'g1', parent: null, type: 'group' },
+      { id: 't1', parent: 'g1', type: 'task' }
+    ];
+    const deps = createMockDeps();
+    deps._tasks = tasks;
+
+    outdentTask('t1', tasks, deps);
+
+    assert.equal(deps.calls.length, 0);
+    assert.equal(deps.statusMessages.length, 1);
+    assert.equal(deps.statusMessages[0], t('modal.outdentLimit'));
+  });
+
+  it('outdents a nested task to its parent parent level and reinserts after parent subtree', () => {
+    /*
+      Structure:
+      - g1 (parent: null)
+        - g2 (parent: 'g1')
+          - t1 (parent: 'g2')
+          - t2 (parent: 'g2')
+        - t3 (parent: 'g1')
+    */
+    const tasks = [
+      { id: 'g1', parent: null, type: 'group' },
+      { id: 'g2', parent: 'g1', type: 'group' },
+      { id: 't1', parent: 'g2', type: 'task' },
+      { id: 't2', parent: 'g2', type: 'task' },
+      { id: 't3', parent: 'g1', type: 'task' }
+    ];
+    const deps = createMockDeps();
+    deps._tasks = tasks;
+
+    outdentTask('t1', tasks, deps);
+
+    assert.equal(deps.statusMessages.length, 0);
+    assert.deepEqual(deps.calls, ['pushHistory', 'scheduleTasks', 'recalcProjEnd', 'render']);
+
+    const t1 = tasks.find(t => t.id === 't1');
+    assert.equal(t1.parent, 'g1');
+
+    assert.deepEqual(
+      tasks.map(t => t.id),
+      ['g1', 'g2', 't2', 't1', 't3']
+    );
+  });
+
+  it('outdents a sub-group with its entire subtree', () => {
+    /*
+      Structure:
+      - root (parent: null)
+        - g1 (parent: 'root')
+          - g2 (parent: 'g1')
+            - t1 (parent: 'g2')
+            - t2 (parent: 'g2')
+          - t3 (parent: 'g1')
+        - t4 (parent: 'root')
+    */
+    const tasks = [
+      { id: 'root', parent: null, type: 'group' },
+      { id: 'g1', parent: 'root', type: 'group' },
+      { id: 'g2', parent: 'g1', type: 'group' },
+      { id: 't1', parent: 'g2', type: 'task' },
+      { id: 't2', parent: 'g2', type: 'task' },
+      { id: 't3', parent: 'g1', type: 'task' },
+      { id: 't4', parent: 'root', type: 'task' }
+    ];
+    const deps = createMockDeps();
+    deps._tasks = tasks;
+
+    outdentTask('g2', tasks, deps);
+
+    assert.equal(deps.statusMessages.length, 0);
+    assert.deepEqual(deps.calls, ['pushHistory', 'scheduleTasks', 'recalcProjEnd', 'render']);
+
+    const g2 = tasks.find(t => t.id === 'g2');
+    assert.equal(g2.parent, 'root');
+
+    // Children of g2 retain g2 as parent
+    assert.equal(tasks.find(t => t.id === 't1').parent, 'g2');
+    assert.equal(tasks.find(t => t.id === 't2').parent, 'g2');
+
+    assert.deepEqual(
+      tasks.map(t => t.id),
+      ['root', 'g1', 't3', 'g2', 't1', 't2', 't4']
+    );
+  });
+});
 
 describe('reorderTask', () => {
   it('does nothing if src task is missing', () => {
