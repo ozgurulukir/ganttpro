@@ -27,7 +27,6 @@ import { renderChartHeader } from './render/chart-header.js';
 import { renderChartBody } from './render/chart-body.js';
 import { renderTaskPanel } from './render/task-panel.js';
 import {
-  syncWday,
   updateModalForType,
   setupDepsInputListener,
   renderDepsDropdown,
