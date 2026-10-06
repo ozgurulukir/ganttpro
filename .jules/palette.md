@@ -14,3 +14,8 @@
 
 **Learning:** Shortcut overlays triggered only via single-key listeners (e.g., `?`) are undiscoverable for visual and screen-reader users unless exposed in standard navigation menus (e.g., Settings dropdown). Additionally, popup/dropdown trigger buttons require `aria-haspopup="true"` and dynamic `aria-expanded` updates so assistive technologies can track open/closed overlay states.
 **Action:** Expose shortcut modals in the Settings dropdown menu, update trigger `aria-expanded` states on open/close, and automatically focus the modal close button upon opening.
+
+## 2026-04-02 - Keyboard Accessibility & ARIA Menu Semantics for Context Menus
+
+**Learning:** Right-click context menus built with generic `div` elements are completely inaccessible to screen reader and keyboard users unless assigned `role="menu"` on the container and `role="menuitem"` with `tabindex="0"` on each item. Moreover, keyboard users require initial focus placed on the first menu item upon open, keydown listeners for `ArrowDown`/`ArrowUp` (with loop wrapping) for list navigation, and `Enter`/`Space` handlers for execution.
+**Action:** Always assign `role="menu"` and `role="menuitem"`, set `tabindex="0"`, auto-focus the first item when opening popup menus, and handle arrow key navigation and Enter/Space actuation.

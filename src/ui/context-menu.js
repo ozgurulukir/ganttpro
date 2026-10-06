@@ -8,7 +8,23 @@ function item(label, fn) {
   const el = document.createElement('div');
   el.className = 'ctx-menu-item';
   el.textContent = label;
+  el.setAttribute('role', 'menuitem');
+  el.setAttribute('tabindex', '0');
   el.addEventListener('click', fn);
+  el.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      fn(e);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const items = Array.from(_menu.querySelectorAll('.ctx-menu-item'));
+      if (!items.length) return;
+      const idx = items.indexOf(el);
+      const nextIdx =
+        e.key === 'ArrowDown' ? (idx + 1) % items.length : (idx - 1 + items.length) % items.length;
+      items[nextIdx].focus();
+    }
+  });
   return el;
 }
 
@@ -21,6 +37,7 @@ function sep() {
 export function initContextMenu() {
   _menu = document.createElement('div');
   _menu.className = 'ctx-menu';
+  _menu.setAttribute('role', 'menu');
   document.body.appendChild(_menu);
 
   document.addEventListener('mousedown', e => {
@@ -91,6 +108,12 @@ export function showContextMenu(x, y, taskId) {
   _menu.style.left = Math.min(x, window.innerWidth - 200) + 'px';
   _menu.style.top = Math.min(y, window.innerHeight - 250) + 'px';
   _menu.classList.add('open');
+
+  // Auto-focus the first menu item for keyboard accessibility
+  setTimeout(() => {
+    const firstItem = _menu.querySelector('.ctx-menu-item');
+    if (firstItem) firstItem.focus();
+  }, 0);
 }
 
 export function hideContextMenu() {
