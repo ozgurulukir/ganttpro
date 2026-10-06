@@ -457,6 +457,18 @@ describe('extended task fields (pinStart/link/approval/evidence)', () => {
     });
     assert.equal(t.link, undefined);
     assert.equal(t.evidence, undefined);
+
+    const obfuscated = validateTask({
+      id: 2,
+      name: 'y',
+      type: 'task',
+      start: '2026-04-01',
+      end: '2026-04-02',
+      link: 'javascript&colon;alert(1)',
+      evidence: 'blob:https://example.com/uuid'
+    });
+    assert.equal(obfuscated.link, undefined);
+    assert.equal(obfuscated.evidence, undefined);
   });
 
   it('omits extended fields that are absent from input', () => {

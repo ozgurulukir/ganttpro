@@ -102,16 +102,22 @@ export function icalEsc(s) {
     .replace(/[\r\n,;]/g, ' ');
 }
 
-/** Sanitize URL string — blocks dangerous schemes (javascript:, data:, vbscript:) to prevent XSS. */
+/** Sanitize URL string — blocks dangerous schemes (javascript:, data:, vbscript:, blob:, file:)
+ *  and normalizes HTML entity obfuscation (&colon;, &#58;, &#x3a;) to prevent XSS/execution bypasses. */
 export function sanitizeUrl(url) {
   if (typeof url !== 'string') return '';
   const trimmed = url.trim();
   if (!trimmed) return '';
-  const clean = trimmed.replace(/[\x00-\x20]/g, '').toLowerCase();
+  const clean = trimmed
+    .replace(/[\x00-\x20]/g, '')
+    .replace(/&(colon|#0*58|#x0*3a);?/gi, ':')
+    .toLowerCase();
   if (
     clean.startsWith('javascript:') ||
     clean.startsWith('data:') ||
-    clean.startsWith('vbscript:')
+    clean.startsWith('vbscript:') ||
+    clean.startsWith('blob:') ||
+    clean.startsWith('file:')
   ) {
     return '';
   }

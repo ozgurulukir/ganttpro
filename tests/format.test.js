@@ -141,12 +141,17 @@ test('sanitizeUrl — allows safe URLs and text', () => {
   assert.equal(sanitizeUrl('DOC-1234'), 'DOC-1234');
 });
 
-test('sanitizeUrl — blocks dangerous URI schemes', () => {
+test('sanitizeUrl — blocks dangerous URI schemes and obfuscated entity colons', () => {
   assert.equal(sanitizeUrl('javascript:alert(1)'), '');
   assert.equal(sanitizeUrl('JAVASCRIPT:alert(1)'), '');
   assert.equal(sanitizeUrl('  java\0script:alert(1)  '), '');
+  assert.equal(sanitizeUrl('javascript&colon;alert(1)'), '');
+  assert.equal(sanitizeUrl('javascript&#58;alert(1)'), '');
+  assert.equal(sanitizeUrl('javascript&#x3a;alert(1)'), '');
   assert.equal(sanitizeUrl('data:text/html,<script>alert(1)</script>'), '');
   assert.equal(sanitizeUrl('vbscript:msgbox(1)'), '');
+  assert.equal(sanitizeUrl('blob:https://example.com/uuid'), '');
+  assert.equal(sanitizeUrl('file:///etc/passwd'), '');
   assert.equal(sanitizeUrl(null), '');
 });
 

@@ -9,3 +9,9 @@
 **Vulnerability:** Project schema validator `validateProject` dropped baseline date objects `{ s, e }` or `{ d }` by calling `toDateStr` directly on objects, while failing to sanitize nested object properties against untrusted input.
 **Learning:** Baseline entries are stored as structured objects (`{ s, e }` / `{ d }`), but validator expected string dates.
 **Prevention:** Ensure schema validators handle nested object data structures explicitly, sanitizing each nested string property while stripping unvalidated keys.
+
+## 2026-10-01 - Obfuscated URI scheme entity encoding bypass in URL sanitization
+
+**Vulnerability:** `sanitizeUrl` checked for `javascript:`, `data:`, and `vbscript:` via literal string prefix, but allowed HTML entity-encoded colons (`javascript&colon;`, `javascript&#58;`, `javascript&#x3a;`) and risky schemes (`blob:`, `file:`). When injected into HTML `href` or `src` attributes, browsers decode HTML entities prior to scheme execution, allowing XSS bypasses.
+**Learning:** Checking string prefixes on raw input without normalizing HTML entities or checking dangerous protocol variations leaves sanitizers vulnerable to entity obfuscation.
+**Prevention:** Normalize HTML entity representations of colons and inspect normalized scheme prefixes against an explicit blocklist (including `blob:` and `file:`) prior to allowing URL strings.
