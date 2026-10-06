@@ -34,7 +34,14 @@ export function wouldCreateCycle(tasks, taskId, newDepId, index = buildIndex(tas
  * walked the visible rows (panel render, CSV export); otherwise it is built
  * once here instead of re-walking per dependency.
  */
-export function buildDepsText(tasks, collapsed, milestoneView, task, rowMap = null, index = buildIndex(tasks)) {
+export function buildDepsText(
+  tasks,
+  collapsed,
+  milestoneView,
+  task,
+  rowMap = null,
+  index = buildIndex(tasks)
+) {
   const parts = [];
   const lagSfx = (type, id) => {
     const l = (task.lags || {})[type + id] || 0;
@@ -71,7 +78,14 @@ export function buildDepsText(tasks, collapsed, milestoneView, task, rowMap = nu
  * error `{ raw, err }`.  Validates format, row existence, self-reference, and
  * cycles.  Empty/blank input yields [].
  */
-export function parseDepInput(val, taskId, tasks, collapsed, milestoneView, index = buildIndex(tasks)) {
+export function parseDepInput(
+  val,
+  taskId,
+  tasks,
+  collapsed,
+  milestoneView,
+  index = buildIndex(tasks)
+) {
   if (!val || typeof val !== 'string' || !val.trim()) return [];
   const rows = getVisibleRows(tasks, collapsed, milestoneView, index);
   return val
