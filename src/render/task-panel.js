@@ -31,7 +31,6 @@ export function renderTaskPanel() {
     buildDepsText,
     taskById,
     getTaskDepth,
-    getVisibleRows,
     outdentTask,
     indentTask,
     addTaskInline,

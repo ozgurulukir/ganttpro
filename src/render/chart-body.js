@@ -22,7 +22,6 @@ export function renderChartBody() {
     CHART_START,
     isReadOnly,
     totalW,
-    getVisibleRows,
     dateToX,
     groupBounds,
     updateStats,
