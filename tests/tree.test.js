@@ -180,12 +180,27 @@ test('getRowNum — 1-based position in visible rows', () => {
   assert.equal(getRowNum(TASKS, EMPTY, false, 't3'), 5);
   assert.equal(getRowNum(TASKS, EMPTY, false, 'm2'), 7);
   assert.equal(getRowNum(TASKS, new Set(['g2']), false, 't3'), null); // hidden
+
+  // Supports pre-built index reuse
+  const index = buildIndex(TASKS);
+  assert.equal(getRowNum(TASKS, EMPTY, false, 't3', index), 5);
 });
 
 test('getTaskByRowNum — round-trips with getRowNum', () => {
   assert.equal(getTaskByRowNum(TASKS, EMPTY, false, 5).id, 't3');
   assert.equal(getTaskByRowNum(TASKS, EMPTY, false, 1).id, 'root1');
   assert.equal(getTaskByRowNum(TASKS, EMPTY, false, 99), null); // out of range
+
+  // Supports pre-built index reuse
+  const index = buildIndex(TASKS);
+  assert.equal(getTaskByRowNum(TASKS, EMPTY, false, 5, index).id, 't3');
+});
+
+test('getVisibleRows — accepts pre-built index for O(1) index reuse', () => {
+  const index = buildIndex(TASKS);
+  const rowsWithIndex = getVisibleRows(TASKS, EMPTY, false, index);
+  const rowsWithoutIndex = getVisibleRows(TASKS, EMPTY, false);
+  assert.deepEqual(rowsWithIndex, rowsWithoutIndex);
 });
 
 test('groupAllDone — all task children done required', () => {
