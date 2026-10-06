@@ -17,3 +17,8 @@
 
 **Learning:** `computeCriticalPath` repeatedly computed `countWorkingDays`, `subtractWorkingDays`, and `prevWorkingDay` inside its backward-pass fixpoint loop. Pre-computing node durations (`wdurMap`) and initial `prevWorkingDay` bounds prior to the fixpoint loop, and caching `LS` on `LF` updates reduced runtime by ~2.8x (from 56.9s to 20.3s across 100 CPM iterations on a 100-task network).
 **Action:** Pre-calculate static node metrics outside iterative graph fixpoint loops, and cache derived node constraints (`LS`) when primary node state (`LF`) updates.
+
+## 2025-05-22 - Index reuse in row layout calculations
+
+**Learning:** `getVisibleRows`, `getRowNum`, and `getTaskByRowNum` rebuild the parent-child index using `buildIndex(tasks)` on every call unless an index is passed. By accepting an optional `index = buildIndex(tasks)` parameter and passing existing pre-built indices from `renderTaskPanel()` and `renderChartBody()`, redundant index creation during UI rendering passes is eliminated.
+**Action:** When row visibility or row indices are calculated during UI renders where a `taskIndex` is already in scope, pass `taskIndex` to `getVisibleRows()` to avoid re-indexing.

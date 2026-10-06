@@ -38,12 +38,12 @@ export function renderTaskPanel() {
     confirmDeleteTask
   } = D;
 
-  const rows = getVisibleRows();
-  const rowMap = new Map();
-  rows.forEach(({ task }, idx) => rowMap.set(task.id, idx + 1));
   const body = document.getElementById('taskBody');
   body.innerHTML = '';
   const taskIndex = Tree.buildIndex(tasks);
+  const rows = Tree.getVisibleRows(tasks, collapsed, milestoneView, taskIndex);
+  const rowMap = new Map();
+  rows.forEach(({ task }, idx) => rowMap.set(task.id, idx + 1));
   const wbsMap = D.showWBS ? Tree.getWBSMap(tasks) : null;
   document.getElementById('taskCount').textContent = tasks.filter(t => t.type === 'task').length;
 

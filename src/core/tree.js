@@ -63,15 +63,15 @@ export function hasMilestoneDescendant(tasks, id, visitedOrIndex = null, indexOr
 }
 
 /** 1-based row number of `taskId` within the currently visible rows. */
-export function getRowNum(tasks, collapsed, milestoneView, taskId) {
-  const rows = getVisibleRows(tasks, collapsed, milestoneView);
+export function getRowNum(tasks, collapsed, milestoneView, taskId, index = buildIndex(tasks)) {
+  const rows = getVisibleRows(tasks, collapsed, milestoneView, index);
   const idx = rows.findIndex(r => r.task.id === taskId);
   return idx >= 0 ? idx + 1 : null;
 }
 
 /** Task at 1-based row `num`, or null. */
-export function getTaskByRowNum(tasks, collapsed, milestoneView, num) {
-  const rows = getVisibleRows(tasks, collapsed, milestoneView);
+export function getTaskByRowNum(tasks, collapsed, milestoneView, num, index = buildIndex(tasks)) {
+  const rows = getVisibleRows(tasks, collapsed, milestoneView, index);
   return rows[num - 1]?.task ?? null;
 }
 
@@ -80,14 +80,14 @@ export function getTaskByRowNum(tasks, collapsed, milestoneView, num) {
  * In milestone view only non-done milestones are shown (depth 0).
  * Otherwise the tree is walked from root, skipping collapsed groups.
  */
-export function getVisibleRows(tasks, collapsed, milestoneView) {
+export function getVisibleRows(tasks, collapsed, milestoneView, index = buildIndex(tasks)) {
   if (milestoneView) {
     return tasks
       .filter(t => t.type === 'milestone' && !t.done)
       .sort((a, b) => ((a.date || '') < (b.date || '') ? -1 : 1))
       .map(t => ({ task: t, depth: 0 }));
   }
-  const { byParent } = buildIndex(tasks);
+  const { byParent } = index;
   const rows = [];
   function addChildren(parentId, depth) {
     for (const t of byParent.get(parentId) || []) {

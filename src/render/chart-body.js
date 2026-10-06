@@ -9,6 +9,7 @@ import { renderBar, renderGroupBar } from './bar.js';
 import { renderMilestone } from './milestone.js';
 import { renderArrows } from './arrows.js';
 import { renderWorkloadChart } from './workload.js';
+import * as Tree from '../core/tree.js';
 
 export function renderChartBody() {
   const {
@@ -45,7 +46,8 @@ export function renderChartBody() {
     return;
   }
 
-  const rows = getVisibleRows();
+  const taskIndex = Tree.buildIndex(D.tasks);
+  const rows = Tree.getVisibleRows(D.tasks, D.collapsed, D.milestoneView, taskIndex);
   const th = rows.length * ROW_H;
   canvas.style.cssText = `width:${tw}px;height:${th}px`;
 
