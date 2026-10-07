@@ -127,11 +127,26 @@ export function renderTaskPanel() {
     const hasChildren = Boolean(children && children.length > 0);
     if (hasChildren) {
       const tog = document.createElement('span');
-      tog.className = 'toggle' + (collapsed.has(task.id) ? ' coll' : '');
+      const isColl = collapsed.has(task.id);
+      tog.className = 'toggle' + (isColl ? ' coll' : '');
       tog.innerHTML = '▼';
+      tog.setAttribute('role', 'button');
+      tog.setAttribute('tabindex', '0');
+      tog.setAttribute('aria-expanded', isColl ? 'false' : 'true');
+      tog.setAttribute(
+        'aria-label',
+        (isColl ? t('common.expandAll') : t('common.collapseAll')) + ': ' + task.name
+      );
       tog.onclick = e => {
         e.stopPropagation();
         toggleCollapse(task.id);
+      };
+      tog.onkeydown = e => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleCollapse(task.id);
+        }
       };
       nc.appendChild(tog);
     } else {
