@@ -135,7 +135,9 @@ export function renderTaskPanel() {
       tog.setAttribute('aria-expanded', isColl ? 'false' : 'true');
       tog.setAttribute(
         'aria-label',
-        (isColl ? t('common.expandAll') : t('common.collapseAll')) + ': ' + task.name
+        isColl
+          ? t('taskPanel.expandTask', { name: task.name })
+          : t('taskPanel.collapseTask', { name: task.name })
       );
       tog.onclick = e => {
         e.stopPropagation();
