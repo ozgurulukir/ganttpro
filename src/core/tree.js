@@ -221,24 +221,34 @@ export function getWBSCode(tasks, taskId, index = buildIndex(tasks)) {
  * each task once using the parent chain. The sibling index for a task is its
  * 1-based position among siblings in the original `tasks` order.
  */
-export function getWBSMap(tasks) {
-  const { byId, byParent } = buildIndex(tasks);
+export function getWBSMap(tasks, index = buildIndex(tasks)) {
+  const { byId, byParent } = index;
   const map = new Map();
-  function walk(id) {
-    if (map.has(id)) return map.get(id);
-    const t = byId.get(id);
-    if (!t) return '';
-    const siblings = byParent.get(t.parent) || [];
-    const idx = siblings.indexOf(t) + 1;
-    let prefix = '';
-    if (t.parent !== null) {
-      prefix = walk(t.parent);
-      prefix = prefix ? prefix + '.' : '';
+  function walk(parentId, prefix) {
+    const children = byParent.get(parentId);
+    if (!children) return;
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      const code = prefix ? `${prefix}.${i + 1}` : `${i + 1}`;
+      map.set(child.id, code);
+      walk(child.id, code);
     }
-    const code = prefix + idx;
-    map.set(id, code);
-    return code;
   }
-  for (const t of tasks) walk(t.id);
+  walk(null, '');
+  if (map.size < tasks.length) {
+    for (const t of tasks) {
+      if (!map.has(t.id)) {
+        const siblings = byParent.get(t.parent) || [];
+        const idx = siblings.indexOf(t) + 1;
+        let prefix = '';
+        if (t.parent !== null && byId.has(t.parent)) {
+          prefix = map.get(t.parent) || '';
+          prefix = prefix ? prefix + '.' : '';
+        }
+        const code = prefix + idx;
+        map.set(t.id, code);
+      }
+    }
+  }
   return map;
 }

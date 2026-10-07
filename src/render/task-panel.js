@@ -43,7 +43,7 @@ export function renderTaskPanel() {
   const rows = Tree.getVisibleRows(tasks, collapsed, milestoneView, taskIndex);
   const rowMap = new Map();
   rows.forEach(({ task }, idx) => rowMap.set(task.id, idx + 1));
-  const wbsMap = D.showWBS ? Tree.getWBSMap(tasks) : null;
+  const wbsMap = D.showWBS ? Tree.getWBSMap(tasks, taskIndex) : null;
   document.getElementById('taskCount').textContent = tasks.filter(t => t.type === 'task').length;
 
   // 工作量視圖：左側面板改列出負責人
@@ -278,7 +278,7 @@ export function renderTaskPanel() {
     const dc = document.createElement('div');
     dc.className = 'deps-cell';
     dc.style.position = 'relative';
-    const allDepsText = buildDepsText(task, rowMap);
+    const allDepsText = buildDepsText(task, rowMap, taskIndex);
     dc.innerHTML = allDepsText
       ? `<span class="deps-nums">${esc(allDepsText)}</span>`
       : `<span style="font-size:11px;color:var(--t4)">—</span>`;
