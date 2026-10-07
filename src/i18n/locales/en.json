@@ -86,7 +86,9 @@
     "outdent": "Outdent (move to parent level)",
     "indent": "Indent (nest under previous sibling)",
     "addSubtask": "Add task under this node",
-    "deleteTask": "Delete task"
+    "deleteTask": "Delete task",
+    "expandTask": "Expand {{name}}",
+    "collapseTask": "Collapse {{name}}"
   },
   "tooltip": {
     "start": "Start",

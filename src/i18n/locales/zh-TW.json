@@ -86,7 +86,9 @@
     "outdent": "升階（移到上一層）",
     "indent": "降階（縮入前一個兄弟）",
     "addSubtask": "在此節點下新增任務",
-    "deleteTask": "刪除任務"
+    "deleteTask": "刪除任務",
+    "expandTask": "展開 {{name}}",
+    "collapseTask": "收合 {{name}}"
   },
   "tooltip": {
     "start": "開始",
