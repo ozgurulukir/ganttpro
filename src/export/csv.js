@@ -11,7 +11,8 @@ export function exportCSV() {
   if (!proj) return;
   // Row numbers in the exported CSV follow full-tree DFS order (collapse is
   // ignored here), so dep references must use the same numbering.
-  const { byParent } = buildIndex(tasks);
+  const taskIndex = buildIndex(tasks);
+  const { byParent } = taskIndex;
   const rowMap = new Map();
   let rowNum = 0;
   const numberRows = parentId => {
@@ -56,7 +57,7 @@ export function exportCSV() {
           isGrp ? gb.e || '' : tk.end || tk.date || '',
           tk.type === 'task' && tk.start && tk.end ? countWorkingDays(tk.start, tk.end) : '',
           tk.type === 'task' ? (tk.done ? 100 : tk.progress || 0) : '',
-          buildDepsText(tk, rowMap),
+          buildDepsText(tk, rowMap, taskIndex),
           tk.done ? 'Y' : ''
         ]);
         walk(tk.id, depth + 1);
