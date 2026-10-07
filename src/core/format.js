@@ -109,6 +109,7 @@ export function sanitizeUrl(url) {
   const trimmed = url.trim();
   if (!trimmed) return '';
   const clean = trimmed
+    .replace(/&(Tab|NewLine|#0*(9|10|13)|#x0*(9|a|d));?/gi, '')
     .replace(/[\x00-\x20]/g, '')
     .replace(/&(colon|#0*58|#x0*3a);?/gi, ':')
     .toLowerCase();

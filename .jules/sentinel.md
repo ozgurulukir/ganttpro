@@ -1,0 +1,4 @@
+## 2026-05-04 - HTML Entity Whitespace Scheme Obfuscation in URL Sanitizer
+**Vulnerability:** `sanitizeUrl` in `src/core/format.js` stripped literal control characters and normalized entity-encoded colons (`&colon;`, `&#58;`), but did not strip entity-encoded whitespace and control characters (e.g. `&Tab;`, `&NewLine;`, `&#9;`, `&#10;`, `&#13;`, `&#x09;`). Attackers could supply payloads like `java&Tab;script:alert(1)` to bypass the scheme check while browsers decoded the entity into a valid `javascript:` scheme.
+**Learning:** Browser HTML/URL parsers decode HTML entities in attributes before scheme execution. Filtering dangerous URI schemes requires stripping or normalizing entity-encoded whitespace and control characters before inspecting scheme prefixes.
+**Prevention:** Strip both literal and entity-encoded whitespace/control characters (`&Tab;`, `&NewLine;`, `&#9;`, `&#10;`, `&#13;`, etc.) prior to checking string prefix against blocked URI schemes.
