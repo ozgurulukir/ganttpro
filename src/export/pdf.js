@@ -25,7 +25,7 @@ export function openPrintSettings() {
     el.id = 'printOverlay';
     el.className = 'overlay';
     el.innerHTML = `<div class='modal print-settings-modal' onclick='event.stopPropagation()'>
-      <button class='modal-close' onclick='document.getElementById("printOverlay").classList.remove("open")'>✕</button>
+      <button class='modal-close' aria-label='${t('common.close')}' data-i18n-aria-label='common.close' onclick='document.getElementById("printOverlay").classList.remove("open")'>✕</button>
       <div class='modal-title'>🖨 ${t('printSettings.title')}</div>
       <div class='print-settings-row'><label>${t('printSettings.paperSize')}</label><select id='printPaper'><option value='A4'>A4</option><option value='A3'>A3</option></select></div>
       <div class='print-settings-row'><label>${t('printSettings.orientation')}</label><select id='printOrientation'><option value='landscape'>${t('printSettings.landscape')}</option><option value='portrait'>${t('printSettings.portrait')}</option></select></div>
