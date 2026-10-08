@@ -22,7 +22,7 @@ import { buildIndex } from './tree.js';
 /** Last working day before exclusive `endStr` (YYYY-MM-DD). */
 export function prevWorkingDay(endStr) {
   let dn = parseDate(endStr) - 1;
-  while (isNonWorkday(formatDate(dn))) dn--;
+  while (isNonWorkday(dn)) dn--;
   return formatDate(dn);
 }
 

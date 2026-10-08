@@ -89,7 +89,7 @@ export function renderChartBody() {
       const clickX = e.clientX - canvasRect.left + scrollX;
       const daysOffset = Math.floor(clickX / PPD);
       let dn = parseDate(CHART_START.toISOString().slice(0, 10)) + daysOffset;
-      while (isNonWorkday(formatDate(dn))) dn++;
+      while (isNonWorkday(dn)) dn++;
       const dateStr = formatDate(dn);
       openModal(null, dateStr);
     });

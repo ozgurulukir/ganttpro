@@ -12,8 +12,9 @@
 
 const MS_PER_DAY = 86400000;
 
-/** Parse 'YYYY-MM-DD' → integer day number (days since 1970-01-01). */
+/** Parse 'YYYY-MM-DD' → integer day number (days since 1970-01-01). Fast-path for number inputs. */
 export function parseDate(str) {
+  if (typeof str === 'number') return str;
   const [y, m, d] = str.split('-').map(Number);
   return Math.floor(Date.UTC(y, m - 1, d) / MS_PER_DAY);
 }
