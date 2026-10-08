@@ -116,7 +116,7 @@ export function setupDepsInputListener(excludeId) {
       .map(p => {
         if (p.err) return `<span style="color:var(--red)">✕ ${esc(p.raw)}: ${esc(p.err)}</span>`;
         const dt = taskById(p.taskId);
-        return `<span style="color:#10B981">✓ ${p.rowNum}${p.type} - ${esc(dt ? dt.name : '')}</span>`;
+        return `<span style="color:#10B981">✓ ${p.rowNum}${esc(p.type)} - ${esc(dt ? dt.name : '')}</span>`;
       })
       .join('&nbsp;&nbsp;');
   }
@@ -709,7 +709,7 @@ export function openAllDepsEditor(task, cell) {
       if (p.err)
         return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${esc(p.raw)}</span> <span style="color:#FCA5A5">✕ ${esc(p.err)}</span></div>`;
       const dt = taskById(p.taskId);
-      return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.rowNum}${p.type}</span> <span style="color:#6EE7B7">✓ ${esc(dt ? dt.name : '')} · ${p.type}</span></div>`;
+      return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.rowNum}${esc(p.type)}</span> <span style="color:#6EE7B7">✓ ${esc(dt ? dt.name : '')} · ${esc(p.type)}</span></div>`;
     });
     rows.push(
       `<div style="margin-top:4px;color:#9CA3AF;font-size:10px">${t('modal.enterConfirm')} &nbsp; ${t('modal.escCancel')}</div>`

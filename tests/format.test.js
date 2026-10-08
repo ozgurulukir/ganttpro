@@ -168,6 +168,7 @@ test('esc — escapes HTML special characters to prevent XSS in template preview
     esc('Phase 1 & Phase 2 "Test" \'Quote\''),
     'Phase 1 &amp; Phase 2 &quot;Test&quot; &#39;Quote&#39;'
   );
+  assert.equal(esc('FS<img src=x onerror=alert(1)>'), 'FS&lt;img src=x onerror=alert(1)&gt;');
   assert.equal(esc(null), '');
 });
 
