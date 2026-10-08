@@ -22,12 +22,14 @@ export function dateKey(d) {
 // Dynamic holiday store (loaded from JSON via loadHolidaysFromJSON).
 let _loadedHolidays = {};
 let _loadedMakeupWorkdays = new Set();
+let _hasLoadedHolidays = false;
 
 export function loadHolidaysFromJSON(data) {
   const entries = Array.isArray(data) ? data : [data];
   for (const entry of entries) {
     if (entry.holidays) {
       Object.assign(_loadedHolidays, entry.holidays);
+      if (Object.keys(entry.holidays).length > 0) _hasLoadedHolidays = true;
     }
     if (entry.makeupWorkdays) {
       for (const d of entry.makeupWorkdays) {
@@ -40,6 +42,7 @@ export function loadHolidaysFromJSON(data) {
 export function resetHolidays() {
   _loadedHolidays = {};
   _loadedMakeupWorkdays = new Set();
+  _hasLoadedHolidays = false;
 }
 
 export function getHoliday(d) {
@@ -61,11 +64,31 @@ export function setWorkDays(days) {
 }
 
 export function isNonWorkday(s) {
-  if (s instanceof Date) s = s.toISOString().slice(0, 10);
-  if (_customHolidays.has(s)) return true;
-  if (_loadedHolidays[s]) return true;
-  if (_loadedMakeupWorkdays.has(s)) return false;
-  return !_workdays.has(dayOfWeek(s));
+  let dn;
+  let str = null;
+  if (typeof s === 'number') {
+    dn = s;
+  } else if (typeof s === 'string') {
+    str = s;
+    dn = parseDate(s);
+  } else if (s instanceof Date) {
+    str = s.toISOString().slice(0, 10);
+    dn = parseDate(str);
+  } else {
+    str = String(s);
+    dn = parseDate(str);
+  }
+
+  // Performance optimization: avoid string formatting and Set/object checks when no holidays are registered
+  if (_customHolidays.size > 0 || _hasLoadedHolidays || _loadedMakeupWorkdays.size > 0) {
+    if (str === null) str = formatDate(dn);
+    if (_customHolidays.has(str)) return true;
+    if (_loadedHolidays[str]) return true;
+    if (_loadedMakeupWorkdays.has(str)) return false;
+  }
+
+  const w = ((dn % 7) + 11) % 7;
+  return !_workdays.has(w);
 }
 
 /**
@@ -74,11 +97,11 @@ export function isNonWorkday(s) {
  */
 export function subtractWorkingDays(endStr, days) {
   let dn = parseDate(endStr);
-  while (isNonWorkday(formatDate(dn))) dn--;
+  while (isNonWorkday(dn)) dn--;
   let count = 0;
   while (count < days) {
     dn--;
-    if (!isNonWorkday(formatDate(dn))) count++;
+    if (!isNonWorkday(dn)) count++;
   }
   return formatDate(dn);
 }
@@ -89,18 +112,18 @@ export function subtractWorkingDays(endStr, days) {
  */
 export function addWorkingDays(startStr, days) {
   let dn = parseDate(startStr);
-  while (isNonWorkday(formatDate(dn))) dn++;
+  while (isNonWorkday(dn)) dn++;
   let count = 1; // inclusive: start is day 1
   while (count < days) {
     dn++;
-    if (!isNonWorkday(formatDate(dn))) count++;
+    if (!isNonWorkday(dn)) count++;
   }
   return formatDate(dn);
 }
 
 export function nextWorkingDay(dateStr) {
   let dn = parseDate(dateStr) + 1;
-  while (isNonWorkday(formatDate(dn))) dn++;
+  while (isNonWorkday(dn)) dn++;
   return formatDate(dn);
 }
 
@@ -116,7 +139,7 @@ export function countWorkingDays(startStr, endStr) {
   if (dn > endDn) throw new Error('start cannot be after end');
   let count = 0;
   while (dn <= endDn) {
-    if (!isNonWorkday(formatDate(dn))) count++;
+    if (!isNonWorkday(dn)) count++;
     dn++;
   }
   return Math.max(count, 1);
@@ -126,6 +149,6 @@ export function countWorkingDays(startStr, endStr) {
 export function snapToWorkday(dateStr, direction = 1) {
   let dn = parseDate(dateStr);
   const step = direction >= 0 ? 1 : -1;
-  while (isNonWorkday(formatDate(dn))) dn += step;
+  while (isNonWorkday(dn)) dn += step;
   return formatDate(dn);
 }

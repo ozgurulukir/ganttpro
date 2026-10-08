@@ -28,7 +28,7 @@ export function renderGrid(canvas, tw, th) {
     let dn = parseDate(startStr);
     while (dn <= endDn) {
       const x = dateToX(formatDate(dn));
-      const off = isNonWorkday(formatDate(dn));
+      const off = isNonWorkday(dn);
       const l = document.createElement('div');
       l.className = 'grid-line' + (off ? ' grid-wknd' : '');
       l.style.cssText = `left:${x}px;height:${th}px`;

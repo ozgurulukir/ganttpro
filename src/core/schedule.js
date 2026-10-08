@@ -136,7 +136,7 @@ export function scheduleTasks(tasks, projStart) {
           if (sfStart > rawStart) rawStart = sfStart;
         }
         let s = parseDate(rawStart);
-        while (isNonWorkday(formatDate(s))) s++;
+        while (isNonWorkday(s)) s++;
         task.start = formatDate(s);
         task.end = addWorkingDays(task.start, task.wday || 1);
       } else {
@@ -144,11 +144,11 @@ export function scheduleTasks(tasks, projStart) {
         let best = latestFsEnd || latestSsStart || null;
         if (best) {
           let dn = parseDate(best);
-          while (isNonWorkday(formatDate(dn))) dn++;
+          while (isNonWorkday(dn)) dn++;
           task.date = formatDate(dn);
         } else if (!(task.pinStart && task.date)) {
           let dn = parseDate(projStart);
-          while (isNonWorkday(formatDate(dn))) dn++;
+          while (isNonWorkday(dn)) dn++;
           task.date = formatDate(dn);
         }
       }
