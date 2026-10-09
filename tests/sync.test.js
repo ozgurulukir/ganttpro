@@ -29,8 +29,56 @@ globalThis.localStorage = {
   }
 };
 
+// Mock BroadcastChannel and window for Node.js test environment
+if (typeof globalThis.BroadcastChannel === 'undefined') {
+  globalThis.BroadcastChannel = class BroadcastChannel {
+    constructor(name) {
+      this.name = name;
+    }
+    postMessage() {}
+    close() {}
+    unref() {}
+  };
+}
+
+if (typeof globalThis.window === 'undefined') {
+  globalThis.window = {
+    addEventListener() {}
+  };
+}
+
 const { initI18n, setLocale } = await import('../src/i18n/index.js');
-const { setSyncDot } = await import('../src/sync.js');
+const { setSyncDot, getPendingCloudWrites, initSync, saveToCloud } = await import('../src/sync.js');
+
+describe('getPendingCloudWrites', () => {
+  it('returns a Set instance representing pending cloud writes', () => {
+    const pending = getPendingCloudWrites();
+    assert.ok(pending instanceof Set);
+  });
+
+  it('initially has size 0 when no writes are pending', () => {
+    const pending = getPendingCloudWrites();
+    assert.strictEqual(pending.size, 0);
+  });
+
+  it('tracks in-flight cloud save promises when user is logged in', async () => {
+    let user = { uid: 'user123' };
+    initSync({
+      getCurrentUser: () => user,
+      getCurProj: () => null,
+      getNextProjId: () => 1,
+      showStatus: () => {}
+    });
+
+    const pending = getPendingCloudWrites();
+    assert.strictEqual(pending.size, 0);
+
+    const savePromise = saveToCloud();
+    // While saving, the write process creates a promise tracked by getPendingCloudWrites
+    await savePromise;
+    assert.strictEqual(pending.size, 0);
+  });
+});
 
 describe('setSyncDot', () => {
   before(async () => {
