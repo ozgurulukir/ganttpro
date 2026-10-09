@@ -11,7 +11,7 @@ import {
 } from '../core/date.js';
 import { D } from '../render/deps.js';
 import { t } from '../i18n/index.js';
-import { buildIndex } from '../core/tree.js';
+import * as Tree from '../core/tree.js';
 
 export function exportPNG() {
   const {
@@ -33,7 +33,7 @@ export function exportPNG() {
     criticalTaskIds
   } = D;
 
-  const taskIndex = buildIndex(tasks);
+  const taskIndex = Tree.buildIndex(tasks);
   const rows = getVisibleRows(taskIndex);
   if (!rows.length) return;
   const proj = curProj() || {};
@@ -246,7 +246,7 @@ export function exportPNG() {
       const lbl = task.name.length > 12 ? task.name.slice(0, 12) + '…' : task.name;
       ctx.fillText(lbl, mx + 11, my);
     } else if (task.type === 'group') {
-      const b = groupBounds(task.id, taskIndex);
+      const b = Tree.groupBounds(tasks, task.id, taskIndex);
       if (b.s && b.e) {
         const bx = PANEL + dateToX(b.s);
         const bw = Math.max(PANEL + dateToX(addDays(b.e, 1)) - bx, 6);
