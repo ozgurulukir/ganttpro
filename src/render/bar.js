@@ -197,7 +197,7 @@ export function attachBarDrag(bar, task) {
   });
 }
 
-export function renderGroupBar(row, task, bounds) {
+export function renderGroupBar(row, task, bounds, index) {
   const { dateToX, groupProgress } = D;
   const x1 = dateToX(bounds.s);
   const x2 = dateToX(addDays(bounds.e, 1));
@@ -212,7 +212,7 @@ export function renderGroupBar(row, task, bounds) {
   bar.style.boxShadow = `inset 0 0 0 1px ${safeCol}80`;
 
   // 群組整體進度填充
-  const gprog = groupProgress(task.id);
+  const gprog = groupProgress(task.id, index);
   if (gprog > 0) {
     const pf = document.createElement('div');
     pf.style.cssText = `position:absolute;top:0;left:0;bottom:0;width:${gprog}%;background:${darkenColor(safeCol, 0.35)};border-radius:4px 0 0 4px;pointer-events:none`;

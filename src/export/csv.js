@@ -43,7 +43,7 @@ export function exportCSV() {
       .forEach(tk => {
         num++;
         const isGrp = tk.type === 'group';
-        const gb = isGrp ? groupBounds(tk.id) : null;
+        const gb = isGrp ? groupBounds(tk.id, taskIndex) : null;
         lines.push([
           num,
           '  '.repeat(depth) + tk.name,

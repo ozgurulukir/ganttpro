@@ -75,8 +75,8 @@ export function renderChartBody() {
     } else if (task.type === 'milestone') {
       renderMilestone(row, task);
     } else if (task.type === 'group') {
-      const bounds = groupBounds(task.id);
-      if (bounds.s && bounds.e) renderGroupBar(row, task, bounds);
+      const bounds = groupBounds(task.id, taskIndex);
+      if (bounds.s && bounds.e) renderGroupBar(row, task, bounds, taskIndex);
     }
 
     row.addEventListener('mouseenter', () => highlightRow(task.id, true));
