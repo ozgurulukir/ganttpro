@@ -7,7 +7,8 @@ import { t } from './i18n/index.js';
 
 // Read admin email from Vite env var.
 // Copy .env.example to .env and set VITE_ADMIN_EMAIL to your email.
-export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
+const env = (typeof import.meta !== 'undefined' && import.meta.env) || {};
+export const ADMIN_EMAIL = env.VITE_ADMIN_EMAIL || '';
 
 export function isAdmin() {
   const user = D.GetCurrentUser();
