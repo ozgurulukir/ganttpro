@@ -101,7 +101,7 @@ export function parseDepInput(
       const depTask = rows[rowNum - 1]?.task ?? null;
       if (!depTask) return { raw: s, err: `Row ${rowNum} not found` };
       if (depTask.id === taskId) return { raw: s, err: 'Cannot depend on itself' };
-      if (taskId != null && wouldCreateCycle(tasks, taskId, depTask.id))
+      if (taskId !== undefined && taskId !== null && wouldCreateCycle(tasks, taskId, depTask.id))
         return { raw: s, err: 'Circular dependency detected' };
       return { rowNum, type, lag, taskId: depTask.id, raw: s };
     })

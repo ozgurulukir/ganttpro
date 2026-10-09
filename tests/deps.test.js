@@ -222,3 +222,15 @@ test('buildDepsText — uses pre-computed rowMap when provided', () => {
   ]);
   assert.equal(buildDepsText(TASKS, EMPTY, MS, C, customRowMap), '20FS, 10SS');
 });
+
+test('parseDepInput — null or undefined taskId skips cycle check', () => {
+  const rNull = parseDepInput('2', null, TASKS, EMPTY, MS);
+  assert.equal(rNull.length, 1);
+  assert.equal(rNull[0].taskId, 'B');
+  assert.equal(rNull[0].err, undefined);
+
+  const rUndef = parseDepInput('2', undefined, TASKS, EMPTY, MS);
+  assert.equal(rUndef.length, 1);
+  assert.equal(rUndef[0].taskId, 'B');
+  assert.equal(rUndef[0].err, undefined);
+});
