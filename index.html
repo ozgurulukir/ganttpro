@@ -769,7 +769,9 @@
             id="fName"
             data-i18n-placeholder="modal.taskNamePlaceholder"
             placeholder="Enter task name..."
+            aria-describedby="fNameError"
           />
+          <div class="form-error-msg" id="fNameError" style="display: none" role="alert"></div>
         </div>
         <div class="form-row-2" style="grid-template-columns: 1fr 1fr">
           <div>
@@ -947,7 +949,9 @@
             id="pName"
             data-i18n-placeholder="project.projectNamePlaceholder"
             placeholder="e.g. Website Redesign, Q3 Marketing Campaign..."
+            aria-describedby="pNameError"
           />
+          <div class="form-error-msg" id="pNameError" style="display: none" role="alert"></div>
         </div>
         <div class="form-row">
           <label class="form-lbl" data-i18n="project.startDate">Start Date</label>

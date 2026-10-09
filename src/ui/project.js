@@ -6,6 +6,26 @@ import { t } from '../i18n/index.js';
 
 let _editingProjId = null;
 
+export function clearProjectNameError() {
+  const pNameEl = document.getElementById('pName');
+  const errEl = document.getElementById('pNameError');
+  if (pNameEl) {
+    pNameEl.classList.remove('form-ctrl-error');
+    pNameEl.removeAttribute('aria-invalid');
+  }
+  if (errEl) {
+    errEl.style.display = 'none';
+    errEl.textContent = '';
+  }
+}
+
+if (typeof document !== 'undefined') {
+  const pNameEl = document.getElementById('pName');
+  if (pNameEl) {
+    pNameEl.addEventListener('input', clearProjectNameError);
+  }
+}
+
 export function switchProject(id) {
   const {
     currentProjId,
@@ -150,6 +170,7 @@ export function openEditProjModal(id, e) {
   const { projects } = D;
   if (e) e.stopPropagation();
   closeProjMenuOnly();
+  clearProjectNameError();
   const p = projects.find(x => x.id === id);
   if (!p) return;
   _editingProjId = id;
@@ -170,6 +191,7 @@ export function openEditProjModal(id, e) {
 export function openProjModal() {
   const { TODAY_STR, TEMPLATES, getNextGroupColor } = D;
   _editingProjId = null;
+  clearProjectNameError();
   document.getElementById('projModalTitle').textContent = t('project.createProject');
   document.getElementById('projSubmitBtn').textContent = t('project.createBtn');
   document.getElementById('pName').value = '';
@@ -245,7 +267,10 @@ export function onTemplateChange() {
 }
 
 export function closeProjModal(e) {
-  if (!e || e.target === document.getElementById('projOverlay')) closeOverlay('projOverlay');
+  if (!e || e.target === document.getElementById('projOverlay')) {
+    clearProjectNameError();
+    closeOverlay('projOverlay');
+  }
 }
 
 export function selectColor(el) {
@@ -269,11 +294,20 @@ export function submitProject() {
     updateProjUI,
     render
   } = D;
-  const name = document.getElementById('pName').value.trim();
+  const pNameEl = document.getElementById('pName');
+  const name = pNameEl.value.trim();
   if (!name) {
-    document.getElementById('pName').focus();
+    const errEl = document.getElementById('pNameError');
+    pNameEl.classList.add('form-ctrl-error');
+    pNameEl.setAttribute('aria-invalid', 'true');
+    if (errEl) {
+      errEl.textContent = t('project.projectNameRequired');
+      errEl.style.display = 'block';
+    }
+    pNameEl.focus();
     return;
   }
+  clearProjectNameError();
   let start = document.getElementById('pStart').value;
   if (!start) {
     start = new Date().toISOString().slice(0, 10);

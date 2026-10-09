@@ -20,6 +20,19 @@ export function cancelInlineEditors() {
   _blockInlineCommit = false;
 }
 
+export function clearTaskNameError() {
+  const fNameEl = document.getElementById('fName');
+  const errEl = document.getElementById('fNameError');
+  if (fNameEl) {
+    fNameEl.classList.remove('form-ctrl-error');
+    fNameEl.removeAttribute('aria-invalid');
+  }
+  if (errEl) {
+    errEl.style.display = 'none';
+    errEl.textContent = '';
+  }
+}
+
 export function populateModal(excludeId = null, presetParent = null, isDone = false) {
   const { tasks, projects, getAllDescendants } = D;
   // Parent groups（含「無」選項；編輯時排除自己與後代避免循環）
@@ -83,6 +96,10 @@ export function syncEndFromWday() {
   document.getElementById('fEnd').addEventListener('change', syncWday);
   document.getElementById('fWday').addEventListener('change', syncEndFromWday);
   document.getElementById('fWday').addEventListener('keyup', syncEndFromWday);
+  const fNameEl = document.getElementById('fName');
+  if (fNameEl) {
+    fNameEl.addEventListener('input', clearTaskNameError);
+  }
 })();
 
 export function updateModalForType() {
@@ -214,6 +231,7 @@ export function openModal(unused, prefillDate) {
     return;
   }
   editingTaskId = null;
+  clearTaskNameError();
   document.getElementById('modal-title').textContent = t('modal.newTask');
   document.getElementById('modal-submit').textContent = t('modal.addTask');
   document.getElementById('fName').value = '';
@@ -349,6 +367,7 @@ export function openModalUnder(taskId) {
   if (!task) return;
   const parentId = task.parent;
   editingTaskId = null;
+  clearTaskNameError();
   document.getElementById('modal-title').textContent = t('modal.newTask');
   document.getElementById('modal-submit').textContent = t('modal.addTask');
   document.getElementById('fName').value = '';
@@ -374,6 +393,7 @@ export function openEditModal(taskId) {
   const task = taskById(taskId);
   if (!task) return;
   editingTaskId = taskId;
+  clearTaskNameError();
   document.getElementById('modal-title').textContent = t('modal.editTask');
   document.getElementById('modal-submit').textContent = t('modal.saveChanges');
   document.getElementById('fName').value = task.name;
@@ -403,6 +423,7 @@ export function openEditModal(taskId) {
 
 export function closeModal(e) {
   if (!e || e.target === document.getElementById('overlay')) {
+    clearTaskNameError();
     closeOverlay('overlay');
     modalOpen = false;
   }
@@ -470,11 +491,20 @@ export function submitTask() {
     recalcProjEnd,
     consumeNextId
   } = D;
-  const name = document.getElementById('fName').value.trim();
+  const fNameEl = document.getElementById('fName');
+  const name = fNameEl.value.trim();
   if (!name) {
-    document.getElementById('fName').focus();
+    const errEl = document.getElementById('fNameError');
+    fNameEl.classList.add('form-ctrl-error');
+    fNameEl.setAttribute('aria-invalid', 'true');
+    if (errEl) {
+      errEl.textContent = t('modal.taskNameRequired');
+      errEl.style.display = 'block';
+    }
+    fNameEl.focus();
     return;
   }
+  clearTaskNameError();
 
   const parentRaw = parseInt(document.getElementById('fParent').value);
   const parentId = Number.isNaN(parentRaw) ? null : parentRaw;
