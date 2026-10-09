@@ -1201,11 +1201,11 @@ function toggleWBS() {
 }
 
 /* deps adapters: pure logic in core/deps.js; bind global state. */
-function buildDepsText(task, rowMap = null, index) {
-  return Deps.buildDepsText(tasks, collapsed, milestoneView, task, rowMap, index);
+function buildDepsText(task, rowMap = null, index = null) {
+  return Deps.buildDepsText(tasks, collapsed, milestoneView, task, rowMap, index ?? undefined);
 }
-function wouldCreateCycle(taskId, newDepId, index) {
-  return Deps.wouldCreateCycle(tasks, taskId, newDepId, index);
+function wouldCreateCycle(taskId, newDepId, index = null) {
+  return Deps.wouldCreateCycle(tasks, taskId, newDepId, index ?? undefined);
 }
 
 const { lagsFromParsed } = Deps;
