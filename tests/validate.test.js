@@ -485,6 +485,14 @@ describe('extended task fields (pinStart/link/approval/evidence)', () => {
     assert.equal(t.evidence, undefined);
   });
 
+  it('sanitizes task approval field only allowing pending, approved, rejected', () => {
+    assert.equal(TASK_FIELDS.approval.sanitize('pending'), 'pending');
+    assert.equal(TASK_FIELDS.approval.sanitize('approved'), 'approved');
+    assert.equal(TASK_FIELDS.approval.sanitize('rejected'), 'rejected');
+    assert.equal(TASK_FIELDS.approval.sanitize('invalid'), undefined);
+    assert.equal(TASK_FIELDS.approval.sanitize('<script>alert(1)</script>'), undefined);
+  });
+
   it('schema covers every extended field the modal writes', () => {
     for (const f of ['pinStart', 'link', 'approval', 'evidence']) {
       assert.ok(TASK_FIELDS[f], `TASK_FIELDS is missing "${f}"`);

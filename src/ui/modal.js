@@ -534,7 +534,7 @@ export function submitTask() {
       const linkVal = TASK_FIELDS.link.sanitize(document.getElementById('fHyperlink').value);
       if (linkVal) t.link = linkVal;
       else delete t.link;
-      const approvalVal = document.getElementById('fApproval').value;
+      const approvalVal = TASK_FIELDS.approval.sanitize(document.getElementById('fApproval').value);
       if (approvalVal) t.approval = approvalVal;
       else delete t.approval;
       const evidenceVal = TASK_FIELDS.evidence.sanitize(document.getElementById('fEvidence').value);
@@ -572,7 +572,7 @@ export function submitTask() {
     if (type !== 'group' && asg) t.assignee = asg;
     const linkVal = TASK_FIELDS.link.sanitize(document.getElementById('fHyperlink').value);
     if (linkVal) t.link = linkVal;
-    const approvalVal = document.getElementById('fApproval').value;
+    const approvalVal = TASK_FIELDS.approval.sanitize(document.getElementById('fApproval').value);
     if (approvalVal) t.approval = approvalVal;
     const evidenceVal = TASK_FIELDS.evidence.sanitize(document.getElementById('fEvidence').value);
     if (evidenceVal) t.evidence = evidenceVal;
