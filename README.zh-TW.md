@@ -6,6 +6,23 @@
 
 ---
 
+![GanttPro 主介面](docs/images/gantt-main.png)
+
+<details>
+<summary><b>更多畫面截圖</b></summary>
+
+### 深色模式
+
+![深色模式](docs/images/gantt-dark.png)
+
+### 工作量視圖
+
+![工作量視圖](docs/images/gantt-workload.png)
+
+</details>
+
+---
+
 ## 功能特色
 
 - **甘特圖** — 任務長條、群組摘要、里程碑菱形標記
