@@ -1102,32 +1102,32 @@ function totalW() {
 function taskById(id) {
   return Tree.taskById(tasks, id);
 }
-function hasMilestoneDescendant(id) {
-  return Tree.hasMilestoneDescendant(tasks, id);
+function hasMilestoneDescendant(id, index) {
+  return Tree.hasMilestoneDescendant(tasks, id, index);
 }
-function getRowNum(taskId) {
-  return Tree.getRowNum(tasks, collapsed, milestoneView, taskId);
+function getRowNum(taskId, index) {
+  return Tree.getRowNum(tasks, collapsed, milestoneView, taskId, index);
 }
-function getTaskByRowNum(num) {
-  return Tree.getTaskByRowNum(tasks, collapsed, milestoneView, num);
+function getTaskByRowNum(num, index) {
+  return Tree.getTaskByRowNum(tasks, collapsed, milestoneView, num, index);
 }
-function getVisibleRows() {
-  return Tree.getVisibleRows(tasks, collapsed, milestoneView);
+function getVisibleRows(index) {
+  return Tree.getVisibleRows(tasks, collapsed, milestoneView, index);
 }
-function groupBounds(id) {
-  return Tree.groupBounds(tasks, id);
+function groupBounds(id, index) {
+  return Tree.groupBounds(tasks, id, index);
 }
-function groupProgress(id) {
-  return Tree.groupProgress(tasks, id);
+function groupProgress(id, index) {
+  return Tree.groupProgress(tasks, id, index);
 }
-function getAllDescendants(id) {
-  return Tree.getAllDescendants(tasks, id);
+function getAllDescendants(id, index) {
+  return Tree.getAllDescendants(tasks, id, index);
 }
-function isDescendant(ancestorId, checkId) {
-  return Tree.isDescendant(tasks, ancestorId, checkId);
+function isDescendant(ancestorId, checkId, index) {
+  return Tree.isDescendant(tasks, ancestorId, checkId, index);
 }
-function getTaskDepth(id) {
-  return Tree.getTaskDepth(tasks, id);
+function getTaskDepth(id, index) {
+  return Tree.getTaskDepth(tasks, id, index);
 }
 
 function toggleCollapse(id) {
@@ -1202,10 +1202,10 @@ function toggleWBS() {
 
 /* deps adapters: pure logic in core/deps.js; bind global state. */
 function buildDepsText(task, rowMap = null, index = null) {
-  return Deps.buildDepsText(tasks, collapsed, milestoneView, task, rowMap, index);
+  return Deps.buildDepsText(tasks, collapsed, milestoneView, task, rowMap, index ?? undefined);
 }
-function wouldCreateCycle(taskId, newDepId) {
-  return Deps.wouldCreateCycle(tasks, taskId, newDepId);
+function wouldCreateCycle(taskId, newDepId, index = null) {
+  return Deps.wouldCreateCycle(tasks, taskId, newDepId, index ?? undefined);
 }
 
 const { lagsFromParsed } = Deps;

@@ -4,6 +4,7 @@ import { allDepIds, allSuccIds as coreAllSuccIds } from '../core/deps.js';
 import { countWorkingDays } from '../core/calendar.js';
 import { esc, safeColor } from '../core/format.js';
 import { t } from '../i18n/index.js';
+import { buildIndex } from '../core/tree.js';
 
 export function highlightRow(id, on) {
   document.querySelectorAll(`[data-id="${id}"]`).forEach(el => {
@@ -73,8 +74,9 @@ export function showTT(e, task) {
     h += `<div class="tt-r"><span>${t('tooltip.assignee')}</span><span>${esc(task.assignee) || '—'}</span></div>`;
     h += `<div class="tt-r"><span>${t('tooltip.fsDep')}</span><span>${(task.deps || []).length}</span></div>`;
   } else if (task.type === 'group') {
-    const b = groupBounds(task.id);
-    const prog = groupProgress(task.id);
+    const taskIndex = buildIndex(tasks);
+    const b = groupBounds(task.id, taskIndex);
+    const prog = groupProgress(task.id, taskIndex);
     if (b.s)
       h += `<div class="tt-r"><span>${t('tooltip.start')}</span><span>${esc(b.s)}</span></div>`;
     if (b.e)
