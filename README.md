@@ -6,6 +6,21 @@ Vite + Firebase.
 
 **[繁體中文](README.zh-TW.md)**
 
+![GanttPro Main Interface](docs/images/gantt-main.png)
+
+<details>
+<summary><b>More Screenshots</b></summary>
+
+### Dark Mode
+
+![Dark Mode](docs/images/gantt-dark.png)
+
+### Workload View
+
+![Workload View](docs/images/gantt-workload.png)
+
+</details>
+
 ## Features
 
 - **Gantt chart** with task bars, group summaries, and milestone diamonds
