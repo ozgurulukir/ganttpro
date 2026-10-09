@@ -630,7 +630,9 @@ export function openStartEditor(task, cell) {
   inp.focus();
   try {
     inp.showPicker();
-  } catch (e) {}
+  } catch (e) {
+    console.warn('showPicker failed:', e);
+  }
   function commit() {
     if (_blockInlineCommit) return;
     const val = inp.value;
@@ -657,7 +659,9 @@ export function openEndEditor(task, cell) {
   inp.focus();
   try {
     inp.showPicker();
-  } catch (e) {}
+  } catch (e) {
+    console.warn('showPicker failed:', e);
+  }
   function commit() {
     if (_blockInlineCommit) return;
     const val = inp.value;
