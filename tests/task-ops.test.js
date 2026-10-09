@@ -1,7 +1,7 @@
 import { describe, it, test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { initI18n, t } from '../src/i18n/index.js';
-import { reorderTask, collectSubtree, outdentTask } from '../src/task-ops.js';
+import { indentTask, outdentTask, reorderTask, collectSubtree } from '../src/task-ops.js';
 
 before(async () => {
   globalThis.localStorage = {
@@ -17,6 +17,7 @@ function createMockDeps(overrides = {}) {
   const statusMessages = [];
   const deps = {
     taskById: id => deps._tasks.find(t => t.id === id),
+    getTaskDepth: id => 0,
     isDescendant: (srcId, targetId) => false,
     pushHistory: () => calls.push('pushHistory'),
     scheduleTasks: () => calls.push('scheduleTasks'),
@@ -30,6 +31,97 @@ function createMockDeps(overrides = {}) {
   };
   return deps;
 }
+
+describe('indentTask', () => {
+  it('shows status error when task is not found', () => {
+    const tasks = [{ id: 't1', parent: null, type: 'task' }];
+    const deps = createMockDeps();
+    deps._tasks = tasks;
+
+    indentTask('nonexistent', tasks, deps);
+
+    assert.equal(deps.calls.length, 0);
+    assert.equal(deps.statusMessages.length, 1);
+    assert.equal(deps.statusMessages[0], t('modal.indentNoPrev'));
+  });
+
+  it('shows status error when task has no previous sibling with same parent', () => {
+    const tasks = [
+      { id: 'g1', parent: null, type: 'group' },
+      { id: 't1', parent: 'g1', type: 'task' }
+    ];
+    const deps = createMockDeps();
+    deps._tasks = tasks;
+
+    indentTask('g1', tasks, deps);
+    assert.equal(deps.calls.length, 0);
+    assert.equal(deps.statusMessages.length, 1);
+    assert.equal(deps.statusMessages[0], t('modal.indentNoPrev'));
+
+    deps.statusMessages.length = 0;
+    indentTask('t1', tasks, deps);
+    assert.equal(deps.calls.length, 0);
+    assert.equal(deps.statusMessages.length, 1);
+    assert.equal(deps.statusMessages[0], t('modal.indentNoPrev'));
+  });
+
+  it('shows status error when previous sibling depth limit (>= 5) is reached', () => {
+    const tasks = [
+      { id: 't1', parent: 'p', type: 'task' },
+      { id: 't2', parent: 'p', type: 'task' }
+    ];
+    const deps = createMockDeps({
+      getTaskDepth: id => (id === 't1' ? 4 : 1)
+    });
+    deps._tasks = tasks;
+
+    indentTask('t2', tasks, deps);
+
+    assert.equal(deps.calls.length, 0);
+    assert.equal(deps.statusMessages.length, 1);
+    assert.equal(deps.statusMessages[0], t('modal.indentLimit'));
+    assert.equal(tasks[1].parent, 'p');
+  });
+
+  it('indents top-level task to become child of previous top-level sibling', () => {
+    const tasks = [
+      { id: 't1', parent: null, type: 'task' },
+      { id: 't2', parent: null, type: 'task' }
+    ];
+    const deps = createMockDeps();
+    deps._tasks = tasks;
+
+    indentTask('t2', tasks, deps);
+
+    assert.equal(deps.statusMessages.length, 0);
+    assert.equal(tasks[1].parent, 't1');
+    assert.deepEqual(deps.calls, ['pushHistory', 'scheduleTasks', 'recalcProjEnd', 'render']);
+  });
+
+  it('indents nested task to become child of previous sibling with same parent, skipping non-siblings', () => {
+    /*
+      Structure:
+      - g1 (parent: null)
+        - t1 (parent: 'g1')
+          - sub1 (parent: 't1')
+        - t2 (parent: 'g1')
+    */
+    const tasks = [
+      { id: 'g1', parent: null, type: 'group' },
+      { id: 't1', parent: 'g1', type: 'task' },
+      { id: 'sub1', parent: 't1', type: 'task' },
+      { id: 't2', parent: 'g1', type: 'task' }
+    ];
+    const deps = createMockDeps();
+    deps._tasks = tasks;
+
+    indentTask('t2', tasks, deps);
+
+    assert.equal(deps.statusMessages.length, 0);
+    assert.equal(tasks[3].parent, 't1');
+    assert.deepEqual(deps.calls, ['pushHistory', 'scheduleTasks', 'recalcProjEnd', 'render']);
+  });
+});
 
 describe('outdentTask', () => {
   it('shows status error when task is not found', () => {
