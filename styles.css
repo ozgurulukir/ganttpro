@@ -1726,6 +1726,15 @@ body.readonly .btn-owner-only {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.15);
 }
+.form-ctrl-error {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+.form-error-msg {
+  color: var(--red);
+  font-size: 11px;
+  margin-top: 4px;
+}
 body.dark .form-ctrl {
   color-scheme: dark;
 }

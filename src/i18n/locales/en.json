@@ -126,6 +126,7 @@
     "editTask": "✏️ Edit Task",
     "taskName": "Task Name",
     "taskNamePlaceholder": "Enter task name...",
+    "taskNameRequired": "Please enter a task name",
     "type": "Type",
     "typeTask": "Task",
     "typeMilestone": "Milestone",
@@ -184,6 +185,7 @@
     "duplicateName": "A project named \"{{name}}\" already exists. Duplicate names can be confusing.\n\nUse this name anyway?",
     "projectName": "Project Name",
     "projectNamePlaceholder": "e.g. Website Redesign, Q3 Marketing Campaign...",
+    "projectNameRequired": "Please enter a project name",
     "startDate": "Start Date",
     "projectColor": "Project Color"
   },

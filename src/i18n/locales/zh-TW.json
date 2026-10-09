@@ -286,6 +286,7 @@
     "editTask": "✏️ 編輯任務",
     "taskName": "任務名稱",
     "taskNamePlaceholder": "輸入任務名稱...",
+    "taskNameRequired": "請輸入任務名稱",
     "type": "類型",
     "typeTask": "任務",
     "typeMilestone": "里程碑",
