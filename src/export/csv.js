@@ -38,30 +38,28 @@ export function exportCSV() {
   ];
   let num = 0;
   const walk = (parentId, depth) => {
-    tasks
-      .filter(tk => tk.parent === parentId)
-      .forEach(tk => {
-        num++;
-        const isGrp = tk.type === 'group';
-        const gb = isGrp ? groupBounds(tk.id, taskIndex) : null;
-        lines.push([
-          num,
-          '  '.repeat(depth) + tk.name,
-          isGrp
-            ? t('export.typeGroup')
-            : tk.type === 'milestone'
-              ? t('export.typeMilestone')
-              : t('export.typeTask'),
-          tk.assignee || '',
-          isGrp ? gb.s || '' : tk.start || tk.date || '',
-          isGrp ? gb.e || '' : tk.end || tk.date || '',
-          tk.type === 'task' && tk.start && tk.end ? countWorkingDays(tk.start, tk.end) : '',
-          tk.type === 'task' ? (tk.done ? 100 : tk.progress || 0) : '',
-          buildDepsText(tk, rowMap, taskIndex),
-          tk.done ? 'Y' : ''
-        ]);
-        walk(tk.id, depth + 1);
-      });
+    (byParent.get(parentId) || []).forEach(tk => {
+      num++;
+      const isGrp = tk.type === 'group';
+      const gb = isGrp ? groupBounds(tk.id, taskIndex) : null;
+      lines.push([
+        num,
+        '  '.repeat(depth) + tk.name,
+        isGrp
+          ? t('export.typeGroup')
+          : tk.type === 'milestone'
+            ? t('export.typeMilestone')
+            : t('export.typeTask'),
+        tk.assignee || '',
+        isGrp ? gb.s || '' : tk.start || tk.date || '',
+        isGrp ? gb.e || '' : tk.end || tk.date || '',
+        tk.type === 'task' && tk.start && tk.end ? countWorkingDays(tk.start, tk.end) : '',
+        tk.type === 'task' ? (tk.done ? 100 : tk.progress || 0) : '',
+        buildDepsText(tk, rowMap, taskIndex),
+        tk.done ? 'Y' : ''
+      ]);
+      walk(tk.id, depth + 1);
+    });
   };
   walk(null, 0);
   const csv = '\ufeff' + lines.map(r => r.map(csvEsc).join(',')).join('\r\n');
