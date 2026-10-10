@@ -178,6 +178,7 @@ test('icalEsc — sanitizes TEXT fields for iCalendar exports', () => {
   assert.equal(icalEsc('Normal Task'), 'Normal Task');
   assert.equal(icalEsc('Task\\With\\Backslash'), 'Task\\\\With\\\\Backslash');
   assert.equal(icalEsc('Task\r\nWith\r\nCRLF'), 'Task  With  CRLF');
+  assert.equal(icalEsc('Task\nWith\nLF Injection'), 'Task With LF Injection');
   assert.equal(icalEsc('Task, with semicolon; and comma'), 'Task  with semicolon  and comma');
   assert.equal(icalEsc(null), '');
   assert.equal(icalEsc(undefined), '');
