@@ -115,6 +115,54 @@ describe('src/data/local.js', () => {
         holidays: []
       });
     });
+
+    it('falls back to default workdays when workdays JSON is malformed but holidays JSON is valid', () => {
+      globalThis.localStorage.setItem(WORKDAYS_KEY, 'invalid json');
+      globalThis.localStorage.setItem(
+        HOLIDAYS_KEY,
+        JSON.stringify([{ date: '2026-01-01', label: 'New Year' }])
+      );
+
+      const settings = loadWorkCalendarSettings();
+      assert.deepStrictEqual(settings, {
+        workdays: [1, 2, 3, 4, 5],
+        holidays: [{ date: '2026-01-01', label: 'New Year' }]
+      });
+    });
+
+    it('falls back to default holidays when holidays JSON is malformed but workdays JSON is valid', () => {
+      globalThis.localStorage.setItem(WORKDAYS_KEY, JSON.stringify([1, 2, 3]));
+      globalThis.localStorage.setItem(HOLIDAYS_KEY, 'invalid json');
+
+      const settings = loadWorkCalendarSettings();
+      assert.deepStrictEqual(settings, {
+        workdays: [1, 2, 3],
+        holidays: []
+      });
+    });
+
+    it('falls back to default values when stored JSON parses to null or falsy value', () => {
+      globalThis.localStorage.setItem(WORKDAYS_KEY, 'null');
+      globalThis.localStorage.setItem(HOLIDAYS_KEY, 'null');
+
+      const settings = loadWorkCalendarSettings();
+      assert.deepStrictEqual(settings, {
+        workdays: [1, 2, 3, 4, 5],
+        holidays: []
+      });
+    });
+
+    it('falls back to default values when localStorage.getItem throws an exception', () => {
+      globalThis.localStorage.getItem = () => {
+        throw new Error('Access denied');
+      };
+
+      const settings = loadWorkCalendarSettings();
+      assert.deepStrictEqual(settings, {
+        workdays: [1, 2, 3, 4, 5],
+        holidays: []
+      });
+    });
   });
 
   describe('loadFromLS', () => {
