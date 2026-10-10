@@ -88,7 +88,8 @@
     "addSubtask": "Add task under this node",
     "deleteTask": "Delete task",
     "expandTask": "Expand {{name}}",
-    "collapseTask": "Collapse {{name}}"
+    "collapseTask": "Collapse {{name}}",
+    "dragToReorder": "Drag to reorder"
   },
   "tooltip": {
     "start": "Start",

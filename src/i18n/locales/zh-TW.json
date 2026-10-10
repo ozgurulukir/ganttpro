@@ -88,7 +88,8 @@
     "addSubtask": "在此節點下新增任務",
     "deleteTask": "刪除任務",
     "expandTask": "展開 {{name}}",
-    "collapseTask": "收合 {{name}}"
+    "collapseTask": "收合 {{name}}",
+    "dragToReorder": "拖曳以調整順序"
   },
   "tooltip": {
     "start": "開始",
