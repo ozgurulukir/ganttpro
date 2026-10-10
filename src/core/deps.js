@@ -23,7 +23,12 @@ export function wouldCreateCycle(tasks, taskId, newDepId, index = buildIndex(tas
     visited.add(id);
     const t = index.byId.get(id);
     if (!t) return false;
-    return allDepIds(t).some(dfs);
+    // Check dependency arrays directly to avoid extra Array/Set allocations per visited node
+    if (t.deps && t.deps.some(dfs)) return true;
+    if (t.sdeps && t.sdeps.some(dfs)) return true;
+    if (t.ffdeps && t.ffdeps.some(dfs)) return true;
+    if (t.sfdeps && t.sfdeps.some(dfs)) return true;
+    return false;
   }
   return dfs(newDepId);
 }
@@ -101,7 +106,11 @@ export function parseDepInput(
       const depTask = rows[rowNum - 1]?.task ?? null;
       if (!depTask) return { raw: s, err: `Row ${rowNum} not found` };
       if (depTask.id === taskId) return { raw: s, err: 'Cannot depend on itself' };
-      if (taskId !== undefined && taskId !== null && wouldCreateCycle(tasks, taskId, depTask.id))
+      if (
+        taskId !== undefined &&
+        taskId !== null &&
+        wouldCreateCycle(tasks, taskId, depTask.id, index)
+      )
         return { raw: s, err: 'Circular dependency detected' };
       return { rowNum, type, lag, taskId: depTask.id, raw: s };
     })
