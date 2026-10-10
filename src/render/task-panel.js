@@ -116,6 +116,8 @@ export function renderTaskPanel() {
     const handle = document.createElement('span');
     handle.className = 'drag-handle';
     handle.textContent = '⋮⋮';
+    handle.title = t('taskPanel.dragToReorder');
+    handle.setAttribute('aria-label', t('taskPanel.dragToReorder'));
     nc.appendChild(handle);
 
     const ind = document.createElement('span');
@@ -321,6 +323,7 @@ export function renderTaskPanel() {
         'aria-label',
         (task.done ? t('taskPanel.markIncomplete') : t('taskPanel.markDone')) + ': ' + task.name
       );
+      cb.title = task.done ? t('taskPanel.markIncomplete') : t('taskPanel.markDone');
       cb.onclick = e => {
         e.stopPropagation();
         D.applyTaskChange(task, task.done ? { done: false } : { done: true, progress: 100 }, {
