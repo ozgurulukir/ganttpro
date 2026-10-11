@@ -86,10 +86,10 @@ export function esc(s) {
     .replace(/'/g, '&#39;');
 }
 
-/** Escape CSV cell value and sanitize formula injection triggers (=, +, -, @, \t, \r). */
+/** Escape CSV cell value and sanitize formula injection triggers (=, +, -, @, %, \t, \r). */
 export function csvEsc(v) {
   v = String(v ?? '');
-  if (/^\s*[=+\-@\t\r]/.test(v)) {
+  if (/^\s*[=+\-@%\t\r]/.test(v)) {
     v = "'" + v;
   }
   return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
