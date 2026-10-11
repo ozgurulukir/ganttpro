@@ -17,7 +17,7 @@ const FALLBACK = 'en';
  * Reads saved locale from localStorage, falls back to 'en'.
  */
 export async function initI18n() {
-  const saved = localStorage.getItem(STORAGE_KEY);
+  const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
   const lng = SUPPORTED.includes(saved) ? saved : FALLBACK;
 
   await i18next.init({
@@ -38,7 +38,7 @@ export async function initI18n() {
  * @returns {string}
  */
 export function t(key, opts) {
-  return i18next.t(key, opts);
+  return i18next.t(key, opts) || key;
 }
 
 /**

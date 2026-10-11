@@ -3,6 +3,8 @@
    Pure functions for undo/redo state management.
    All state is passed in as parameters — no module-scope coupling.
 ═══════════════════════════════════════════ */
+import { updateDarkBtnUI } from './ui/settings.js';
+
 const MAX_HISTORY = 50;
 
 export function getHistory(proj) {
@@ -88,8 +90,7 @@ export function undo(state, deps) {
   document.body.classList.toggle('show-wbs', state.showWBS);
   document.body.classList.toggle('dark', state.isDark);
 
-  const darkBtn = document.getElementById('darkBtn');
-  if (darkBtn) darkBtn.textContent = state.isDark ? '☀️' : '🌙';
+  updateDarkBtnUI(state.isDark);
 
   const bd = document.getElementById('settingBarDates');
   if (bd) bd.checked = state.showBarDates;

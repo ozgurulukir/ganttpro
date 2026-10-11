@@ -77,6 +77,7 @@ import {
   scrollToToday,
   updateStats,
   toggleDark,
+  updateDarkBtnUI,
   curVersions,
   openVersionPanel,
   closeVersionPanel,
@@ -1377,6 +1378,7 @@ document.addEventListener('keydown', e => {
 function syncRenderDeps() {
   // State variables (refreshed each render) — derived from STATE_FIELDS
   for (const [name, f] of Object.entries(STATE_FIELDS)) D[name] = f.get();
+  updateDarkBtnUI(D.isDark);
   D.PPDS = PPDS;
   D.TODAY_STR = TODAY_STR;
   D.TODAY = new Date(TODAY_STR);

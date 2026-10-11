@@ -64,10 +64,12 @@ export function closeExportMenu() {
 }
 
 // Click-outside listeners (module-load wiring)
-document.addEventListener('click', e => {
-  const w = document.getElementById('exportWrap');
-  if (w && !w.contains(e.target)) closeExportMenu();
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', e => {
+    const w = document.getElementById('exportWrap');
+    if (w && !w.contains(e.target)) closeExportMenu();
+  });
+}
 
 export function closeSettings() {
   closeOverlay('settingsPanel');
@@ -75,10 +77,12 @@ export function closeSettings() {
   if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
-document.addEventListener('click', e => {
-  const wrap = document.getElementById('settingsWrap');
-  if (wrap && !wrap.contains(e.target)) closeSettings();
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('settingsWrap');
+    if (wrap && !wrap.contains(e.target)) closeSettings();
+  });
+}
 
 export function applyZoom(factor) {
   const { CHART_START, PPD, PPDS, updateChartStart, render } = D;
@@ -134,12 +138,21 @@ export function updateStats() {
   document.getElementById('sMilestone').textContent = m.length;
 }
 
+export function updateDarkBtnUI(isDark) {
+  const darkBtn = document.getElementById('darkBtn');
+  if (!darkBtn) return;
+  darkBtn.textContent = isDark ? '☀️' : '🌙';
+  const label = isDark ? t('toolbar.lightMode') : t('toolbar.darkMode');
+  darkBtn.title = label;
+  if (darkBtn.setAttribute) darkBtn.setAttribute('aria-label', label);
+}
+
 export function toggleDark() {
   const { setIsDark } = D;
-  const isDark = D.isDark;
-  setIsDark(!isDark);
-  document.body.classList.toggle('dark', !isDark);
-  document.getElementById('darkBtn').textContent = !isDark ? '☀️' : '🌙';
+  const newDark = !D.isDark;
+  setIsDark(newDark);
+  document.body.classList.toggle('dark', newDark);
+  updateDarkBtnUI(newDark);
 }
 
 export function curVersions() {
