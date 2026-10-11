@@ -30,7 +30,6 @@ export function renderTaskPanel() {
     openAllDepsEditor,
     buildDepsText,
     taskById,
-    getTaskDepth,
     outdentTask,
     indentTask,
     addTaskInline,
@@ -372,7 +371,8 @@ export function renderTaskPanel() {
     const siblings = taskIndex.byParent.get(task.parent) || [];
     const sibIdx = siblings.indexOf(task);
     const _prevSib = sibIdx > 0 ? siblings[sibIdx - 1] : null;
-    const canIndent = _prevSib !== null && Tree.getTaskDepth(tasks, _prevSib.id, taskIndex) + 1 < 5;
+    // _prevSib shares the same parent as task, so its tree depth equals `depth` (saves O(depth) lookups)
+    const canIndent = _prevSib !== null && depth + 1 < 5;
 
     const outBtn = document.createElement('div');
     outBtn.className = 'row-action-btn';
