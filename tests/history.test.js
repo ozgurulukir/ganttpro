@@ -2,15 +2,26 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { getHistory, pushHistory, undo } from '../src/history.js';
+import { initI18n } from '../src/i18n/index.js';
+
+await initI18n();
 
 function createMockElement(id, dataset = {}) {
   const classList = new Set();
+  const attributes = new Map();
   return {
     id,
     dataset,
     disabled: false,
     checked: false,
     textContent: '',
+    title: '',
+    setAttribute(name, val) {
+      attributes.set(name, val);
+    },
+    getAttribute(name) {
+      return attributes.get(name);
+    },
     classList: {
       toggle(cls, force) {
         if (force === undefined) {
@@ -349,6 +360,8 @@ test('undo — restores project, state, and calls lifecycle deps', () => {
   assert.equal(dom.bodyClasses.has('dark'), true);
   assert.equal(dom.bodyClasses.has('show-wbs'), true);
   assert.equal(darkBtn.textContent, '☀️');
+  assert.equal(darkBtn.title, 'Light mode');
+  assert.equal(darkBtn.getAttribute('aria-label'), 'Light mode');
   assert.equal(settingBarDates.checked, true);
   assert.equal(settingBaseline.checked, false);
   assert.equal(viewBtnWeek.classList.contains('active'), true);
