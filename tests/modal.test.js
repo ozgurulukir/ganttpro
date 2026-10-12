@@ -32,6 +32,9 @@ function createMockElement(tagName = 'div') {
     getAttribute(k) {
       return attributes[k];
     },
+    removeAttribute(k) {
+      delete attributes[k];
+    },
     addEventListener(evt, fn) {
       if (!listeners[evt]) listeners[evt] = [];
       listeners[evt].push(fn);
@@ -61,6 +64,19 @@ function createMockElement(tagName = 'div') {
       },
       contains(cls) {
         return classList.has(cls);
+      },
+      toggle(cls, force) {
+        if (force !== undefined) {
+          if (force) classList.add(cls);
+          else classList.delete(cls);
+          return force;
+        }
+        if (classList.has(cls)) {
+          classList.delete(cls);
+          return false;
+        }
+        classList.add(cls);
+        return true;
       }
     }
   };
@@ -83,7 +99,8 @@ globalThis.document = {
 };
 
 // Import module after document mock setup
-const { openStartEditor, openEndEditor } = await import('../src/ui/modal.js');
+const { openStartEditor, openEndEditor, openModal, openEditModal } =
+  await import('../src/ui/modal.js');
 const { D } = await import('../src/render/deps.js');
 
 test('Modal — openStartEditor and openEndEditor handle showPicker warnings and changes', async t => {
@@ -201,4 +218,28 @@ test('Modal — openStartEditor and openEndEditor handle showPicker warnings and
       globalThis.document.createElement = origCreate;
     }
   );
+});
+
+test('Modal — advanced options accordion updates aria-expanded on open and edit', async t => {
+  D.isReadOnly = false;
+  D.curProj = () => ({ id: 1, name: 'Test' });
+  D.openProjModal = () => {};
+  D.TODAY_STR = '2026-05-07';
+  D.getAllDescendants = () => [];
+  D.tasks = [];
+  D.projects = [];
+  D.taskById = id => ({ id, name: 'Test Task', type: 'task', link: 'https://example.com' });
+  D.buildDepsText = () => '';
+
+  await t.test('openModal sets aria-expanded to false', () => {
+    openModal();
+    const advToggle = getOrCreateMockById('modalAdvancedToggle');
+    assert.equal(advToggle.getAttribute('aria-expanded'), 'false');
+  });
+
+  await t.test('openEditModal sets aria-expanded to true if advanced fields are present', () => {
+    openEditModal(1);
+    const advToggle = getOrCreateMockById('modalAdvancedToggle');
+    assert.equal(advToggle.getAttribute('aria-expanded'), 'true');
+  });
 });
