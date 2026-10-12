@@ -129,16 +129,16 @@ export function lagsFromParsed(parsed) {
 /**
  * All dependency ids referenced by a task's four dep arrays, deduped,
  * in FS/SS/FF/SF order.
+ * Direct iteration into Set avoids intermediate array allocations.
  */
 export function allDepIds(task) {
-  return [
-    ...new Set([
-      ...(task.deps || []),
-      ...(task.sdeps || []),
-      ...(task.ffdeps || []),
-      ...(task.sfdeps || [])
-    ])
-  ];
+  if (!task) return [];
+  const set = new Set();
+  if (task.deps) for (let i = 0; i < task.deps.length; i++) set.add(task.deps[i]);
+  if (task.sdeps) for (let i = 0; i < task.sdeps.length; i++) set.add(task.sdeps[i]);
+  if (task.ffdeps) for (let i = 0; i < task.ffdeps.length; i++) set.add(task.ffdeps[i]);
+  if (task.sfdeps) for (let i = 0; i < task.sfdeps.length; i++) set.add(task.sfdeps[i]);
+  return Array.from(set);
 }
 
 /** Does the task reference any dependency (of any type)? */
@@ -151,7 +151,23 @@ export function hasAnyDeps(task) {
   );
 }
 
-/** Ids of tasks that reference `id` in any of their dep arrays. */
+/**
+ * Ids of tasks that reference `id` in any of their dep arrays.
+ * Single linear pass over tasks with direct array checks avoids O(N) calls to
+ * `allDepIds` and eliminates intermediate array/Set allocations.
+ */
 export function allSuccIds(tasks, id) {
-  return tasks.filter(t => allDepIds(t).includes(id)).map(t => t.id);
+  const result = [];
+  for (let i = 0; i < tasks.length; i++) {
+    const t = tasks[i];
+    if (
+      (t.deps && t.deps.includes(id)) ||
+      (t.sdeps && t.sdeps.includes(id)) ||
+      (t.ffdeps && t.ffdeps.includes(id)) ||
+      (t.sfdeps && t.sfdeps.includes(id))
+    ) {
+      result.push(t.id);
+    }
+  }
+  return result;
 }
