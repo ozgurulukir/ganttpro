@@ -174,6 +174,11 @@ test('esc — escapes HTML special characters to prevent XSS in template preview
   assert.equal(esc(null), '');
 });
 
+test('esc — escapes double quotes and HTML special characters for attribute contexts', () => {
+  assert.equal(esc('v1" onclick="alert(1)'), 'v1&quot; onclick=&quot;alert(1)');
+  assert.equal(esc("v1' onmouseover='alert(1)"), 'v1&#39; onmouseover=&#39;alert(1)');
+});
+
 /* ── icalEsc ── */
 
 test('icalEsc — sanitizes TEXT fields for iCalendar exports', () => {
