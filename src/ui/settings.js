@@ -269,8 +269,8 @@ export function renderVersionList() {
       <div class="ver-item-name">${esc(v.name)}</div>
       <div class="ver-item-meta">${dateStr} · ${v.taskCount} tasks</div>
       <div class="ver-item-actions">
-        <button class="ver-btn ver-btn-restore" data-action="restore-version" data-id="${v.id}">${t('settings.restore')}</button>
-        <button class="ver-btn ver-btn-del" data-action="delete-version" data-id="${v.id}">${t('settings.delete')}</button>
+        <button class="ver-btn ver-btn-restore" data-action="restore-version" data-id="${esc(v.id)}">${t('settings.restore')}</button>
+        <button class="ver-btn ver-btn-del" data-action="delete-version" data-id="${esc(v.id)}">${t('settings.delete')}</button>
       </div>
     `;
     el.appendChild(item);
