@@ -248,7 +248,9 @@ export function openModal(unused, prefillDate) {
   document.getElementById('fApproval').value = '';
   document.getElementById('fEvidence').value = '';
   const adv = document.getElementById('modalAdvanced');
+  const advToggle = document.getElementById('modalAdvancedToggle');
   if (adv) adv.classList.add('collapsed');
+  if (advToggle) advToggle.setAttribute('aria-expanded', 'false');
   populateModal();
   updateModalForType();
   openOverlay('overlay');
@@ -378,7 +380,9 @@ export function openModalUnder(taskId) {
   document.getElementById('fApproval').value = '';
   document.getElementById('fEvidence').value = '';
   const adv = document.getElementById('modalAdvanced');
+  const advToggle = document.getElementById('modalAdvancedToggle');
   if (adv) adv.classList.add('collapsed');
+  if (advToggle) advToggle.setAttribute('aria-expanded', 'false');
   populateModal(null, parentId);
   updateModalForType();
   openOverlay('overlay');
@@ -410,10 +414,11 @@ export function openEditModal(taskId) {
   document.getElementById('fHyperlink').value = task.link || '';
   document.getElementById('fApproval').value = task.approval || '';
   document.getElementById('fEvidence').value = task.evidence || '';
-  if (task.link || task.approval || task.evidence) {
-    const adv = document.getElementById('modalAdvanced');
-    if (adv) adv.classList.remove('collapsed');
-  }
+  const hasAdvFields = !!(task.link || task.approval || task.evidence);
+  const adv = document.getElementById('modalAdvanced');
+  const advToggle = document.getElementById('modalAdvancedToggle');
+  if (adv) adv.classList.toggle('collapsed', !hasAdvFields);
+  if (advToggle) advToggle.setAttribute('aria-expanded', hasAdvFields ? 'true' : 'false');
   updateModalForType();
   openOverlay('overlay');
   modalOpen = true;

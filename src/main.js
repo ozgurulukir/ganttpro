@@ -1891,10 +1891,15 @@ function wireTaskModalEvents() {
 
   // ── Advanced options toggle ──
   const advToggle = document.getElementById('modalAdvancedToggle');
-  if (advToggle)
-    advToggle.addEventListener('click', () =>
-      document.getElementById('modalAdvanced')?.classList.toggle('collapsed')
-    );
+  if (advToggle) {
+    advToggle.addEventListener('click', () => {
+      const adv = document.getElementById('modalAdvanced');
+      if (adv) {
+        const isCollapsed = adv.classList.toggle('collapsed');
+        advToggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+      }
+    });
+  }
 }
 
 function wireArrowStyleEvents() {
