@@ -211,17 +211,42 @@
       <button class="btn" id="collapseAllBtn" data-i18n="common.collapseAll">⊟ Collapse All</button>
       <div class="spacer"></div>
       <div class="btn-group" id="chartViewBtns">
-        <button class="btn active" data-cv="gantt" data-i18n="toolbar.viewGantt">Gantt</button>
-        <button class="btn" data-cv="milestone" data-i18n="toolbar.viewMilestone">
+        <button
+          class="btn active"
+          data-cv="gantt"
+          data-i18n="toolbar.viewGantt"
+          aria-pressed="true"
+        >
+          Gantt
+        </button>
+        <button
+          class="btn"
+          data-cv="milestone"
+          data-i18n="toolbar.viewMilestone"
+          aria-pressed="false"
+        >
           ◆ Milestones
         </button>
-        <button class="btn" data-cv="workload" data-i18n="toolbar.viewWorkload">Workload</button>
+        <button
+          class="btn"
+          data-cv="workload"
+          data-i18n="toolbar.viewWorkload"
+          aria-pressed="false"
+        >
+          Workload
+        </button>
       </div>
       <div class="sep"></div>
       <div class="btn-group" id="viewBtns">
-        <button class="btn" data-v="day" data-i18n="toolbar.zoomDay">Day</button>
-        <button class="btn active" data-v="week" data-i18n="toolbar.zoomWeek">Week</button>
-        <button class="btn" data-v="month" data-i18n="toolbar.zoomMonth">Month</button>
+        <button class="btn" data-v="day" data-i18n="toolbar.zoomDay" aria-pressed="false">
+          Day
+        </button>
+        <button class="btn active" data-v="week" data-i18n="toolbar.zoomWeek" aria-pressed="true">
+          Week
+        </button>
+        <button class="btn" data-v="month" data-i18n="toolbar.zoomMonth" aria-pressed="false">
+          Month
+        </button>
       </div>
       <button
         class="btn zoom-btn"
@@ -270,6 +295,7 @@
         title="Show critical path"
         data-i18n-title="toolbar.criticalPathHint"
         data-i18n="toolbar.criticalPath"
+        aria-pressed="false"
       >
         ◆ Critical Path
       </button>
@@ -279,6 +305,7 @@
         title="Toggle WBS numbering"
         data-i18n-title="wbs.toggleHint"
         data-i18n="wbs.toggle"
+        aria-pressed="false"
       >
         # WBS
       </button>

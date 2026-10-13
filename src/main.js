@@ -1154,7 +1154,9 @@ function setView(v) {
   viewMode = v;
   PPD = PPDS[v];
   document.querySelectorAll('#viewBtns .btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.v === v);
+    const active = b.dataset.v === v;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
   updateChartStart();
   render();
@@ -1166,7 +1168,9 @@ function setChartView(v) {
   milestoneView = v === 'milestone';
   workloadView = v === 'workload';
   document.querySelectorAll('#chartViewBtns .btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.cv === v);
+    const active = b.dataset.cv === v;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
   document.body.classList.toggle('ms-view', milestoneView);
   render();
@@ -1187,7 +1191,11 @@ function getCriticalPredTaskIds(task, index) {
 
 function toggleCriticalPath() {
   showCriticalPath = !showCriticalPath;
-  document.getElementById('cpBtn').classList.toggle('active', showCriticalPath);
+  const cpBtn = document.getElementById('cpBtn');
+  if (cpBtn) {
+    cpBtn.classList.toggle('active', showCriticalPath);
+    cpBtn.setAttribute('aria-pressed', showCriticalPath ? 'true' : 'false');
+  }
   if (showCriticalPath) criticalTaskIds = computeCriticalPath();
   else criticalTaskIds = new Set();
   render();
@@ -1197,7 +1205,11 @@ function toggleWBS() {
   showWBS = !showWBS;
   document.body.classList.toggle('show-wbs', showWBS);
   localStorage.setItem('gp_showWBS', showWBS ? '1' : '0');
-  document.getElementById('wbsBtn')?.classList.toggle('active', showWBS);
+  const wbsBtn = document.getElementById('wbsBtn');
+  if (wbsBtn) {
+    wbsBtn.classList.toggle('active', showWBS);
+    wbsBtn.setAttribute('aria-pressed', showWBS ? 'true' : 'false');
+  }
   render();
 }
 

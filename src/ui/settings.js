@@ -91,7 +91,9 @@ export function applyZoom(factor) {
   const leftMs = CHART_START.getTime() + (cs.scrollLeft / PPD) * 86400000;
   D.setPPD(Math.max(2, Math.min(80, Math.round(PPD * factor))));
   document.querySelectorAll('#viewBtns .btn').forEach(b => {
-    b.classList.toggle('active', PPDS[b.dataset.v] === D.PPD);
+    const active = PPDS[b.dataset.v] === D.PPD;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
   updateChartStart(); // recompute CHART_START padding for new PPD
   render();
