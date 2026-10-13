@@ -148,8 +148,13 @@ test('sanitizeUrl — blocks dangerous URI schemes and obfuscated entity colons'
   assert.equal(sanitizeUrl('JAVASCRIPT:alert(1)'), '');
   assert.equal(sanitizeUrl('  java\0script:alert(1)  '), '');
   assert.equal(sanitizeUrl('javascript&colon;alert(1)'), '');
+  assert.equal(sanitizeUrl('javascript%3aalert(1)'), '');
+  assert.equal(sanitizeUrl('javascript%3Aalert(1)'), '');
   assert.equal(sanitizeUrl('javascript&#58;alert(1)'), '');
   assert.equal(sanitizeUrl('javascript&#x3a;alert(1)'), '');
+  assert.equal(sanitizeUrl('java%0ascript:alert(1)'), '');
+  assert.equal(sanitizeUrl('java%0d%0ascript%3aalert(1)'), '');
+  assert.equal(sanitizeUrl('java%09script:alert(1)'), '');
   assert.equal(sanitizeUrl('java&Tab;script:alert(1)'), '');
   assert.equal(sanitizeUrl('java&#9;script:alert(1)'), '');
   assert.equal(sanitizeUrl('java&NewLine;script:alert(1)'), '');
