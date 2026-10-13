@@ -71,7 +71,9 @@ export function undo(state, deps) {
     state.viewMode = snap.viewMode;
     state.PPD = state.PPDS[snap.viewMode];
     document.querySelectorAll('#viewBtns .btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.v === snap.viewMode);
+      const active = b.dataset.v === snap.viewMode;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
   }
 
@@ -99,15 +101,23 @@ export function undo(state, deps) {
 
   const cv = state.milestoneView ? 'milestone' : state.workloadView ? 'workload' : 'gantt';
   document.querySelectorAll('#chartViewBtns .btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.cv === cv);
+    const active = b.dataset.cv === cv;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
 
   const cpBtn = document.getElementById('cpBtn');
-  if (cpBtn) cpBtn.classList.toggle('active', state.showCriticalPath);
+  if (cpBtn) {
+    cpBtn.classList.toggle('active', state.showCriticalPath);
+    cpBtn.setAttribute('aria-pressed', state.showCriticalPath ? 'true' : 'false');
+  }
   if (state.showCriticalPath) state.criticalTaskIds = deps.computeCriticalPath();
   else state.criticalTaskIds = new Set();
   const wbsBtn = document.getElementById('wbsBtn');
-  if (wbsBtn) wbsBtn.classList.toggle('active', state.showWBS);
+  if (wbsBtn) {
+    wbsBtn.classList.toggle('active', state.showWBS);
+    wbsBtn.setAttribute('aria-pressed', state.showWBS ? 'true' : 'false');
+  }
 
   deps.updateProjUI();
   deps.renderVersionList();

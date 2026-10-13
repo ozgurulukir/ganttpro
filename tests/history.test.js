@@ -365,9 +365,13 @@ test('undo — restores project, state, and calls lifecycle deps', () => {
   assert.equal(settingBarDates.checked, true);
   assert.equal(settingBaseline.checked, false);
   assert.equal(viewBtnWeek.classList.contains('active'), true);
+  assert.equal(viewBtnWeek.getAttribute('aria-pressed'), 'true');
   assert.equal(viewBtnDay.classList.contains('active'), false);
+  assert.equal(viewBtnDay.getAttribute('aria-pressed'), 'false');
   assert.equal(cpBtn.classList.contains('active'), true);
+  assert.equal(cpBtn.getAttribute('aria-pressed'), 'true');
   assert.equal(wbsBtn.classList.contains('active'), true);
+  assert.equal(wbsBtn.getAttribute('aria-pressed'), 'true');
 
   // Remaining history check
   assert.equal(getHistory(proj).length, 0);
@@ -427,4 +431,78 @@ test('undo — handles when showCriticalPath is false (resets criticalTaskIds to
   assert.equal(state.showCriticalPath, false);
   assert.equal(state.criticalTaskIds.size, 0);
   assert.equal(cpBtn.classList.contains('active'), false);
+  assert.equal(cpBtn.getAttribute('aria-pressed'), 'false');
+});
+
+test('undo — synchronizes aria-pressed attributes on chart view and toggle buttons', () => {
+  const dom = setupMockDOM();
+
+  const cpBtn = createMockElement('cpBtn');
+  const wbsBtn = createMockElement('wbsBtn');
+  dom.elements.set('cpBtn', cpBtn);
+  dom.elements.set('wbsBtn', wbsBtn);
+
+  const cvGantt = createMockElement('cvGantt', { cv: 'gantt' });
+  const cvMilestone = createMockElement('cvMilestone', { cv: 'milestone' });
+  dom.queryAllResults.set('#chartViewBtns .btn', [cvGantt, cvMilestone]);
+
+  const vDay = createMockElement('vDay', { v: 'day' });
+  const vMonth = createMockElement('vMonth', { v: 'month' });
+  dom.queryAllResults.set('#viewBtns .btn', [vDay, vMonth]);
+
+  const proj = {
+    id: 'p1',
+    tasks: [],
+    _history: [
+      {
+        tasks: [],
+        viewMode: 'month',
+        milestoneView: true,
+        workloadView: false,
+        showCriticalPath: false,
+        showWBS: true,
+        startDate: '2026-01-01',
+        endDate: '2026-12-31'
+      }
+    ]
+  };
+
+  const state = {
+    curProj: proj,
+    tasks: [],
+    collapsed: new Set(),
+    viewMode: 'day',
+    PPDS: { day: 36, month: 4 },
+    PPD: 36,
+    showCriticalPath: true,
+    showWBS: false,
+    milestoneView: false,
+    workloadView: false,
+    criticalTaskIds: new Set()
+  };
+
+  const deps = {
+    getHistory,
+    computeCriticalPath: () => new Set(),
+    updateProjUI: () => {},
+    renderVersionList: () => {},
+    scheduleTasks: () => {},
+    recalcProjEnd: () => {},
+    render: () => {}
+  };
+
+  undo(state, deps);
+
+  assert.equal(cvMilestone.classList.contains('active'), true);
+  assert.equal(cvMilestone.getAttribute('aria-pressed'), 'true');
+  assert.equal(cvGantt.classList.contains('active'), false);
+  assert.equal(cvGantt.getAttribute('aria-pressed'), 'false');
+
+  assert.equal(vMonth.classList.contains('active'), true);
+  assert.equal(vMonth.getAttribute('aria-pressed'), 'true');
+  assert.equal(vDay.classList.contains('active'), false);
+  assert.equal(vDay.getAttribute('aria-pressed'), 'false');
+
+  assert.equal(cpBtn.getAttribute('aria-pressed'), 'false');
+  assert.equal(wbsBtn.getAttribute('aria-pressed'), 'true');
 });

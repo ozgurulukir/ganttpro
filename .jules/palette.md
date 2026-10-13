@@ -12,3 +12,8 @@
 
 **Learning:** Collapsible accordion toggle buttons in modal dialogs (e.g. `#modalAdvancedToggle`) that lack `aria-expanded` and `aria-controls` fail to inform screen reader users whether the panel is expanded or collapsed.
 **Action:** Add `aria-controls` linking to the section ID and `aria-expanded` initialized to `"false"`. Synchronize `aria-expanded` ("true"/"false") whenever the panel toggles or when modal state is initialized/edited.
+
+## 2026-10-13 - ARIA Pressed States on Toolbar Toggle Buttons
+
+**Learning:** Toolbar button groups and feature toggles (e.g. Chart View, Zoom, Critical Path, WBS) that use CSS `.active` classes without `aria-pressed` attributes fail to convey active/pressed state to screen readers.
+**Action:** Add initial `aria-pressed` attributes in HTML and update `aria-pressed="true"` / `"false"` whenever `.active` classes change in UI handlers, zoom actions, and undo/redo restorations.
