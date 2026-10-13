@@ -48,75 +48,145 @@ export function scheduleTasks(tasks, projStart) {
     if (t.type === 'task' && !t.wday)
       t.wday = t.start && t.end ? countWorkingDays(t.start, t.end) : 1;
   });
-  const candidates = tasks.filter(t => t.type === 'task' || t.type === 'milestone');
+  let remaining = tasks.filter(t => t.type === 'task' || t.type === 'milestone');
   const scheduled = new Set();
-  const MAX = candidates.length * 3;
+  const MAX = remaining.length * 3;
   let iter = 0,
     progress = true;
-  while (progress && iter++ < MAX) {
-    progress = false;
-    candidates.forEach(task => {
-      if (scheduled.has(task.id)) return;
-      // FS deps: must be scheduled first
-      const deps = (task.deps || []).map(id => index.byId.get(id)).filter(Boolean);
-      const unresolvedFs = deps.filter(d => {
-        if (d.type === 'group') return !allGroupMembersScheduled(tasks, d.id, scheduled, index);
-        return !scheduled.has(d.id);
-      });
-      if (unresolvedFs.length) return;
-      // SS deps: must be scheduled first too
-      const sdeps = (task.sdeps || []).map(id => index.byId.get(id)).filter(Boolean);
-      const unresolvedSs = sdeps.filter(d => !scheduled.has(d.id));
-      if (unresolvedSs.length) return;
-      // FF deps: must be scheduled first
-      const ffdeps = (task.ffdeps || []).map(id => index.byId.get(id)).filter(Boolean);
-      const unresolvedFf = ffdeps.filter(d => !scheduled.has(d.id));
-      if (unresolvedFf.length) return;
-      // SF deps: must be scheduled first
-      const sfdeps = (task.sfdeps || []).map(id => index.byId.get(id)).filter(Boolean);
-      const unresolvedSf = sfdeps.filter(d => !scheduled.has(d.id));
-      if (unresolvedSf.length) return;
 
-      const depLag = (type, id) => (task.lags || {})[type + id] || 0;
-      // Latest end among FS deps → task must start after this（含 lag 偏移）
+  // Helper check for scheduled state of a dependency (handles groups and tasks/milestones)
+  const isScheduled = d =>
+    d.type === 'group'
+      ? allGroupMembersScheduled(tasks, d.id, scheduled, index)
+      : scheduled.has(d.id);
+
+  while (progress && iter++ < MAX && remaining.length > 0) {
+    progress = false;
+    const nextRemaining = [];
+
+    // Zero-allocation loop over unscheduled tasks; short-circuits on unresolved deps
+    for (let k = 0; k < remaining.length; k++) {
+      const task = remaining[k];
+
+      let unresolved = false;
+
+      // FS deps: must be scheduled first
+      if (task.deps && task.deps.length) {
+        for (let i = 0; i < task.deps.length; i++) {
+          const d = index.byId.get(task.deps[i]);
+          if (d && !isScheduled(d)) {
+            unresolved = true;
+            break;
+          }
+        }
+      }
+
+      // SS deps: must be scheduled first
+      if (!unresolved && task.sdeps && task.sdeps.length) {
+        for (let i = 0; i < task.sdeps.length; i++) {
+          const d = index.byId.get(task.sdeps[i]);
+          if (d && !scheduled.has(d.id)) {
+            unresolved = true;
+            break;
+          }
+        }
+      }
+
+      // FF deps: must be scheduled first
+      if (!unresolved && task.ffdeps && task.ffdeps.length) {
+        for (let i = 0; i < task.ffdeps.length; i++) {
+          const d = index.byId.get(task.ffdeps[i]);
+          if (d && !scheduled.has(d.id)) {
+            unresolved = true;
+            break;
+          }
+        }
+      }
+
+      // SF deps: must be scheduled first
+      if (!unresolved && task.sfdeps && task.sfdeps.length) {
+        for (let i = 0; i < task.sfdeps.length; i++) {
+          const d = index.byId.get(task.sfdeps[i]);
+          if (d && !scheduled.has(d.id)) {
+            unresolved = true;
+            break;
+          }
+        }
+      }
+
+      if (unresolved) {
+        nextRemaining.push(task);
+        continue;
+      }
+
+      const lags = task.lags;
+
+      // Latest end among FS deps → task must start after this (with lag offset)
       let latestFsEnd = null;
-      deps.forEach(dep => {
-        let e =
-          dep.type === 'task'
-            ? dep.end
-            : dep.type === 'milestone'
-              ? dep.date
-              : dep.type === 'group'
-                ? groupBounds(tasks, dep.id, index).e
-                : null;
-        if (!e) return;
-        e = shiftWorkingDays(e, depLag('FS', dep.id));
-        if (!latestFsEnd || e > latestFsEnd) latestFsEnd = e;
-      });
+      if (task.deps && task.deps.length) {
+        for (let i = 0; i < task.deps.length; i++) {
+          const depId = task.deps[i];
+          const dep = index.byId.get(depId);
+          if (!dep) continue;
+          let e =
+            dep.type === 'task'
+              ? dep.end
+              : dep.type === 'milestone'
+                ? dep.date
+                : dep.type === 'group'
+                  ? groupBounds(tasks, dep.id, index).e
+                  : null;
+          if (!e) continue;
+          const lag = lags ? lags['FS' + depId] || 0 : 0;
+          if (lag) e = shiftWorkingDays(e, lag);
+          if (!latestFsEnd || e > latestFsEnd) latestFsEnd = e;
+        }
+      }
+
       // Latest start among SS deps → task must start no earlier than this
       let latestSsStart = null;
-      sdeps.forEach(dep => {
-        let s = dep.type === 'task' ? dep.start : dep.type === 'milestone' ? dep.date : null;
-        if (!s) return;
-        s = shiftWorkingDays(s, depLag('SS', dep.id));
-        if (!latestSsStart || s > latestSsStart) latestSsStart = s;
-      });
+      if (task.sdeps && task.sdeps.length) {
+        for (let i = 0; i < task.sdeps.length; i++) {
+          const depId = task.sdeps[i];
+          const dep = index.byId.get(depId);
+          if (!dep) continue;
+          let s = dep.type === 'task' ? dep.start : dep.type === 'milestone' ? dep.date : null;
+          if (!s) continue;
+          const lag = lags ? lags['SS' + depId] || 0 : 0;
+          if (lag) s = shiftWorkingDays(s, lag);
+          if (!latestSsStart || s > latestSsStart) latestSsStart = s;
+        }
+      }
+
       // Latest end among FF deps → backward-schedule task start so end >= dep end
       let latestFfEnd = null;
-      ffdeps.forEach(dep => {
-        let e = dep.type === 'task' ? dep.end : dep.type === 'milestone' ? dep.date : null;
-        if (!e) return;
-        e = shiftWorkingDays(e, depLag('FF', dep.id));
-        if (!latestFfEnd || e > latestFfEnd) latestFfEnd = e;
-      });
+      if (task.ffdeps && task.ffdeps.length) {
+        for (let i = 0; i < task.ffdeps.length; i++) {
+          const depId = task.ffdeps[i];
+          const dep = index.byId.get(depId);
+          if (!dep) continue;
+          let e = dep.type === 'task' ? dep.end : dep.type === 'milestone' ? dep.date : null;
+          if (!e) continue;
+          const lag = lags ? lags['FF' + depId] || 0 : 0;
+          if (lag) e = shiftWorkingDays(e, lag);
+          if (!latestFfEnd || e > latestFfEnd) latestFfEnd = e;
+        }
+      }
+
       // Latest start among SF deps → backward-schedule task start so end >= dep start
       let latestSfStart = null;
-      sfdeps.forEach(dep => {
-        let s = dep.type === 'task' ? dep.start : dep.type === 'milestone' ? dep.date : null;
-        if (!s) return;
-        s = shiftWorkingDays(s, depLag('SF', dep.id));
-        if (!latestSfStart || s > latestSfStart) latestSfStart = s;
-      });
+      if (task.sfdeps && task.sfdeps.length) {
+        for (let i = 0; i < task.sfdeps.length; i++) {
+          const depId = task.sfdeps[i];
+          const dep = index.byId.get(depId);
+          if (!dep) continue;
+          let s = dep.type === 'task' ? dep.start : dep.type === 'milestone' ? dep.date : null;
+          if (!s) continue;
+          const lag = lags ? lags['SF' + depId] || 0 : 0;
+          if (lag) s = shiftWorkingDays(s, lag);
+          if (!latestSfStart || s > latestSfStart) latestSfStart = s;
+        }
+      }
 
       if (task.type === 'task') {
         let rawStart = latestFsEnd
@@ -154,20 +224,19 @@ export function scheduleTasks(tasks, projStart) {
       }
       scheduled.add(task.id);
       progress = true;
-    });
+    }
+    remaining = nextRemaining;
   }
-  if (candidates.some(t => !scheduled.has(t.id))) {
-    candidates
-      .filter(t => !scheduled.has(t.id))
-      .forEach(t => {
-        ['deps', 'sdeps', 'ffdeps', 'sfdeps'].forEach(depProp => {
-          (t[depProp] || []).forEach(depId => {
-            if (wouldCreateCycle(tasks, t.id, depId, index)) {
-              console.warn(`Cycle detected between ${t.id} and ${depId}`);
-            }
-          });
+  if (remaining.length > 0) {
+    remaining.forEach(t => {
+      ['deps', 'sdeps', 'ffdeps', 'sfdeps'].forEach(depProp => {
+        (t[depProp] || []).forEach(depId => {
+          if (wouldCreateCycle(tasks, t.id, depId, index)) {
+            console.warn(`Cycle detected between ${t.id} and ${depId}`);
+          }
         });
       });
+    });
   }
 }
 
