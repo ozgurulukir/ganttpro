@@ -115,7 +115,9 @@ export function fitToFrame() {
   const totalDays = (CHART_END - CHART_START) / 86400000 + 1;
   D.setPPD(Math.max(2, Math.min(80, viewW / totalDays)));
   document.querySelectorAll('#viewBtns .btn').forEach(b => {
-    b.classList.toggle('active', PPDS[b.dataset.v] === D.PPD);
+    const active = PPDS[b.dataset.v] === D.PPD;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
   updateChartStart();
   render();
