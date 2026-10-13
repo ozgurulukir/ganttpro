@@ -103,15 +103,16 @@ export function icalEsc(s) {
 }
 
 /** Sanitize URL string — blocks dangerous schemes (javascript:, data:, vbscript:, blob:, file:)
- *  and normalizes HTML entity obfuscation (&colon;, &#58;, &#x3a;) to prevent XSS/execution bypasses. */
+ *  and normalizes HTML entity/URL percent obfuscation (&colon;, %3a, %0a) to prevent XSS/execution bypasses. */
 export function sanitizeUrl(url) {
   if (typeof url !== 'string') return '';
   const trimmed = url.trim();
   if (!trimmed) return '';
   const clean = trimmed
     .replace(/&(Tab|NewLine|#0*(9|10|13)|#x0*(9|a|d));?/gi, '')
+    .replace(/%(00|09|0a|0d|20)/gi, '')
     .replace(/[\x00-\x20]/g, '')
-    .replace(/&(colon|#0*58|#x0*3a);?/gi, ':')
+    .replace(/(&(colon|#0*58|#x0*3a);?|%3a)/gi, ':')
     .toLowerCase();
   if (
     clean.startsWith('javascript:') ||
