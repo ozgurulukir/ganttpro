@@ -748,7 +748,7 @@ export function openAllDepsEditor(task, cell) {
       if (p.err)
         return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${esc(p.raw)}</span> <span style="color:#FCA5A5">✕ ${esc(p.err)}</span></div>`;
       const dt = taskById(p.taskId);
-      return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${p.rowNum}${esc(p.type)}</span> <span style="color:#6EE7B7">✓ ${esc(dt ? dt.name : '')} · ${esc(p.type)}</span></div>`;
+      return `<div><span style="color:#A5B4FC;font-weight:600;display:inline-block;min-width:44px">${esc(p.rowNum)}${esc(p.type)}</span> <span style="color:#6EE7B7">✓ ${esc(dt ? dt.name : '')} · ${esc(p.type)}</span></div>`;
     });
     rows.push(
       `<div style="margin-top:4px;color:#9CA3AF;font-size:10px">${t('modal.enterConfirm')} &nbsp; ${t('modal.escCancel')}</div>`
