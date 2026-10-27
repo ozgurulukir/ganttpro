@@ -46,44 +46,50 @@ export function showTT(e, task) {
   if (task.type === 'task') {
     const wdays = task.wday || countWorkingDays(task.start, task.end);
     const tprog = task.done ? 100 : task.progress || 0;
-    h += `<div class="tt-r"><span>${t('tooltip.start')}</span><span>${esc(task.start)}</span></div>`;
-    h += `<div class="tt-r"><span>${t('tooltip.end')}</span><span>${esc(task.end)}</span></div>`;
-    h += `<div class="tt-r"><span>${t('tooltip.workdays')}</span><span>${wdays}d</span></div>`;
-    h += `<div class="tt-r"><span>${t('tooltip.progress')}</span><span>${tprog}%</span></div>`;
+    h += `<div class="tt-r"><span>${esc(t('tooltip.start'))}</span><span>${esc(task.start)}</span></div>`;
+    h += `<div class="tt-r"><span>${esc(t('tooltip.end'))}</span><span>${esc(task.end)}</span></div>`;
+    h += `<div class="tt-r"><span>${esc(t('tooltip.workdays'))}</span><span>${esc(wdays)}d</span></div>`;
+    h += `<div class="tt-r"><span>${esc(t('tooltip.progress'))}</span><span>${esc(tprog)}%</span></div>`;
     if (task.assignee)
-      h += `<div class="tt-r"><span>${t('tooltip.assignee')}</span><span>${esc(task.assignee)}</span></div>`;
+      h += `<div class="tt-r"><span>${esc(t('tooltip.assignee'))}</span><span>${esc(task.assignee)}</span></div>`;
     const _bl = (curProj()?.baseline?.dates || {})[task.id];
     if (_bl && _bl.e && task.end && _bl.e !== task.end) {
       const late = task.end > _bl.e;
       const dd = countWorkingDays(late ? _bl.e : task.end, late ? task.end : _bl.e) - 1;
-      h += `<div class="tt-r"><span>${t('tooltip.baselineDrift')}</span><span style="color:${late ? '#EF4444' : '#10B981'}">${late ? '+' : '-'}${dd} workdays</span></div>`;
+      h += `<div class="tt-r"><span>${esc(t('tooltip.baselineDrift'))}</span><span style="color:${late ? '#EF4444' : '#10B981'}">${late ? '+' : '-'}${esc(dd)} workdays</span></div>`;
     }
-    h += `<div class="tt-pb"><div class="tt-pf" style="width:${tprog}%;background:${safeColor(task.color)}"></div></div>`;
+    h += `<div class="tt-pb"><div class="tt-pf" style="width:${esc(tprog)}%;background:${safeColor(task.color)}"></div></div>`;
     const _ovd = !task.done && task.end && task.end < TODAY_STR;
-    h += `<div class="tt-r"><span>${t('tooltip.status')}</span><span style="color:${task.done ? '#10B981' : _ovd ? '#EF4444' : '#9CA3AF'}">${task.done ? t('tooltip.done') : _ovd ? t('tooltip.overdue') : t('tooltip.pending')}</span></div>`;
+    const statusText = task.done
+      ? t('tooltip.done')
+      : _ovd
+        ? t('tooltip.overdue')
+        : t('tooltip.pending');
+    h += `<div class="tt-r"><span>${esc(t('tooltip.status'))}</span><span style="color:${task.done ? '#10B981' : _ovd ? '#EF4444' : '#9CA3AF'}">${esc(statusText)}</span></div>`;
     if ((task.deps || []).length)
-      h += `<div class="tt-r"><span>${t('tooltip.fsDep')}</span><span>${task.deps.length}</span></div>`;
+      h += `<div class="tt-r"><span>${esc(t('tooltip.fsDep'))}</span><span>${esc(task.deps.length)}</span></div>`;
     if ((task.sdeps || []).length)
-      h += `<div class="tt-r"><span>${t('tooltip.ssDep')}</span><span style="color:#F59E0B">${task.sdeps.length}</span></div>`;
+      h += `<div class="tt-r"><span>${esc(t('tooltip.ssDep'))}</span><span style="color:#F59E0B">${esc(task.sdeps.length)}</span></div>`;
     if ((task.ffdeps || []).length)
-      h += `<div class="tt-r"><span>${t('tooltip.ffDep')}</span><span style="color:#10B981">${task.ffdeps.length}</span></div>`;
+      h += `<div class="tt-r"><span>${esc(t('tooltip.ffDep'))}</span><span style="color:#10B981">${esc(task.ffdeps.length)}</span></div>`;
     if ((task.sfdeps || []).length)
-      h += `<div class="tt-r"><span>${t('tooltip.sfDep')}</span><span style="color:#8B5CF6">${task.sfdeps.length}</span></div>`;
+      h += `<div class="tt-r"><span>${esc(t('tooltip.sfDep'))}</span><span style="color:#8B5CF6">${esc(task.sfdeps.length)}</span></div>`;
   } else if (task.type === 'milestone') {
-    h += `<div class="tt-r"><span>${t('tooltip.date')}</span><span>${esc(task.date)}</span></div>`;
-    h += `<div class="tt-r"><span>${t('tooltip.assignee')}</span><span>${esc(task.assignee) || '—'}</span></div>`;
-    h += `<div class="tt-r"><span>${t('tooltip.fsDep')}</span><span>${(task.deps || []).length}</span></div>`;
+    h += `<div class="tt-r"><span>${esc(t('tooltip.date'))}</span><span>${esc(task.date)}</span></div>`;
+    h += `<div class="tt-r"><span>${esc(t('tooltip.assignee'))}</span><span>${esc(task.assignee) || '—'}</span></div>`;
+    h += `<div class="tt-r"><span>${esc(t('tooltip.fsDep'))}</span><span>${esc((task.deps || []).length)}</span></div>`;
   } else if (task.type === 'group') {
     const taskIndex = buildIndex(tasks);
     const b = groupBounds(task.id, taskIndex);
     const prog = groupProgress(task.id, taskIndex);
     if (b.s)
-      h += `<div class="tt-r"><span>${t('tooltip.start')}</span><span>${esc(b.s)}</span></div>`;
+      h += `<div class="tt-r"><span>${esc(t('tooltip.start'))}</span><span>${esc(b.s)}</span></div>`;
     if (b.e)
-      h += `<div class="tt-r"><span>${t('tooltip.end')}</span><span>${esc(b.e)}</span></div>`;
-    h += `<div class="tt-r"><span>${t('tooltip.subTasks')}</span><span>${tasks.filter(tk => tk.parent === task.id && tk.type === 'task').length}</span></div>`;
-    h += `<div class="tt-r"><span>${t('tooltip.overallProgress')}</span><span>${prog}%</span></div>`;
-    h += `<div class="tt-pb"><div class="tt-pf" style="width:${prog}%;background:${safeColor(task.color)}"></div></div>`;
+      h += `<div class="tt-r"><span>${esc(t('tooltip.end'))}</span><span>${esc(b.e)}</span></div>`;
+    const subTaskCount = tasks.filter(tk => tk.parent === task.id && tk.type === 'task').length;
+    h += `<div class="tt-r"><span>${esc(t('tooltip.subTasks'))}</span><span>${esc(subTaskCount)}</span></div>`;
+    h += `<div class="tt-r"><span>${esc(t('tooltip.overallProgress'))}</span><span>${esc(prog)}%</span></div>`;
+    h += `<div class="tt-pb"><div class="tt-pf" style="width:${esc(prog)}%;background:${safeColor(task.color)}"></div></div>`;
   }
   tt.innerHTML = h;
   tt.classList.add('show');
