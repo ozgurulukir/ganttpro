@@ -90,4 +90,8 @@ test('addMonths clamps to the target month length', () => {
   assert.equal(formatDate(addMonths(parseDate('2026-01-15'), 1)), '2026-02-15');
   assert.equal(formatDate(addMonths(parseDate('2026-03-31'), -1)), '2026-02-28');
   assert.equal(formatDate(addMonths(parseDate('2026-12-15'), 2)), '2027-02-15');
+  assert.equal(formatDate(addMonths(parseDate('2026-10-31'), 1)), '2026-11-30');
+  assert.equal(formatDate(addMonths(parseDate('2026-08-31'), 1)), '2026-09-30');
+  assert.equal(formatDate(addMonths(parseDate('2028-01-31'), 1)), '2028-02-29');
+  assert.equal(formatDate(addMonths(parseDate('2028-02-29'), 12)), '2029-02-28');
 });
