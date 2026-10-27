@@ -8,6 +8,7 @@ function createMockElement(tagName = 'div') {
   const classList = new Set();
 
   const el = {
+    getBoundingClientRect: () => ({ left: 0, bottom: 0, width: 100, height: 20 }),
     tagName: tagName.toUpperCase(),
     style: {},
     children,
@@ -23,6 +24,7 @@ function createMockElement(tagName = 'div') {
       classList.clear();
       if (v) v.split(' ').forEach(c => c && classList.add(c));
     },
+    select() {},
     focus() {
       el.focused = true;
     },
@@ -49,10 +51,12 @@ function createMockElement(tagName = 'div') {
       children.push(child);
       return child;
     },
+    _innerHTML: '',
     get innerHTML() {
-      return '';
+      return this._innerHTML;
     },
     set innerHTML(v) {
+      this._innerHTML = v;
       if (v === '') children.length = 0;
     },
     classList: {
@@ -99,7 +103,7 @@ globalThis.document = {
 };
 
 // Import module after document mock setup
-const { openStartEditor, openEndEditor, openModal, openEditModal } =
+const { openStartEditor, openEndEditor, openModal, openEditModal, openAllDepsEditor } =
   await import('../src/ui/modal.js');
 const { D } = await import('../src/render/deps.js');
 
@@ -242,4 +246,34 @@ test('Modal — advanced options accordion updates aria-expanded on open and edi
     const advToggle = getOrCreateMockById('modalAdvancedToggle');
     assert.equal(advToggle.getAttribute('aria-expanded'), 'true');
   });
+});
+
+test('Modal — openAllDepsEditor escapes task count / rowNum in tooltip innerHTML', async t => {
+  const cell = createMockElement('td');
+  cell.getBoundingClientRect = () => ({ left: 0, bottom: 0, width: 100 });
+  const task = { id: 2, name: 'Target Task' };
+
+  let innerHTMLValue = '';
+  const bodyAppended = [];
+  const origAppendChild = globalThis.document.body ? globalThis.document.body.appendChild : null;
+  globalThis.document.body = {
+    appendChild: el => {
+      bodyAppended.push(el);
+      return el;
+    }
+  };
+
+  D.parseDepInput = () => [{ rowNum: '<script>alert(1)</script>1', type: 'FS', taskId: 1 }];
+  D.taskById = () => ({ id: 1, name: '<img src=x onerror=alert(2)>' });
+  D.buildDepsText = () => '1FS';
+
+  openAllDepsEditor(task, cell);
+
+  const tip = bodyAppended.find(el => el.className === 'deps-tip');
+  assert.ok(tip, 'deps-tip element appended to document.body');
+  assert.ok(
+    tip.innerHTML.includes('&lt;script&gt;alert(1)&lt;/script&gt;1'),
+    'escapes rowNum in tip.innerHTML'
+  );
+  assert.ok(!tip.innerHTML.includes('<script>'), 'un-escaped script tag not present');
 });
