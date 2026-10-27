@@ -1092,7 +1092,7 @@ function avColor(name) {
   return Format.avColor(name, AV_COLORS);
 }
 const { toStr, initials, darkenColor, hexToRgba, esc } = Format;
-const { diffDays, addDays, parseDate, formatDate } = DateUtils;
+const { diffDays, addDays, parseDate, formatDate, addMonths } = DateUtils;
 
 function totalW() {
   return Math.round((diffDays(toStr(CHART_END), toStr(CHART_START)) + 1) * PPD);
@@ -1277,9 +1277,7 @@ function recalcProjEnd() {
     curProj().endDate = maxEnd;
     CHART_END = new Date(maxEnd);
     // Expand chart by 1 month to give room
-    const d = new Date(maxEnd);
-    d.setMonth(d.getMonth() + 1);
-    const newStr = formatDate(Math.floor(d.getTime() / 86400000));
+    const newStr = formatDate(addMonths(parseDate(maxEnd), 1));
     if (newStr > curProj().endDate) curProj().endDate = newStr;
     CHART_END = new Date(curProj().endDate);
     changed = true;
