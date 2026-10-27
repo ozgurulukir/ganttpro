@@ -277,3 +277,53 @@ test('Modal — openAllDepsEditor escapes task count / rowNum in tooltip innerHT
   );
   assert.ok(!tip.innerHTML.includes('<script>'), 'un-escaped script tag not present');
 });
+
+test('Project — onTemplateChange escapes template string parameters in innerHTML preview', async () => {
+  let setInnerHTML = '';
+  const mockPreview = createMockElement('div');
+  Object.defineProperty(mockPreview, 'innerHTML', {
+    get() {
+      return setInnerHTML;
+    },
+    set(val) {
+      setInnerHTML = val;
+    }
+  });
+
+  const mockSelect = createMockElement('select');
+  mockSelect.value = 'tpl1';
+
+  const mockNameEl = createMockElement('input');
+  mockNameEl.value = 'Existing Name';
+  mockNameEl.select = () => {};
+
+  mockElementsMap['templatePreview'] = mockPreview;
+  mockElementsMap['pTemplate'] = mockSelect;
+  mockElementsMap['pName'] = mockNameEl;
+  mockElementsMap['projColorDot'] = createMockElement('div');
+
+  D.TEMPLATES = [
+    {
+      id: 'tpl1',
+      name: 'Software Project',
+      color: '#123456',
+      tasks: [
+        { id: 1, type: 'group', parent: null, name: 'Root' },
+        { id: 2, type: 'group', parent: 1, name: 'Phase <script>alert(1)</script>' },
+        { id: 3, type: 'task', parent: 2, name: 'Task 1' }
+      ]
+    }
+  ];
+  D.getNextGroupColor = () => '#654321';
+
+  const { onTemplateChange } = await import('../src/ui/project.js');
+
+  onTemplateChange();
+
+  assert.ok(!setInnerHTML.includes('<script>'), 'un-escaped script tag should not be present');
+  assert.ok(
+    setInnerHTML.includes('&lt;script&gt;alert(1)&lt;/script&gt;'),
+    'phase name should be escaped'
+  );
+  assert.ok(setInnerHTML.includes('<b>'), 'HTML bold tag should be present');
+});
