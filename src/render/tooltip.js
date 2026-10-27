@@ -86,7 +86,9 @@ export function showTT(e, task) {
       h += `<div class="tt-r"><span>${esc(t('tooltip.start'))}</span><span>${esc(b.s)}</span></div>`;
     if (b.e)
       h += `<div class="tt-r"><span>${esc(t('tooltip.end'))}</span><span>${esc(b.e)}</span></div>`;
-    const subTaskCount = tasks.filter(tk => tk.parent === task.id && tk.type === 'task').length;
+    const subTaskCount = (taskIndex.byParent.get(task.id) || []).filter(
+      tk => tk.type === 'task'
+    ).length;
     h += `<div class="tt-r"><span>${esc(t('tooltip.subTasks'))}</span><span>${esc(subTaskCount)}</span></div>`;
     h += `<div class="tt-r"><span>${esc(t('tooltip.overallProgress'))}</span><span>${esc(prog)}%</span></div>`;
     h += `<div class="tt-pb"><div class="tt-pf" style="width:${esc(prog)}%;background:${safeColor(task.color)}"></div></div>`;

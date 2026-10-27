@@ -1,7 +1,8 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
 import { D } from '../src/render/deps.js';
-import { showTT } from '../src/render/tooltip.js';
+import { showTT, hideTT } from '../src/render/tooltip.js';
+import * as Tree from '../src/core/tree.js';
 
 describe('showTT security & escaping', () => {
   let originalDocument;
@@ -146,5 +147,51 @@ describe('showTT security & escaping', () => {
     );
 
     assert.ok(html.includes('75&quot;&lt;script&gt;alert(&quot;p&quot;)&lt;/script&gt;%'));
+  });
+
+  it('renders group tooltip correctly using indexed subtask count', () => {
+    const tasks = [
+      { id: 'g1', type: 'group', name: 'Group 1', parent: null, color: '#3B82F6' },
+      {
+        id: 't1',
+        type: 'task',
+        name: 'Task 1',
+        parent: 'g1',
+        start: '2026-05-01',
+        end: '2026-05-05',
+        progress: 50,
+        done: false
+      },
+      {
+        id: 't2',
+        type: 'task',
+        name: 'Task 2',
+        parent: 'g1',
+        start: '2026-05-03',
+        end: '2026-05-10',
+        progress: 100,
+        done: true
+      },
+      { id: 'm1', type: 'milestone', name: 'Milestone 1', parent: 'g1', date: '2026-05-06' }
+    ];
+
+    D.TODAY_STR = '2026-05-01';
+    D.curProj = () => null;
+    D.groupBounds = (id, index) => Tree.groupBounds(tasks, id, index);
+    D.groupProgress = (id, index) => Tree.groupProgress(tasks, id, index);
+    D.tasks = tasks;
+
+    const event = { clientX: 100, clientY: 100 };
+    showTT(event, tasks[0]);
+
+    assert.equal(mockTooltipEl.classList.contains('show'), true);
+    assert.match(mockTooltipEl.innerHTML, /Group 1/);
+    assert.match(mockTooltipEl.innerHTML, /2026-05-01/);
+    assert.match(mockTooltipEl.innerHTML, /2026-05-10/);
+    // Expect subtasks count to be 2 (t1 and t2, ignoring milestone m1)
+    assert.match(mockTooltipEl.innerHTML, /<span>2<\/span>/);
+
+    hideTT();
+    assert.equal(mockTooltipEl.classList.contains('show'), false);
   });
 });
