@@ -260,3 +260,10 @@ test('getWBSMap — empty task list returns empty map', () => {
 test('getWBSCode — missing task returns empty string', () => {
   assert.equal(getWBSCode(TASKS, 'nonexistent'), '');
 });
+
+test('groupBounds — accepts pre-built index to avoid N+1 index rebuilds', () => {
+  const index = buildIndex(TASKS);
+  const boundsWithIndex = groupBounds(TASKS, 'root1', index);
+  const boundsWithoutIndex = groupBounds(TASKS, 'root1');
+  assert.deepEqual(boundsWithIndex, boundsWithoutIndex);
+});
