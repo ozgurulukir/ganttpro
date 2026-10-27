@@ -1,36 +1,87 @@
-# GanttPro agent guide
+# GanttPro Agent Guide
 
-GanttPro is a vanilla JavaScript single-page Gantt chart app built with Vite and Firebase. `index.html` loads
-`src/main.js`; `gantt.html` is a separate legacy implementation and is not part of the Vite build.
+Operational context, commands, and strict invariants for AI coding agents working on GanttPro.
 
-## Documentation
+## Quick Reference Commands
 
-- Start with [README.md](README.md) for the project overview and quickstart.
-- Use [docs/index.md](docs/index.md) to find development, architecture, and Firebase/security guidance.
-- Keep code and technical documentation in English. User-facing strings belong in both `src/i18n/locales/en.json` and
-  `src/i18n/locales/zh-TW.json`.
+| Purpose        | Command                           | Notes                                                      |
+| -------------- | --------------------------------- | ---------------------------------------------------------- |
+| Install        | `npm ci`                          | **npm only**. Never use `pnpm` or commit `pnpm-lock.yaml`. |
+| Test           | `npm test`                        | Node.js native test runner (`node --test`).                |
+| Timezone Test  | `TZ=America/Los_Angeles npm test` | Verifies UTC date arithmetic independence.                 |
+| Build          | `npm run build`                   | Vite client production build into `dist/`.                 |
+| Format Check   | `npm run format:check`            | Prettier verification across the repository.               |
+| Format Fix     | `npm run format`                  | Automatically formats files with Prettier.                 |
+| Generate Rules | `npm run build:rules`             | Generates `firestore.rules` from template.                 |
 
-## Code conventions
+> [!IMPORTANT]
+> Always verify changes before completing a task:
+> `npm test && npm run build && npm run format:check`
 
-- Keep `src/core/` domain logic pure: no DOM, `window`, or app-global state.
-- Keep browser and Firebase I/O in the application shell (`src/main.js`, `src/render/`, `src/ui/`, `src/data/`, and
-  feature modules).
-- Rendering modules receive current state through the shared `D` object in `src/render/deps.js`; extracted modules
-  should not import `src/main.js`.
-- Use event delegation in the Vite app rather than adding inline `onclick` handlers.
-- When changing core behavior, update or add tests under `tests/`. Run them with `npm test`.
-- Do not edit generated `firestore.rules` directly. Update `firestore.rules.template` and regenerate the output with
-  `npm run build:rules`.
+## Architecture & Module Boundaries
 
-## Common commands
+GanttPro uses vanilla JavaScript ES modules with a pure-core and imperative-shell split.
 
-```bash
-npm ci
-npm run dev
-npm run build
-npm test
-npm run format:check
+- **`src/core/` (Pure Core):** Domain logic only (date arithmetic, task tree, dependencies, CPM, scheduling, validation, formatting).
+  - **Constraint:** Strictly no DOM (`document`, `window`, elements), no Firebase, and no global app state.
+  - Must remain 100% testable in headless Node.js without DOM mocks.
+- **`src/render/` (Rendering Shell):** DOM rendering (bars, milestones, headers, grid, arrows, tooltips).
+  - **Constraint:** Modules receive runtime state through the mutable dependency injection object `D` in `src/render/deps.js`. **Never import `src/main.js`** from extracted modules (prevents circular dependencies).
+- **`src/ui/` (UI Controllers):** Modal dialogs, menus, project settings, work-time panel. Use event delegation; avoid inline `onclick` attributes.
+- **`src/data/` (I/O & Persistence):** Firebase Auth/Firestore, localStorage, share links, audit logging.
+- **`src/main.js` (App Shell):** State initialization, render loop orchestration, event wiring.
+- **`gantt.html` (Legacy):** Standalone legacy variant. Not part of the Vite build (`index.html` is the canonical entrypoint). Do not edit unless specifically instructed.
+
+## Critical Invariants & Security Guardrails
+
+### 1. XSS Sanitization (`innerHTML` sinks)
+
+Any dynamic value (user input, task properties, dates, translated strings with interpolation) rendered into `innerHTML` sinks **must be escaped** using `esc()` from `src/core/format.js`.
+
+```javascript
+import { esc } from '../core/format.js';
+// Good
+el.innerHTML = `<span>${esc(task.name)}</span> · <span>${esc(dateStr)}</span>`;
+// Bad
+el.innerHTML = `<span>${task.name}</span> · <span>${dateStr}</span>`;
 ```
 
-See [Development setup](docs/development.md) for prerequisites, Firebase configuration, and the full command list. See
-[Firebase and security](docs/firebase-security.md) before changing access rules or sharing behavior.
+### 2. Timezone-Safe Date Arithmetic
+
+Dates are calendar strings (`YYYY-MM-DD`) without time components.
+
+- **Constraint:** Never use JavaScript `Date` local getters/setters (`.getMonth()`, `.setMonth()`, `.getDate()`, `.setDate()`) on calendar strings. They produce off-by-one day shifts across timezones and daylight saving boundaries.
+- **Requirement:** Always use integer day-number helpers from `src/core/date.js` (`parseDate`, `formatDate`, `addMonths`, `addDays`, `diffDays`, `startOfMonth`, `endOfMonth`).
+
+### 3. Package Management & Tooling
+
+- The repository strictly uses `npm` with `package-lock.json`.
+- Do not run `pnpm` or commit `pnpm-lock.yaml`.
+
+### 4. Firestore Security Rules
+
+- `firestore.rules` is auto-generated and Git-ignored.
+- **Constraint:** Never edit `firestore.rules` directly. Update `firestore.rules.template` and run `npm run build:rules`.
+- Admin authority is determined strictly by `VITE_ADMIN_EMAIL` in `.env`; user-writable `is_admin` fields in Firestore are untrusted.
+
+### 5. Localization (i18n)
+
+- Technical documentation, code comments, and commit messages are in **English**.
+- User-facing UI strings must be added to **both** locales:
+  - `src/i18n/locales/en.json` (English)
+  - `src/i18n/locales/zh-TW.json` (Traditional Chinese)
+
+## Testing Guidelines
+
+- Unit tests reside in `tests/` using Node.js native test runner (`node:test` and `node:assert/strict`).
+- When modifying pure logic in `src/core/`, add or update corresponding unit tests in `tests/`.
+- Ensure new tests are deterministic and independent of local machine timezone.
+
+## Documentation Pointers
+
+For detailed documentation, consult:
+
+- [Architecture & Layout](docs/architecture.md)
+- [Development Setup & Scripts](docs/development.md)
+- [Firebase & Security Model](docs/firebase-security.md)
+- [Documentation Index](docs/index.md)
