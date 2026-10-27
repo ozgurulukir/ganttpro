@@ -33,7 +33,7 @@ async function loadAdminUsers() {
         <td>${esc(u.name) || '—'}</td>
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(u.email)}">${esc(u.email)}</td>
         <td>${u.is_admin ? 'Admin' : 'User'}</td>
-        <td style="color:var(--t3)">${dateStr}</td>
+        <td style="color:var(--t3)">${esc(dateStr)}</td>
         <td>${delBtn}</td>
       </tr>`;
       })
