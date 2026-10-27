@@ -249,7 +249,7 @@ export function onTemplateChange() {
     .filter(t => t.type === 'group' && t.parent === 1)
     .map(t => esc(t.name))
     .join(' → ');
-  preview.innerHTML = `<b>${t('project.template')}:</b> ${t('project.templatePreview', { groups, tasks, miles })}<br>
+  preview.innerHTML = `<b>${esc(t('project.template'))}:</b> ${esc(t('project.templatePreview', { groups, tasks, miles }))}<br>
     <span style="color:var(--t4)">${phases}</span>`;
   preview.style.display = '';
   // Auto-fill name if empty (use short default, not full template name)
