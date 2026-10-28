@@ -99,6 +99,7 @@ function getOrCreateMockById(id) {
 globalThis.document = {
   getElementById: id => getOrCreateMockById(id),
   createElement: tag => createMockElement(tag),
+  createTextNode: text => ({ nodeType: 3, textContent: text }),
   querySelectorAll: () => []
 };
 
@@ -278,17 +279,8 @@ test('Modal — openAllDepsEditor escapes task count / rowNum in tooltip innerHT
   assert.ok(!tip.innerHTML.includes('<script>'), 'un-escaped script tag not present');
 });
 
-test('Project — onTemplateChange escapes template string parameters in innerHTML preview', async () => {
-  let setInnerHTML = '';
+test('Project — onTemplateChange constructs preview using safe DOM methods', async () => {
   const mockPreview = createMockElement('div');
-  Object.defineProperty(mockPreview, 'innerHTML', {
-    get() {
-      return setInnerHTML;
-    },
-    set(val) {
-      setInnerHTML = val;
-    }
-  });
 
   const mockSelect = createMockElement('select');
   mockSelect.value = 'tpl1';
@@ -320,10 +312,14 @@ test('Project — onTemplateChange escapes template string parameters in innerHT
 
   onTemplateChange();
 
-  assert.ok(!setInnerHTML.includes('<script>'), 'un-escaped script tag should not be present');
-  assert.ok(
-    setInnerHTML.includes('&lt;script&gt;alert(1)&lt;/script&gt;'),
-    'phase name should be escaped'
+  const elementChildren = mockPreview.children.filter(c => c.tagName);
+  assert.strictEqual(elementChildren.length, 3, 'Preview should contain <b>, <br>, and <span>');
+  assert.strictEqual(elementChildren[0].tagName, 'B');
+  assert.strictEqual(elementChildren[1].tagName, 'BR');
+  assert.strictEqual(elementChildren[2].tagName, 'SPAN');
+  assert.strictEqual(
+    elementChildren[2].textContent,
+    'Phase <script>alert(1)</script>',
+    'Phase name textContent should match exact string without HTML execution'
   );
-  assert.ok(setInnerHTML.includes('<b>'), 'HTML bold tag should be present');
 });
