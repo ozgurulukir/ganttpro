@@ -236,10 +236,22 @@ export function getWBSMap(tasks, index = buildIndex(tasks)) {
   }
   walk(null, '');
   if (map.size < tasks.length) {
+    const parentIndices = new Map();
     for (const t of tasks) {
       if (!map.has(t.id)) {
         const siblings = byParent.get(t.parent) || [];
-        const idx = siblings.indexOf(t) + 1;
+        let idx = 1;
+        if (siblings.length > 1) {
+          let idxMap = parentIndices.get(t.parent);
+          if (!idxMap) {
+            idxMap = new Map();
+            for (let i = 0; i < siblings.length; i++) {
+              idxMap.set(siblings[i].id, i + 1);
+            }
+            parentIndices.set(t.parent, idxMap);
+          }
+          idx = idxMap.get(t.id) || 1;
+        }
         let prefix = '';
         if (t.parent !== null && byId.has(t.parent)) {
           prefix = map.get(t.parent) || '';
