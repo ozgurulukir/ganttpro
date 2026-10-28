@@ -7,6 +7,7 @@ import { esc } from '../core/format.js';
 import { openOverlay, closeOverlay } from './overlay.js';
 import { t } from '../i18n/index.js';
 import { logAudit } from '../data/audit.js';
+import { buildIndex } from '../core/tree.js';
 
 /* Modal-local state (moved from main.js — only used here). */
 let editingTaskId = null;
@@ -337,6 +338,7 @@ export function addTaskInline(refTaskId) {
   // Insert: after last child of group, or after ref for leaf
   let insertIdx = tasks.indexOf(ref);
   if (ref.type === 'group') {
+    const index = buildIndex(tasks);
     // Find last descendant of this group
     for (let i = insertIdx + 1; i < tasks.length; i++) {
       const anc = tasks[i];
@@ -346,7 +348,7 @@ export function addTaskInline(refTaskId) {
           insertIdx = i;
           break;
         }
-        p = taskById(p)?.parent;
+        p = index.byId.get(p)?.parent;
       }
     }
   }
