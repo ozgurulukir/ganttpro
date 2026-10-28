@@ -1620,14 +1620,7 @@ function showApp() {
   if (typeof window.__gpReady === 'function') window.__gpReady();
 }
 
-function isSafeAvatarUrl(url) {
-  try {
-    const u = new URL(url);
-    return u.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
+const isSafeAvatarUrl = Format.isSafeAvatarUrl;
 
 function updateUserDisplay() {
   if (!currentUser) return;
@@ -1635,9 +1628,32 @@ function updateUserDisplay() {
   const avatar = isSafeAvatarUrl(currentUser.photoURL) ? currentUser.photoURL : null;
   const el = document.getElementById('userDisplay');
   if (!el) return;
-  el.innerHTML = avatar
-    ? `<img src="${esc(avatar)}" title="${esc(name)}" style="width:26px;height:26px;border-radius:50%;object-fit:cover">`
-    : `<div title="${esc(name)}" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${esc(name[0] || 'U').toUpperCase()}</div>`;
+  el.textContent = '';
+  if (avatar) {
+    const img = document.createElement('img');
+    img.src = avatar;
+    img.title = name;
+    img.style.width = '26px';
+    img.style.height = '26px';
+    img.style.borderRadius = '50%';
+    img.style.objectFit = 'cover';
+    el.appendChild(img);
+  } else {
+    const avatarDiv = document.createElement('div');
+    avatarDiv.title = name;
+    avatarDiv.style.width = '26px';
+    avatarDiv.style.height = '26px';
+    avatarDiv.style.borderRadius = '50%';
+    avatarDiv.style.background = 'var(--accent)';
+    avatarDiv.style.display = 'flex';
+    avatarDiv.style.alignItems = 'center';
+    avatarDiv.style.justifyContent = 'center';
+    avatarDiv.style.color = '#fff';
+    avatarDiv.style.fontSize = '11px';
+    avatarDiv.style.fontWeight = '700';
+    avatarDiv.textContent = (name[0] || 'U').toUpperCase();
+    el.appendChild(avatarDiv);
+  }
   document.getElementById('signOutBtn').style.display = '';
 }
 
@@ -1691,8 +1707,23 @@ async function initApp() {
       if (adminBtn) adminBtn.style.display = isAdmin() ? '' : 'none';
       if (_guestMode) {
         const el = document.getElementById('userDisplay');
-        if (el)
-          el.innerHTML = `<div title="Guest mode (local)" style="width:26px;height:26px;border-radius:50%;background:var(--t4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">G</div>`;
+        if (el) {
+          el.textContent = '';
+          const guestDiv = document.createElement('div');
+          guestDiv.title = 'Guest mode (local)';
+          guestDiv.style.width = '26px';
+          guestDiv.style.height = '26px';
+          guestDiv.style.borderRadius = '50%';
+          guestDiv.style.background = 'var(--t4)';
+          guestDiv.style.display = 'flex';
+          guestDiv.style.alignItems = 'center';
+          guestDiv.style.justifyContent = 'center';
+          guestDiv.style.color = '#fff';
+          guestDiv.style.fontSize = '10px';
+          guestDiv.style.fontWeight = '700';
+          guestDiv.textContent = 'G';
+          el.appendChild(guestDiv);
+        }
         document.getElementById('signOutBtn').style.display = '';
       }
       _appInitialized = true;
