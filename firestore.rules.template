@@ -41,8 +41,10 @@ service cloud.firestore {
         && (resource.data.owner_id == request.auth.uid
             || resource.data.shared_with_email == request.auth.token.email);
       // Only project owner can create/delete shares.
-      allow create, delete: if isRegistered()
+      allow create: if isRegistered()
         && request.resource.data.owner_id == request.auth.uid;
+      allow delete: if isRegistered()
+        && resource.data.owner_id == request.auth.uid;
       allow update: if isAdmin(); // admin-only (no UI for update currently)
     }
 

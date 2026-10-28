@@ -33,10 +33,8 @@ that key.
 
 - A user can read and write their own `gantt_user_data` document. A registered user can also read and write **any**
   user's data document. The rules do not check the per-project share grant before permitting those cross-user writes.
-- Owners and named invitees can read their collaboration-grant documents. The template's combined create/delete rule
-  checks `request.resource.data.owner_id`; Firebase describes `request.resource` as pending data for create and update
-  operations, so the delete condition appears to deny deletion. Verify or fix this before relying on collaboration-grant
-  deletion. See
+- Owners and named invitees can read their collaboration-grant documents. The template allows the project owner to create
+  collaboration grants (checking `request.resource.data.owner_id`) and delete collaboration grants (checking `resource.data.owner_id`). See
   [Firebase's Firestore request reference](https://firebase.google.com/docs/reference/rules/rules.firestore.Request).
 - A signed-in user can self-register by creating their own allowlist document with `is_admin: false`. Only the
   configured admin can update or delete allowlist records. The client-supplied `is_admin` field does not grant admin
