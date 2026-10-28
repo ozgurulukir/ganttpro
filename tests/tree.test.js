@@ -267,3 +267,19 @@ test('groupBounds — accepts pre-built index to avoid N+1 index rebuilds', () =
   const boundsWithoutIndex = groupBounds(TASKS, 'root1');
   assert.deepEqual(boundsWithIndex, boundsWithoutIndex);
 });
+
+test('getWBSMap — fallback handles orphaned and disconnected tasks with correct sibling indices', () => {
+  const orphanTasks = [
+    { id: 'root1', parent: null, type: 'group' },
+    { id: 't1', parent: 'root1', type: 'task' },
+    { id: 'o1', parent: 'missing_parent', type: 'task' },
+    { id: 'o2', parent: 'missing_parent', type: 'task' },
+    { id: 'o3', parent: 'missing_parent', type: 'task' }
+  ];
+  const map = getWBSMap(orphanTasks);
+  assert.equal(map.get('root1'), '1');
+  assert.equal(map.get('t1'), '1.1');
+  assert.equal(map.get('o1'), '1');
+  assert.equal(map.get('o2'), '2');
+  assert.equal(map.get('o3'), '3');
+});
