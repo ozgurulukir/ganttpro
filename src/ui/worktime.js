@@ -171,10 +171,12 @@ export function openWorkTimeModal() {
       const data = await res.json();
       loadHolidaysFromJSON(data);
       const entries = Array.isArray(data) ? data : [data];
+      const existingDates = new Set(holidays.map(h => h.date));
       for (const entry of entries) {
         if (entry.holidays) {
           for (const [date, label] of Object.entries(entry.holidays)) {
-            if (!holidays.find(h => h.date === date)) {
+            if (!existingDates.has(date)) {
+              existingDates.add(date);
               holidays.push({ date, label });
             }
           }
