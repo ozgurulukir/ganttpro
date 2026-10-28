@@ -13,7 +13,11 @@ import {
   nextWorkingDay,
   shiftWorkingDays,
   countWorkingDays,
-  loadHolidaysFromJSON
+  snapToWorkday,
+  loadHolidaysFromJSON,
+  setCustomHolidays,
+  setWorkDays,
+  resetHolidays
 } from '../src/core/calendar.js';
 
 const holidayData = JSON.parse(
@@ -76,4 +80,42 @@ test('shiftWorkingDays — 0 no-op, positive forward, negative back', () => {
   assert.equal(shiftWorkingDays('2026-07-06', 0), '2026-07-06');
   assert.equal(shiftWorkingDays('2026-07-06', 2), '2026-07-08'); // Mon→Wed
   assert.equal(shiftWorkingDays('2026-07-06', -1), '2026-07-03'); // Mon→Fri
+});
+
+test('snapToWorkday — keeps working day unchanged regardless of direction', () => {
+  assert.equal(snapToWorkday('2026-07-06'), '2026-07-06'); // default direction (1)
+  assert.equal(snapToWorkday('2026-07-06', 1), '2026-07-06');
+  assert.equal(snapToWorkday('2026-07-06', -1), '2026-07-06');
+  assert.equal(snapToWorkday('2026-07-06', 0), '2026-07-06');
+});
+
+test('snapToWorkday — snaps non-workday forward when direction >= 0', () => {
+  // 2026-07-04 is Saturday, 2026-07-05 is Sunday
+  assert.equal(snapToWorkday('2026-07-04'), '2026-07-06'); // Mon (default direction)
+  assert.equal(snapToWorkday('2026-07-04', 1), '2026-07-06'); // Mon
+  assert.equal(snapToWorkday('2026-07-04', 0), '2026-07-06'); // Mon (direction >= 0 steps +1)
+  assert.equal(snapToWorkday('2026-07-05', 1), '2026-07-06'); // Mon
+});
+
+test('snapToWorkday — snaps non-workday backward when direction < 0', () => {
+  // 2026-07-04 is Saturday, 2026-07-05 is Sunday -> Friday is 2026-07-03
+  assert.equal(snapToWorkday('2026-07-04', -1), '2026-07-03');
+  assert.equal(snapToWorkday('2026-07-05', -1), '2026-07-03');
+});
+
+test('snapToWorkday — respects custom holidays and custom workdays', () => {
+  try {
+    // Make 2026-07-06 (Mon) a custom holiday
+    setCustomHolidays(['2026-07-06']);
+    // Saturday 2026-07-04 snapped forward should skip Mon (holiday) -> Tue 2026-07-07
+    assert.equal(snapToWorkday('2026-07-04', 1), '2026-07-07');
+
+    // Make workdays Mon-Thu (1, 2, 3, 4), making Friday 2026-07-03 a non-workday
+    setWorkDays([1, 2, 3, 4]);
+    // Saturday 2026-07-04 snapped backward should skip Fri (non-workday) -> Thu 2026-07-02
+    assert.equal(snapToWorkday('2026-07-04', -1), '2026-07-02');
+  } finally {
+    setCustomHolidays([]);
+    setWorkDays([1, 2, 3, 4, 5]);
+  }
 });
