@@ -195,7 +195,8 @@ export function persist() {
 export async function loadFromCloud() {
   if (!_ctx.getCurrentUser()) return false;
   try {
-    const s = await Remote.readUserData(_ctx.getCurrentUser().uid);
+    const readUserData = _ctx.readUserData || Remote.readUserData;
+    const s = await readUserData(_ctx.getCurrentUser().uid);
     if (!s) return false;
     const validated = validateProjects(s.projects || []);
     _ctx.setProjects(validated);

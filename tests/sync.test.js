@@ -48,7 +48,8 @@ if (typeof globalThis.window === 'undefined') {
 }
 
 const { initI18n, setLocale } = await import('../src/i18n/index.js');
-const { setSyncDot, getPendingCloudWrites, initSync, saveToCloud } = await import('../src/sync.js');
+const { setSyncDot, getPendingCloudWrites, initSync, saveToCloud, loadFromCloud } =
+  await import('../src/sync.js');
 
 describe('getPendingCloudWrites', () => {
   it('returns a Set instance representing pending cloud writes', () => {
@@ -181,5 +182,121 @@ describe('setSyncDot', () => {
 
     // Reset back to English
     setLocale('en');
+  });
+});
+
+describe('loadFromCloud', () => {
+  it('returns false when no current user is logged in', async () => {
+    initSync({
+      getCurrentUser: () => null
+    });
+    const result = await loadFromCloud();
+    assert.strictEqual(result, false);
+  });
+
+  it('returns false and catches error when readUserData throws an exception', async () => {
+    initSync({
+      getCurrentUser: () => ({ uid: 'user_error' }),
+      readUserData: async () => {
+        throw new Error('Network timeout');
+      }
+    });
+    const result = await loadFromCloud();
+    assert.strictEqual(result, false);
+  });
+
+  it('returns false when readUserData returns null/falsy', async () => {
+    initSync({
+      getCurrentUser: () => ({ uid: 'user_null' }),
+      readUserData: async () => null
+    });
+    const result = await loadFromCloud();
+    assert.strictEqual(result, false);
+  });
+
+  it('returns true and handles empty project list properly', async () => {
+    let currentProjId = 123;
+    let tasks = [1];
+    let nextId = 10;
+    let projects = [{ id: 1 }];
+
+    initSync({
+      getCurrentUser: () => ({ uid: 'user_empty' }),
+      readUserData: async () => ({ projects: [], nextProjId: 1 }),
+      setProjects: p => {
+        projects = p;
+      },
+      setNextProjId: id => {},
+      setCurrentProjId: id => {
+        currentProjId = id;
+      },
+      setTasks: t => {
+        tasks = t;
+      },
+      setNextId: id => {
+        nextId = id;
+      }
+    });
+
+    const result = await loadFromCloud();
+    assert.strictEqual(result, true);
+    assert.strictEqual(currentProjId, null);
+    assert.deepStrictEqual(tasks, []);
+    assert.strictEqual(nextId, 1);
+  });
+
+  it('returns true and loads projects and current project state properly', async () => {
+    const mockProj = {
+      id: 1,
+      name: 'Project 1',
+      tasks: [{ id: 1, name: 'Root', type: 'group', parent: null }],
+      nextId: 2,
+      startDate: '2026-05-01',
+      endDate: '2026-05-10'
+    };
+
+    let setProjList = [];
+    let curId = null;
+    let curTasks = [];
+    let curNextId = null;
+    let chartStart = null;
+    let chartEnd = null;
+
+    initSync({
+      getCurrentUser: () => ({ uid: 'user_valid' }),
+      readUserData: async () => ({
+        projects: [mockProj],
+        currentProjId: 1,
+        nextProjId: 2
+      }),
+      setProjects: p => {
+        setProjList = p;
+      },
+      setNextProjId: () => {},
+      setCurrentProjId: id => {
+        curId = id;
+      },
+      getCurProj: () => mockProj,
+      setTasks: t => {
+        curTasks = t;
+      },
+      setNextId: id => {
+        curNextId = id;
+      },
+      setChartStart: d => {
+        chartStart = d;
+      },
+      setChartEnd: d => {
+        chartEnd = d;
+      }
+    });
+
+    const result = await loadFromCloud();
+    assert.strictEqual(result, true);
+    assert.strictEqual(curId, 1);
+    assert.strictEqual(curTasks.length, 1);
+    assert.strictEqual(curNextId, 2);
+    assert.ok(chartStart instanceof Date);
+    assert.ok(chartEnd instanceof Date);
   });
 });
