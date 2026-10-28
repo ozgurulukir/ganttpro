@@ -125,3 +125,15 @@ export function sanitizeUrl(url) {
   }
   return trimmed;
 }
+
+/** Validate whether an avatar URL is safe (non-empty string, https protocol, no malicious scheme/obfuscation). */
+export function isSafeAvatarUrl(url) {
+  if (typeof url !== 'string' || !url.trim()) return false;
+  if (sanitizeUrl(url) !== url.trim()) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}

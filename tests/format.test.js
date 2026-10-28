@@ -12,7 +12,8 @@ import {
   csvEsc,
   icalEsc,
   sanitizeUrl,
-  esc
+  esc,
+  isSafeAvatarUrl
 } from '../src/core/format.js';
 
 /* ── dateToX ── */
@@ -194,4 +195,25 @@ test('icalEsc — sanitizes TEXT fields for iCalendar exports', () => {
   assert.equal(icalEsc('Task, with semicolon; and comma'), 'Task  with semicolon  and comma');
   assert.equal(icalEsc(null), '');
   assert.equal(icalEsc(undefined), '');
+});
+
+/* ── isSafeAvatarUrl ── */
+
+test('isSafeAvatarUrl — allows valid https URLs', () => {
+  assert.equal(isSafeAvatarUrl('https://lh3.googleusercontent.com/a/default-user'), true);
+  assert.equal(isSafeAvatarUrl('https://example.com/avatar.png'), true);
+});
+
+test('isSafeAvatarUrl — rejects unsafe protocols, malicious schemes, and malformed inputs', () => {
+  assert.equal(isSafeAvatarUrl('http://example.com/avatar.png'), false);
+  assert.equal(isSafeAvatarUrl('javascript:alert(1)'), false);
+  assert.equal(isSafeAvatarUrl('data:text/html,<script>alert(1)</script>'), false);
+  assert.equal(isSafeAvatarUrl('java\0script:alert(1)'), false);
+  assert.equal(isSafeAvatarUrl('javascript&colon;alert(1)'), false);
+  assert.equal(isSafeAvatarUrl('vbscript:msgbox(1)'), false);
+  assert.equal(isSafeAvatarUrl('file:///etc/passwd'), false);
+  assert.equal(isSafeAvatarUrl(''), false);
+  assert.equal(isSafeAvatarUrl('   '), false);
+  assert.equal(isSafeAvatarUrl(null), false);
+  assert.equal(isSafeAvatarUrl(undefined), false);
 });
