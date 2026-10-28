@@ -2,6 +2,7 @@ import * as Remote from './data/remote.js';
 import { isAdmin } from './auth.js';
 import { esc } from './core/format.js';
 import { t } from './i18n/index.js';
+import { D } from './render/deps.js';
 
 export async function openAdminPanel() {
   if (!isAdmin()) return;
@@ -17,7 +18,8 @@ async function loadAdminUsers() {
   const tbody = document.getElementById('adminUserList');
   tbody.innerHTML = `<tr><td colspan="5" style="color:var(--t3);text-align:center;padding:16px">${t('common.loading')}</td></tr>`;
   try {
-    const data = await Remote.getAllUsers();
+    const fetchUsers = D.getAllUsers || Remote.getAllUsers;
+    const data = await fetchUsers();
     document.getElementById('adminUserCount').textContent = t('admin.userCount', {
       count: data.length
     });
@@ -47,7 +49,8 @@ export async function deleteUser(email) {
   if (!isAdmin()) return;
   if (!confirm(t('share.removeAccess', { email }))) return;
   try {
-    await Remote.removeUser(email);
+    const doRemove = D.removeUser || Remote.removeUser;
+    await doRemove(email);
     await loadAdminUsers();
   } catch (e) {
     alert('Delete failed: ' + e.message);

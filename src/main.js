@@ -18,6 +18,7 @@ import * as Format from './core/format.js';
 import * as DateUtils from './core/date.js';
 import { validateProject } from './core/validate.js';
 import * as Sync from './sync.js';
+import * as Remote from './data/remote.js';
 import { D } from './render/deps.js';
 import { highlightRow, highlightDeps, showTT, moveTT, hideTT } from './render/tooltip.js';
 import { renderBar, renderGroupBar, attachBarDrag, getWorkingSegs } from './render/bar.js';
@@ -1569,6 +1570,8 @@ function syncRenderDeps() {
   D.initApp = initApp;
   D.cleanupRealtime = Sync.cleanupRealtime;
   D.setSyncDot = Sync.setSyncDot;
+  D.getAllUsers = Remote.getAllUsers;
+  D.removeUser = Remote.removeUser;
 }
 
 function render() {
