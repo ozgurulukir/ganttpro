@@ -51,6 +51,10 @@ function createMockElement(tagName = 'div') {
       children.push(child);
       return child;
     },
+    replaceChildren(...nodes) {
+      children.length = 0;
+      children.push(...nodes);
+    },
     _innerHTML: '',
     get innerHTML() {
       return this._innerHTML;
@@ -99,6 +103,7 @@ function getOrCreateMockById(id) {
 globalThis.document = {
   getElementById: id => getOrCreateMockById(id),
   createElement: tag => createMockElement(tag),
+  createTextNode: text => ({ textContent: String(text), nodeType: 3 }),
   querySelectorAll: () => []
 };
 
@@ -278,18 +283,8 @@ test('Modal — openAllDepsEditor escapes task count / rowNum in tooltip innerHT
   assert.ok(!tip.innerHTML.includes('<script>'), 'un-escaped script tag not present');
 });
 
-test('Project — onTemplateChange escapes template string parameters in innerHTML preview', async () => {
-  let setInnerHTML = '';
+test('Project — onTemplateChange safely renders preview using DOM elements', async () => {
   const mockPreview = createMockElement('div');
-  Object.defineProperty(mockPreview, 'innerHTML', {
-    get() {
-      return setInnerHTML;
-    },
-    set(val) {
-      setInnerHTML = val;
-    }
-  });
-
   const mockSelect = createMockElement('select');
   mockSelect.value = 'tpl1';
 
@@ -320,10 +315,11 @@ test('Project — onTemplateChange escapes template string parameters in innerHT
 
   onTemplateChange();
 
-  assert.ok(!setInnerHTML.includes('<script>'), 'un-escaped script tag should not be present');
-  assert.ok(
-    setInnerHTML.includes('&lt;script&gt;alert(1)&lt;/script&gt;'),
-    'phase name should be escaped'
-  );
-  assert.ok(setInnerHTML.includes('<b>'), 'HTML bold tag should be present');
+  const phaseSpan = mockPreview.children.find(c => c.tagName === 'SPAN');
+  assert.ok(phaseSpan, 'span element for phase names should exist');
+  assert.equal(phaseSpan.textContent, 'Phase <script>alert(1)</script>');
+  assert.equal(phaseSpan.style.color, 'var(--t4)');
+
+  const boldEl = mockPreview.children.find(c => c.tagName === 'B');
+  assert.ok(boldEl, 'bold element for template title should exist');
 });
