@@ -5,10 +5,21 @@ import { t } from './i18n/index.js';
  * Returns { ids: Set, items: tasks[] }.
  */
 export function collectSubtree(tid, tasks) {
+  const byParent = new Map();
+  for (const t of tasks) {
+    const list = byParent.get(t.parent);
+    if (list) list.push(t);
+    else byParent.set(t.parent, [t]);
+  }
   const ids = new Set();
   function walk(id) {
     ids.add(id);
-    tasks.filter(c => c.parent === id).forEach(c => walk(c.id));
+    const children = byParent.get(id);
+    if (children) {
+      for (const c of children) {
+        walk(c.id);
+      }
+    }
   }
   walk(tid);
   return { ids, items: tasks.filter(t => ids.has(t.id)) };
@@ -83,11 +94,18 @@ export function outdentTask(id, tasks, deps) {
   // Find insertion point: after last descendant of parent in remaining tasks.
   // Build a Set of all descendants of `parent` first, then a single linear scan.
   const parentDescendants = new Set();
+  const byParent = new Map();
+  for (const c of tasks) {
+    const list = byParent.get(c.parent);
+    if (list) list.push(c);
+    else byParent.set(c.parent, [c]);
+  }
   const stack = [parent.id];
   while (stack.length) {
     const pid = stack.pop();
-    for (const c of tasks) {
-      if (c.parent === pid) {
+    const children = byParent.get(pid);
+    if (children) {
+      for (const c of children) {
         parentDescendants.add(c.id);
         stack.push(c.id);
       }
