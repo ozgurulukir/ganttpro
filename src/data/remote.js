@@ -1,6 +1,6 @@
 /* Firestore I/O wrappers — pure functions taking data, returning data.
    No app-state globals. All Firestore API calls live here.
-   Collections: gantt_user_data, gantt_project_shares, gantt_shares, gantt_allowed_users. */
+   Collections: gantt_user_data, gantt_user_shares, gantt_project_shares, gantt_shares, gantt_allowed_users. */
 import { db } from './firebase.js';
 import {
   doc,
@@ -65,7 +65,29 @@ export function watchUserData(uid, callback) {
   return onSnapshot(doc(db, 'gantt_user_data', uid), callback);
 }
 
-/* ── gantt_project_shares ── */
+/* ── gantt_user_shares & gantt_project_shares ── */
+
+export async function syncUserShare(ownerId, email) {
+  if (!ownerId || !email) return;
+  const q = query(
+    collection(db, 'gantt_project_shares'),
+    where('owner_id', '==', ownerId),
+    where('shared_with_email', '==', email)
+  );
+  const snap = await getDocs(q);
+  const userShareRef = doc(db, 'gantt_user_shares', `${ownerId}_${email}`);
+  if (snap.empty) {
+    await deleteDoc(userShareRef);
+  } else {
+    const canEdit = snap.docs.some(d => d.data().permission === 'edit');
+    await setDoc(userShareRef, {
+      owner_id: ownerId,
+      shared_with_email: email,
+      can_read: true,
+      can_edit: canEdit
+    });
+  }
+}
 
 export async function getProjectSharesForEmail(email) {
   const q = query(collection(db, 'gantt_project_shares'), where('shared_with_email', '==', email));
@@ -85,10 +107,21 @@ export async function getProjectSharesForOwner(projId, uid) {
 
 export async function addProjectShare(docId, data) {
   await setDoc(doc(db, 'gantt_project_shares', docId), data);
+  await syncUserShare(data.owner_id, data.shared_with_email);
 }
 
-export async function removeProjectShare(shareId) {
+export async function removeProjectShare(shareId, ownerId, sharedWithEmail) {
+  if (!ownerId || !sharedWithEmail) {
+    const snap = await getDoc(doc(db, 'gantt_project_shares', shareId));
+    if (snap.exists()) {
+      ownerId = snap.data().owner_id;
+      sharedWithEmail = snap.data().shared_with_email;
+    }
+  }
   await deleteDoc(doc(db, 'gantt_project_shares', shareId));
+  if (ownerId && sharedWithEmail) {
+    await syncUserShare(ownerId, sharedWithEmail);
+  }
 }
 
 /* ── gantt_shares (public read-only share links) ── */

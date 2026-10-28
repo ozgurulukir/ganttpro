@@ -190,6 +190,7 @@ export async function addShare() {
 
 export async function removeShare(shareId, email) {
   if (!confirm(t('share.removeAccess', { email }))) return;
-  await Remote.removeProjectShare(shareId);
+  const user = D.GetCurrentUser();
+  await Remote.removeProjectShare(shareId, user?.uid, email);
   await refreshCollabList();
 }
