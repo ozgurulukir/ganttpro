@@ -21,16 +21,40 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/gantt_allowed_users/$(request.auth.token.email));
     }
 
+    // Helper: returns true if requester is a registered collaborator with read access to owner's user data
+    function hasUserDataReadAccess(uid) {
+      return isRegistered()
+        && exists(/databases/$(database)/documents/gantt_user_shares/$(uid)_$(request.auth.token.email));
+    }
+
+    // Helper: returns true if requester is a registered collaborator with edit access to owner's user data
+    function hasUserDataWriteAccess(uid) {
+      return isRegistered()
+        && get(/databases/$(database)/documents/gantt_user_shares/$(uid)_$(request.auth.token.email)).data.can_edit == true;
+    }
+
     // ── gantt_user_data/{uid} ──
     // One doc per user. Contains all projects as opaque data blob.
     match /gantt_user_data/{uid} {
       // Owner reads/writes own data.
-      // Registered collaborators may read and write (edit-permission collab
-      // writes directly to owner's doc — cross-doc permission check not
-      // possible in rules without schema change; trust boundary = registered
-      // users only).
-      allow read: if request.auth.uid == uid || isRegistered();
-      allow write: if request.auth.uid == uid || isRegistered();
+      // Authorized registered collaborators may read or write according to gantt_user_shares.
+      allow read: if request.auth.uid == uid || hasUserDataReadAccess(uid);
+      allow write: if request.auth.uid == uid || hasUserDataWriteAccess(uid);
+    }
+
+    // ── gantt_user_shares/{docId} ──
+    // Per-user collaboration grants mapping owner ID and invitee email.
+    match /gantt_user_shares/{docId} {
+      // Owner or named invitee can read.
+      allow read: if isRegistered()
+        && (resource.data.owner_id == request.auth.uid
+            || resource.data.shared_with_email == request.auth.token.email);
+      // Project owner can create or update grants.
+      allow create, update: if isRegistered()
+        && request.resource.data.owner_id == request.auth.uid;
+      // Project owner can delete grants.
+      allow delete: if isRegistered()
+        && resource.data.owner_id == request.auth.uid;
     }
 
     // ── gantt_project_shares/{docId} ──
@@ -40,9 +64,12 @@ service cloud.firestore {
       allow read: if isRegistered()
         && (resource.data.owner_id == request.auth.uid
             || resource.data.shared_with_email == request.auth.token.email);
-      // Only project owner can create/delete shares.
-      allow create, delete: if isRegistered()
+      // Only project owner can create shares.
+      allow create: if isRegistered()
         && request.resource.data.owner_id == request.auth.uid;
+      // Only project owner can delete shares.
+      allow delete: if isRegistered()
+        && resource.data.owner_id == request.auth.uid;
       allow update: if isAdmin(); // admin-only (no UI for update currently)
     }
 
