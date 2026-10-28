@@ -247,10 +247,20 @@ export function onTemplateChange() {
   // List phase names (top-level groups)
   const phases = tpl.tasks
     .filter(t => t.type === 'group' && t.parent === 1)
-    .map(t => esc(t.name))
+    .map(t => t.name)
     .join(' → ');
-  preview.innerHTML = `<b>${esc(t('project.template'))}:</b> ${esc(t('project.templatePreview', { groups, tasks, miles }))}<br>
-    <span style="color:var(--t4)">${phases}</span>`;
+
+  const b = document.createElement('b');
+  b.textContent = t('project.template') + ': ';
+  const summaryText = document.createTextNode(
+    t('project.templatePreview', { groups, tasks, miles })
+  );
+  const br = document.createElement('br');
+  const span = document.createElement('span');
+  span.style.color = 'var(--t4)';
+  span.textContent = phases;
+
+  preview.replaceChildren(b, summaryText, br, span);
   preview.style.display = '';
   // Auto-fill name if empty (use short default, not full template name)
   const nameEl = document.getElementById('pName');
