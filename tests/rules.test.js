@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -8,6 +8,12 @@ const ROOT = resolve(import.meta.dirname, '..');
 describe('Firestore Security Rules Security Verification', () => {
   const templatePath = resolve(ROOT, 'firestore.rules.template');
   const rulesPath = resolve(ROOT, 'firestore.rules');
+
+  before(async () => {
+    if (!existsSync(rulesPath)) {
+      await import('../scripts/generate-firestore-rules.js');
+    }
+  });
 
   it('exists and is readable', () => {
     assert.strictEqual(existsSync(templatePath), true, 'firestore.rules.template should exist');
